@@ -7,9 +7,10 @@ All notable changes to littledl will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.1.0] - 2024-01-XX
+## [0.1.0][0.1.0] - 2026-03-28
 
 ### Added
+
 - IDM-style multi-threaded chunked downloading
 - Smart scheduling with slow chunk detection and resplitting
 - Resume support with chunk-level progress tracking
@@ -23,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Automatic filename detection from various sources
 
 ### Features
+
 - **Multi-threaded Downloads**: Split files into chunks and download in parallel
 - **Smart Scheduling**: Intelligent chunk resplitting for optimal speed
 - **Resume Support**: Continue interrupted downloads seamlessly
@@ -31,6 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Connection Management**: Efficient HTTP connection reuse
 
 ### Supported Platforms
+
 - Windows 10/11
 - macOS 10.15+
 - Linux (Ubuntu 20.04+, Debian 11+, Fedora 35+)
