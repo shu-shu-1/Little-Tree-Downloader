@@ -7,6 +7,27 @@ English | 简体中文
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)，
 本项目遵循 [语义化版本](https://semver.org/spec/v2.0.0.html)。
 
+## 0.3.0 - 2026-03-28
+
+### 新增
+
+- **多源下载管理器 (Multi-Source Manager)**：增强多备份链接的调度可靠性
+  - 动态集成了自动故障转移和错误重切处理机制
+- **内容感知的文件复用判定 (Content-Aware File Reuse)**：跳过当前系统中已经被下载过的相同资源
+  - 引入 `FileReuseChecker` 组件，通过文件签名与快速增量哈希匹配实现重复探测
+  - 新增 `SharedFileRegistry` 全局文件注册表模块来同步与剔除批量下载中同时发起的重复网络请求
+- **重构智能策略选择 (Intelligent Strategy)**：算法指派与自适应调度进化
+  - 设计 `StrategySelector` 以精确处理网络能力档案并赋予资源最佳调度风格及分块参数
+  - 推出对于多个文件下载会话中并发生态调频专用的 `DynamicStyleAllocator` (动态策略分配器)
+- **混合提升模式 (HYBRID_TURBO / AIMD 算法)**：通过高级别拥塞控制进一步榨干宽带
+  - 将 AIMD 加性增与乘性减退避算法 (Multiplicative Decrease / Additive Increase) 参数正式开放到了 `DownloadConfig` 对象
+  - 在配置类上新增公开的 `apply_style("HYBRID_TURBO")` 实例方法，用于对调用代码或 CLI 一键全量激活底层高级别参数。
+
+### 优化变更
+
+- 通过 `GlobalThreadPool` 与 `SpeedAdaptiveController` 统筹连接与线程资源，降低系统开销与内存压力
+- 调整并修正了 AIMD 在速度降级情况下的线性相减为合乎预期的比例惩罚(Factor级修正调度) 逻辑
+
 ## 0.2.0 - 2026-03-28
 
 ### 新增

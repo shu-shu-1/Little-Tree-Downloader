@@ -7,6 +7,30 @@ All notable changes to littledl will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.3.0 - 2026-03-28
+
+### Added
+
+- **Multi-Source Manager**: Robust multiple URL downloading
+  - Dynamic `MultiSourceManager` with reliable automatic failover control
+  - P2P style multiple backup URL capability
+- **Content-Aware File Reuse**: Skip downloading files that already exist
+  - Introduces `FileReuseChecker` using file signatures and rapid hashing techniques
+  - Pre-verifications and incremental block hashing matching across the entire directory
+  - Integration with `SharedFileRegistry` to eliminate concurrent duplicate task fetching
+- **Intelligent Strategy Overhaul**: Upgraded underlying download strategy assignment algorithms
+  - `StrategySelector` class for profiling resources and adapting download methodology based strictly on dynamic evaluations (e.g., file sizes, server capabilities)
+  - `DynamicStyleAllocator` efficiently handles download styles across batch sessions combining concurrency and network capacity
+- **Hybrid Turbo Strategy Implementation**: Introducing AIMD logic to scheduling
+  - Exposed advanced congestion control parameters (Increase Step, Decrease Factor, Speedup Threshold) in `DownloadConfig`
+  - Integrated multiplicative decrease (`hybrid_aimd_decrease_factor`) mechanics on severe drops mimicking aggressive network fetchers like IDM/aria2
+  - Exposed direct configuration mutation function `apply_style` within the configuration object
+
+### Changed
+
+- Enhanced global connection and thread pooling via `GlobalThreadPool` and `SpeedAdaptiveController`
+- Migrated AIMD step settings mapping code correctly out of internal CLI parsers and strictly into API objects
+
 ## 0.2.0 - 2026-03-28
 
 ### Added
