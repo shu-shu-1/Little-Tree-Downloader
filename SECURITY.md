@@ -6,9 +6,9 @@ English | [简体中文](SECURITY.zh.md)
 
 We actively support the following versions with security updates:
 
-| Version | Supported          |
-| ------- | ------------------ |
-| 0.2.x   | :white_check_mark: |
+| Version | Supported |
+| ------- | --------- |
+| 0.1.x   | ✅        |
 
 ## Reporting a Vulnerability
 
@@ -21,11 +21,12 @@ We take the security of littledl seriously. If you discover a security vulnerabi
 Instead, please report them via:
 
 1. **GitHub Security Advisories** (Preferred)
+
    - Go to the [Security tab](https://github.com/little-tree/little-tree-downloader/security) of our repository
    - Click "Report a vulnerability"
    - Fill out the form with details about the vulnerability
-
 2. **Email** (Alternative)
+
    - Send an email to zsxiaoshu@outlook.com
    - Include "SECURITY" in the subject line
    - Provide detailed information about the vulnerability
@@ -132,6 +133,7 @@ Security updates will be announced via:
 ## Contact
 
 For security concerns:
+
 - **Security Advisories**: [GitHub Security](https://github.com/little-tree/little-tree-downloader/security)
 - **Email**: zsxiaoshu@outlook.com
 

@@ -119,6 +119,6 @@ __all__ = [
     "LANGUAGE_ENV_VAR",
 ]
 
-__version__ = "0.2.0"
+__version__ = "0.1.0"
 
 init_language()

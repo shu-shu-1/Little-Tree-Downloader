@@ -6,9 +6,9 @@ English | 简体中文
 
 我们积极为以下版本提供安全更新：
 
-| 版本 | 支持状态 |
-| ---- | -------- |
-| 0.2.x | ✅ |
+| 版本  | 支持状态 |
+| ----- | -------- |
+| 0.1.x | ✅       |
 
 ## 报告漏洞
 
@@ -21,11 +21,12 @@ English | 简体中文
 请通过以下方式报告：
 
 1. **GitHub 安全公告**（首选）
+
    - 进入我们的仓库的 [安全标签页](https://github.com/little-tree/little-tree-downloader/security)
    - 点击"报告漏洞"
    - 填写包含漏洞详情的表格
-
 2. **电子邮件**（备选）
+
    - 发送电子邮件至 zsxiaoshu@outlook.com
    - 主题行中包含"SECURITY"
    - 提供漏洞的详细信息
@@ -132,6 +133,7 @@ config = DownloadConfig(
 ## 联系
 
 安全问题：
+
 - **安全公告**：[GitHub Security](https://github.com/little-tree/little-tree-downloader/security)
 - **电子邮件**：zsxiaoshu@outlook.com
 
