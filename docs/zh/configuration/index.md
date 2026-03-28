@@ -1,0 +1,110 @@
+# 配置指南
+
+littledl 的详细配置选项。
+
+## DownloadConfig
+
+下载操作的主要配置类。
+
+```python
+from littledl import DownloadConfig
+
+config = DownloadConfig(
+    enable_chunking=True,
+    max_chunks=16,
+    chunk_size=4 * 1024 * 1024,  # 4MB
+    buffer_size=64 * 1024,        # 64KB
+    timeout=300,
+    resume=True,
+    verify_ssl=True,
+)
+```
+
+## 配置选项
+
+| 选项 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `enable_chunking` | bool | True | 启用多线程分块下载 |
+| `max_chunks` | int | 16 | 最大并发分块数 |
+| `chunk_size` | int | 4MB | 每个分块的大小 |
+| `buffer_size` | int | 64KB | 磁盘写入缓冲区大小 |
+| `timeout` | float | 300 | 读写超时时间（秒） |
+| `resume` | bool | True | 启用断点续传 |
+| `verify_ssl` | bool | True | 验证 SSL 证书 |
+| `fallback_to_single_on_failure` | bool | True | 分块失败时自动回退到单连接下载 |
+| `verify_hash` | bool | False | 校验下载文件哈希 |
+| `expected_hash` | str | None | 预期哈希值 |
+| `hash_algorithm` | str | `sha256` | 校验使用的哈希算法 |
+| `min_file_size` | int | None | 拒绝小于该值的文件 |
+| `max_file_size` | int | None | 拒绝大于该值的文件 |
+| `progress_update_interval` | float | 0.5 | 回调刷新间隔（秒） |
+| `chunk_callback` | Callable | None | 分块下载过程中的分片状态回调 |
+
+## 代理配置
+
+```python
+from littledl import DownloadConfig, ProxyConfig, ProxyMode
+
+proxy = ProxyConfig(
+    mode=ProxyMode.CUSTOM,
+    http_proxy="http://proxy.example.com:8080",
+    https_proxy="https://proxy.example.com:8080",
+)
+
+config = DownloadConfig(proxy=proxy)
+```
+
+## 速度限制
+
+```python
+from littledl import DownloadConfig, SpeedLimitConfig, SpeedLimitMode
+
+speed_limit = SpeedLimitConfig(
+    enabled=True,
+    mode=SpeedLimitMode.GLOBAL,
+    max_speed=1024 * 1024,  # 1 MB/s
+)
+
+config = DownloadConfig(speed_limit=speed_limit)
+```
+
+## 进度回调
+
+`progress_callback` 支持四种格式：
+
+- 传统位置参数：`(downloaded, total, speed, eta)`
+- 事件对象：`ProgressEvent`
+- 字典载荷：`dict`
+- 关键字参数：`**payload`
+
+```python
+from littledl import ProgressEvent
+
+def on_progress(downloaded: int, total: int, speed: float, eta: int):
+    percent = (downloaded / total) * 100
+    print(f"\r{percent:.1f}% | {speed/1024:.1f} KB/s | 剩余: {eta}s", end="")
+
+def on_event(event: ProgressEvent):
+    print(event.progress, event.remaining)
+
+def on_dict(payload: dict):
+    print(payload["downloaded"], payload["speed"])
+
+def on_kwargs(**payload):
+    print(payload["eta"])
+
+config = DownloadConfig(progress_callback=on_progress)
+```
+
+## 分块状态回调
+
+`chunk_callback` 仅在分块下载模式下触发，支持与 `progress_callback` 相同的四种格式。
+
+```python
+from littledl import ChunkEvent
+
+def on_chunk(event: ChunkEvent):
+    print(event.chunk_index, event.status, event.progress)
+
+config = DownloadConfig(chunk_callback=on_chunk)
+```

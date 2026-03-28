@@ -1,0 +1,89 @@
+site_name: littledl
+site_description: High-performance download library with IDM-style multi-threaded chunked downloading
+site_url: https://littledl.zsxiaoshu.cn/
+repo_name: little-tree/little-tree-downloader
+repo_url: https://github.com/little-tree/little-tree-downloader
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  font:
+    text: Roboto
+    code: Roboto Mono
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.sections
+    - toc.integrate
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+
+plugins:
+  - search:
+      lang:
+        - en
+        - zh
+  - i18n:
+      docs_structure: folder
+      fallback_to_default: true
+      reconfigure_material: true
+      reconfigure_search: true
+  - llmstxt:
+      markdown_description: |
+        High-performance download library with IDM-style multi-threaded chunked downloading,
+        intelligent scheduling, and resume support.
+      sections:
+        Getting Started:
+          - en/index.md: Home
+          - en/getting-started/index.md: Getting Started
+        Configuration:
+          - en/configuration/index.md: Configuration Guide
+          - en/authentication/index.md: Authentication
+          - en/proxy/index.md: Proxy Configuration
+          - en/error-handling/index.md: Error Handling
+        Advanced:
+          - en/advanced/index.md: Advanced Usage
+          - en/api-reference/index.md: API Reference
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/little-tree/little-tree-downloader
+  generator: false
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchorlink: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - admonition
+  - tables
+  - toc:
+      permalink: true
+  - attr_list
+  - md_in_html
+
+nav:
+  - Home: index.md
+  - Getting Started: getting-started/index.md
+  - Configuration: configuration/index.md
+  - Authentication: authentication/index.md
+  - Proxy: proxy/index.md
+  - Error Handling: error-handling/index.md
+  - Advanced: advanced/index.md
+  - API Reference: api-reference/index.md

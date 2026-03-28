@@ -1,0 +1,351 @@
+# littledl
+
+High-performance download library with IDM-style multi-threaded chunked downloading, intelligent scheduling, and resume support.
+
+## Features
+
+- Multi-threaded chunked downloads with intelligent scheduling
+- Direct file writing (no temporary files)
+- Resume support for interrupted downloads
+- Real-time speed monitoring with ETA
+- Multiple authentication methods (Basic, Bearer, Digest, API Key, OAuth2)
+- Full proxy support (HTTP, HTTPS, SOCKS5, system proxy auto-detect)
+- Speed limiting (token bucket, leaky bucket, adaptive)
+- Cross-platform (Windows, macOS, Linux, FreeBSD)
+
+## Installation
+
+```bash
+pip install littledl
+# or
+uv add littledl
+```
+
+# Getting Started
+
+## Prerequisites
+
+- Python 3.10 or higher
+- pip or uv package manager
+
+## Basic Usage
+
+### Synchronous Download
+
+```python
+from littledl import download_file_sync
+
+path = download_file_sync("https://example.com/file.zip")
+```
+
+### Asynchronous Download
+
+```python
+import asyncio
+from littledl import download_file
+
+async def main():
+    path = await download_file(
+        "https://example.com/file.zip",
+        save_path="./downloads",
+        filename="my_file.zip",
+    )
+
+asyncio.run(main())
+```
+
+# Configuration
+
+## DownloadConfig
+
+```python
+from littledl import DownloadConfig
+
+config = DownloadConfig(
+    enable_chunking=True,
+    max_chunks=16,
+    chunk_size=4 * 1024 * 1024,  # 4MB
+    buffer_size=64 * 1024,        # 64KB
+    timeout=300,
+    resume=True,
+    verify_ssl=True,
+)
+```
+
+## Configuration Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| enable_chunking | bool | True | Enable multi-threaded chunked download |
+| max_chunks | int | 16 | Maximum number of concurrent chunks |
+| chunk_size | int | 4MB | Default size for each chunk |
+| buffer_size | int | 64KB | Disk write buffer size |
+| timeout | float | 300 | Read/write timeout in seconds |
+| resume | bool | True | Enable resume support |
+| verify_ssl | bool | True | Verify SSL certificates |
+
+## Speed Limiting
+
+```python
+from littledl import DownloadConfig, SpeedLimitConfig, SpeedLimitMode
+
+speed_limit = SpeedLimitConfig(
+    enabled=True,
+    mode=SpeedLimitMode.GLOBAL,
+    max_speed=1024 * 1024,  # 1 MB/s
+)
+
+config = DownloadConfig(speed_limit=speed_limit)
+```
+
+# Authentication
+
+## AuthConfig
+
+```python
+from littledl import AuthConfig, AuthType
+```
+
+## Authentication Types
+
+### Basic Authentication
+
+```python
+auth = AuthConfig(
+    auth_type=AuthType.BASIC,
+    username="user",
+    password="pass",
+)
+```
+
+### Bearer Token
+
+```python
+auth = AuthConfig(
+    auth_type=AuthType.BEARER,
+    token="your-api-token",
+)
+```
+
+### API Key
+
+```python
+auth = AuthConfig(
+    auth_type=AuthType.API_KEY,
+    api_key="your-api-key",
+    api_key_header="X-API-Key",
+)
+```
+
+### OAuth2
+
+```python
+auth = AuthConfig(
+    auth_type=AuthType.OAUTH2,
+    client_id="client-id",
+    client_secret="client-secret",
+    token_url="https://example.com/oauth/token",
+)
+```
+
+# Proxy Configuration
+
+## ProxyConfig
+
+```python
+from littledl import ProxyConfig, ProxyMode
+```
+
+## Proxy Modes
+
+### System Proxy (Auto-detect)
+
+```python
+proxy = ProxyConfig(mode=ProxyMode.SYSTEM)
+```
+
+### Custom Proxy
+
+```python
+proxy = ProxyConfig(
+    mode=ProxyMode.CUSTOM,
+    http_proxy="http://proxy.example.com:8080",
+    https_proxy="https://proxy.example.com:8080",
+)
+```
+
+### SOCKS5 Proxy
+
+```python
+proxy = ProxyConfig(
+    mode=ProxyMode.CUSTOM,
+    socks5_proxy="socks5://user:pass@proxy.example.com:1080",
+)
+```
+
+# Error Handling
+
+## Exception Types
+
+### DownloadException
+
+Base exception for all download-related errors.
+
+### NetworkError
+
+Network-related errors (connection timeout, DNS failure, etc.).
+
+### AuthenticationError
+
+Authentication failures.
+
+## Retry Configuration
+
+```python
+from littledl import DownloadConfig, RetryConfig, RetryMode
+
+retry = RetryConfig(
+    enabled=True,
+    mode=RetryMode.EXPONENTIAL,
+    max_retries=3,
+    initial_delay=1.0,
+    max_delay=60.0,
+)
+
+config = DownloadConfig(retry=retry)
+```
+
+# Advanced Usage
+
+## Chunk Management
+
+### Manual Chunk Size
+
+```python
+config = DownloadConfig(
+    enable_chunking=True,
+    chunk_size=8 * 1024 * 1024,  # 8MB chunks
+    max_chunks=8,
+)
+```
+
+### Disabling Chunking
+
+```python
+config = DownloadConfig(enable_chunking=False)
+```
+
+## Concurrent Downloads
+
+```python
+import asyncio
+from littledl import download_file
+
+async def download_multiple(urls: list[str]):
+    tasks = [download_file(url) for url in urls]
+    return await asyncio.gather(*tasks)
+```
+
+## Custom Headers
+
+```python
+config = DownloadConfig(
+    headers={
+        "User-Agent": "MyApp/1.0",
+        "Accept": "application/octet-stream",
+    }
+)
+```
+
+## Progress Callback
+
+```python
+def on_progress(downloaded: int, total: int, speed: float, eta: int):
+    percent = (downloaded / total) * 100
+    print(f"\r{percent:.1f}% | {speed/1024:.1f} KB/s | ETA: {eta}s", end="")
+
+config = DownloadConfig(progress_callback=on_progress)
+```
+
+## Performance Tuning
+
+### Buffer Size
+
+```python
+config = DownloadConfig(
+    buffer_size=256 * 1024,  # 256KB buffer
+)
+```
+
+### Connection Pooling
+
+```python
+config = DownloadConfig(
+    max_connections=32,
+    max_keepalive_connections=16,
+)
+```
+
+# API Reference
+
+## Core Functions
+
+### download_file_sync
+
+```python
+from littledl import download_file_sync
+
+path = download_file_sync(
+    url: str,
+    save_path: str = ".",
+    filename: str | None = None,
+    config: DownloadConfig | None = None,
+) -> Path
+```
+
+### download_file
+
+```python
+from littledl import download_file
+
+path = await download_file(
+    url: str,
+    save_path: str = ".",
+    filename: str | None = None,
+    config: DownloadConfig | None = None,
+) -> Path
+```
+
+## Enums
+
+### AuthType
+
+- BASIC
+- BEARER
+- DIGEST
+- API_KEY
+- OAUTH2
+
+### ProxyMode
+
+- SYSTEM - Auto-detect system proxy
+- CUSTOM - Use custom proxy settings
+- NONE - No proxy
+
+### SpeedLimitMode
+
+- GLOBAL - Limit overall speed
+- PER_CHUNK - Limit per-chunk speed
+
+## Multi-language Support
+
+```python
+from littledl import set_language, get_available_languages
+
+set_language("zh")  # or "en"
+print(get_available_languages())  # {'en': 'English', 'zh': '中文'}
+```
+
+# License
+
+Apache-2.0
