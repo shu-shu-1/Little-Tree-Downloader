@@ -1,4 +1,15 @@
 from .auth import AuthConfig, AuthManager, TokenInfo
+from .batch import (
+    AdaptiveConcurrencyController,
+    BatchDownloader,
+    BatchProgress,
+    FileScheduler,
+    FileTask,
+    FileTaskStatus,
+    SharedConnectionBatchDownloader,
+    batch_download,
+    batch_download_sync,
+)
 from .chunk import Chunk, ChunkManager, ChunkStatus
 from .config import (
     AuthType,
@@ -55,6 +66,15 @@ __all__ = [
     "Downloader",
     "download_file",
     "download_file_sync",
+    "BatchDownloader",
+    "BatchProgress",
+    "FileScheduler",
+    "FileTask",
+    "FileTaskStatus",
+    "AdaptiveConcurrencyController",
+    "SharedConnectionBatchDownloader",
+    "batch_download",
+    "batch_download_sync",
     "ProgressEvent",
     "ChunkEvent",
     "DownloadConfig",

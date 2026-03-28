@@ -123,6 +123,40 @@ path = download_file_sync(
 
 ## Advanced Usage
 
+### Batch Download
+
+Multi-file batch download with specialized optimizations for large numbers of small/large files:
+
+```python
+from littledl import batch_download_sync
+
+results = batch_download_sync(
+    urls=[
+        "https://example.com/file1.zip",
+        "https://example.com/file2.zip",
+        "https://example.com/file3.zip",
+    ],
+    save_path="./downloads",
+    max_concurrent_files=5,
+)
+
+for url, path, error in results:
+    if path:
+        print(f"✓ {url} -> {path}")
+    else:
+        print(f"✗ {url}: {error}")
+```
+
+Async version:
+
+```python
+from littledl import BatchDownloader
+
+downloader = BatchDownloader(max_concurrent_files=5)
+await downloader.add_urls(urls, "./downloads")
+await downloader.start()
+```
+
 ### Authentication Configuration
 
 ```python

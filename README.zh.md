@@ -123,6 +123,40 @@ path = download_file_sync(
 
 ## 高级用法
 
+### 批量下载
+
+支持多文件批量下载，针对大量小文件、大文件或混合场景进行了专门优化：
+
+```python
+from littledl import batch_download_sync
+
+results = batch_download_sync(
+    urls=[
+        "https://example.com/file1.zip",
+        "https://example.com/file2.zip",
+        "https://example.com/file3.zip",
+    ],
+    save_path="./downloads",
+    max_concurrent_files=5,
+)
+
+for url, path, error in results:
+    if path:
+        print(f"✓ {url} -> {path}")
+    else:
+        print(f"✗ {url}: {error}")
+```
+
+异步版本：
+
+```python
+from littledl import BatchDownloader
+
+downloader = BatchDownloader(max_concurrent_files=5)
+await downloader.add_urls(urls, "./downloads")
+await downloader.start()
+```
+
 ### 认证配置
 
 ```python

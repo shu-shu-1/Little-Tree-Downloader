@@ -17,6 +17,7 @@
 ## 高级主题
 
 - [高级用法](advanced/index.md) - 高级功能和优化
+- [批量下载](batch-download/index.md) - 多文件批量下载
 - [API 参考](api-reference/index.md) - 完整的 API 参考
 
 ## 其他

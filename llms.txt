@@ -246,6 +246,51 @@ async def download_multiple(urls: list[str]):
     return await asyncio.gather(*tasks)
 ```
 
+## Batch Download
+
+Multi-file batch download with specialized optimizations for large numbers of small/large files:
+
+```python
+from littledl import batch_download_sync
+
+results = batch_download_sync(
+    urls=[
+        "https://example.com/file1.zip",
+        "https://example.com/file2.zip",
+        "https://example.com/file3.zip",
+    ],
+    save_path="./downloads",
+    max_concurrent_files=5,
+)
+
+for url, path, error in results:
+    if path:
+        print(f"✓ {url} -> {path}")
+    else:
+        print(f"✗ {url}: {error}")
+```
+
+Async version with more control:
+
+```python
+from littledl import BatchDownloader
+
+downloader = BatchDownloader(
+    max_concurrent_files=5,
+    max_concurrent_chunks_per_file=4,
+    enable_adaptive_concurrency=True,
+)
+await downloader.add_urls(urls, "./downloads")
+await downloader.start()
+```
+
+Batch download features:
+- Adaptive concurrency: dynamically adjusts concurrent downloads based on network speed
+- Small file priority: auto-identifies and prioritizes small files for better UX
+- Connection pooling: shared connection pool reduces overhead
+- Batch probe: parallel HEAD requests for file info
+- Smart chunking: auto-selects optimal chunk strategy based on file size
+
 ## Custom Headers
 
 ```python
@@ -314,6 +359,86 @@ path = await download_file(
     filename: str | None = None,
     config: DownloadConfig | None = None,
 ) -> Path
+```
+
+### batch_download_sync
+
+```python
+from littledl import batch_download_sync
+
+results = batch_download_sync(
+    urls: list[str],
+    save_path: str = "./downloads",
+    config: DownloadConfig | None = None,
+    max_concurrent_files: int = 5,
+    max_concurrent_chunks_per_file: int = 4,
+) -> list[tuple[str, Path | None, str | None]]
+# Returns [(url, path, error), ...]
+```
+
+### BatchDownloader
+
+```python
+from littledl import BatchDownloader
+
+downloader = BatchDownloader(
+    config: DownloadConfig | None = None,
+    max_concurrent_files: int = 5,
+    max_concurrent_chunks_per_file: int = 4,
+    enable_adaptive_concurrency: bool = True,
+    enable_small_file_priority: bool = True,
+)
+
+await downloader.add_url(url, save_path, filename, priority)
+await downloader.add_urls(urls, save_path)
+downloader.set_progress_callback(callback)
+downloader.set_file_complete_callback(callback)
+await downloader.start()
+await downloader.pause()
+await downloader.resume()
+await downloader.cancel()
+await downloader.stop()
+
+task = downloader.get_task(task_id)
+tasks = downloader.get_all_tasks()
+progress = downloader.get_progress()
+stats = downloader.get_stats()
+```
+
+### FileTask
+
+```python
+from littledl import FileTask
+
+# Properties:
+task.task_id       # Unique task ID
+task.url           # Download URL
+task.filename      # Output filename
+task.status        # FileTaskStatus enum
+task.file_size     # Total file size
+task.downloaded    # Downloaded bytes
+task.speed         # Current speed
+task.progress      # Progress percentage
+task.error         # Error message if failed
+task.is_small_file # True if < 5MB
+task.is_large_file # True if > 100MB
+```
+
+### BatchProgress
+
+```python
+from littledl import BatchProgress
+
+# Properties:
+progress.total_files      # Total number of files
+progress.completed_files  # Completed files count
+progress.failed_files     # Failed files count
+progress.active_files     # Currently downloading count
+progress.total_bytes      # Total bytes to download
+progress.downloaded_bytes # Downloaded bytes
+progress.overall_speed    # Current download speed
+progress.eta             # Estimated seconds remaining
+progress.progress        # Overall progress percentage
 ```
 
 ## Enums

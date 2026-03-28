@@ -72,9 +72,7 @@ class ProgressCallbackAdapter:
             return "legacy"
 
         positional = [
-            p
-            for p in params
-            if p.kind in (inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD)
+            p for p in params if p.kind in (inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD)
         ]
 
         if len(positional) >= 4:
@@ -324,7 +322,11 @@ class H2MultiPlexDownloader:
                         self._download_speed = bytes_in_chunk / elapsed
 
                     now = time.time()
-                    if progress_callback and self.config and (now - self._last_progress_emit) >= self._progress_interval:
+                    if (
+                        progress_callback
+                        and self.config
+                        and (now - self._last_progress_emit) >= self._progress_interval
+                    ):
                         self._last_progress_emit = now
                         progress_callback(
                             chunk.start_byte + chunk.downloaded,
@@ -367,6 +369,9 @@ class Downloader:
         self._cancelled = False
         self._lock = asyncio.Lock()
         self._h2_downloader: H2MultiPlexDownloader | None = None
+
+    def set_connection_pool(self, pool: ConnectionPool) -> None:
+        self._connection_pool = pool
 
     async def download(
         self,
