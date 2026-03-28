@@ -42,6 +42,10 @@ plugins:
       fallback_to_default: true
       reconfigure_material: true
       reconfigure_search: true
+      languages:
+        - locale: en
+          default: true
+        - locale: zh
   - llmstxt:
       markdown_description: |
         High-performance download library with IDM-style multi-threaded chunked downloading,
