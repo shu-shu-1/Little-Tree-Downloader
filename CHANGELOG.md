@@ -7,6 +7,19 @@ All notable changes to littledl will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.4.1 - 2026-03-29
+
+### Fixed
+
+- Fixed `httpx.Timeout` initialization in `probe_url` missing `write` and `pool` parameters
+- Fixed `asyncio.run()` cannot be called from a running event loop in `run_download`
+- Fixed filename fallback when server doesn't send `Content-Disposition` header (CDN downloads defaulting to `download.bin`)
+- Fixed `--temp-dir` CLI option not wired to `DownloadConfig`
+
+### Added
+
+- `--temp-dir` CLI option to specify temporary directory for download temp files
+
 ## 0.4.0 - 2026-03-29
 
 ### Added

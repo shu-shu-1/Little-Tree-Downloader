@@ -9,7 +9,7 @@ from typing import Any, TextIO
 
 import httpx
 
-from . import DownloadConfig, download_file_sync
+from . import DownloadConfig, download_file
 from .batch import BatchDownloader, FileTaskStatus
 from .i18n import gettext as _
 from .strategy import DownloadStyle, StrategySelector
@@ -78,13 +78,20 @@ def parse_args(args: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--quiet", "-q", dest="quiet", action="store_true", help=_("Quiet mode (minimal output)"))
     parser.add_argument("--force", dest="force", action="store_true", help=_("Force download even if file exists"))
     parser.add_argument(
+        "--temp-dir",
+        dest="temp_dir",
+        type=str,
+        default=None,
+        help=_("Temporary directory for download temp files"),
+    )
+    parser.add_argument(
         "--output-format",
         dest="output_format",
         choices=["auto", "json", "text"],
         default="auto",
         help=_("Output format: auto (根据环境), json (结构化), text (纯文本)"),
     )
-    parser.add_argument("--version", action="version", version="%(prog)s 0.3.0")
+    parser.add_argument("--version", action="version", version="%(prog)s 0.4.0")
     return parser.parse_args(args)
 
 
@@ -168,7 +175,12 @@ def read_urls_from_file(file_path: str) -> list[tuple[int, str]]:
 
 
 async def probe_url(url: str, config: DownloadConfig) -> dict[str, Any]:
-    timeout = httpx.Timeout(connect=config.connect_timeout, read=config.read_timeout)
+    timeout = httpx.Timeout(
+        connect=config.connect_timeout,
+        read=config.read_timeout,
+        write=config.write_timeout,
+        pool=config.write_timeout,
+    )
 
     async with httpx.AsyncClient(verify=config.verify_ssl) as client:
         headers = config.get_headers(url)
@@ -496,7 +508,7 @@ async def run_download(
             progress.update(downloaded, total, speed, eta)
 
     try:
-        path = download_file_sync(
+        path = await download_file(
             url=url,
             save_path=str(save_path.parent),
             filename=save_path.name,
@@ -717,6 +729,7 @@ def build_config_from_args(args: argparse.Namespace) -> DownloadConfig:
         max_chunks=args.max_chunks,
         timeout=args.timeout,
         verify_ssl=args.verify_ssl,
+        temp_dir=args.temp_dir,
     )
 
     if args.proxy:

@@ -7,6 +7,19 @@ English | 简体中文
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)，
 本项目遵循 [语义化版本](https://semver.org/spec/v2.0.0.html)。
 
+## 0.4.1 - 2026-03-29
+
+### 修复
+
+- 修复 `probe_url` 中 `httpx.Timeout` 缺少 `write` 和 `pool` 参数
+- 修复 `run_download` 中在已有事件循环中调用 `asyncio.run()` 的问题
+- 修复服务器未发送 `Content-Disposition` 时文件名回退逻辑（CDN 下载默认变成 `download.bin` 的问题）
+- 修复 `--temp-dir` CLI 选项未连接到 `DownloadConfig`
+
+### 新增
+
+- `--temp-dir` CLI 选项：指定临时文件目录
+
 ## 0.4.0 - 2026-03-29
 
 ### 新增

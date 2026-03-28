@@ -406,7 +406,7 @@ class Downloader:
                 return final_path
 
             download_id = generate_download_id(url)
-            temp_dir = final_path.parent
+            temp_dir = Path(self.config.temp_dir).expanduser().resolve() if self.config.temp_dir else final_path.parent
 
             self._resume_manager = ResumeManager(temp_dir, download_id)
 
@@ -513,6 +513,10 @@ class Downloader:
             from .utils import parse_content_disposition
 
             filename = parse_content_disposition(content_disposition)
+        if not filename:
+            from .utils import extract_filename_from_url
+
+            filename = extract_filename_from_url(url)
 
         if not filename and not supports_range:
             supports_range = await self._test_range_support(client, url)

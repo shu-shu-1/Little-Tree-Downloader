@@ -14,7 +14,7 @@ Verify installation:
 
 ```bash
 littledl --version
-# Output: littledl 0.3.0
+# Output: littledl 0.4.0
 ```
 
 ## Basic Usage
@@ -44,26 +44,27 @@ littledl -F urls.txt -o ./downloads
 
 ## Common Options
 
-| Option | Description | Default |
-|--------|-------------|---------|
-| `-o, --output PATH` | Output directory or file path | `./downloads` |
-| `-f, --filename NAME` | Specify output filename | Server-provided |
-| `-c, --max-chunks N` | Maximum parallel chunks | `16` |
-| `-t, --timeout SECONDS` | Request timeout | `300` |
-| `--proxy URL` | HTTP proxy | None |
-| `--speed-limit BYTES/s` | Limit download speed | Unlimited |
-| `--retry N` | Maximum retry attempts | `3` |
-| `-v, --verbose` | Verbose output | False |
+| Option                    | Description                   | Default         |
+| ------------------------- | ----------------------------- | --------------- |
+| `-o, --output PATH`     | Output directory or file path | `./downloads` |
+| `-f, --filename NAME`   | Specify output filename       | Server-provided |
+| `-c, --max-chunks N`    | Maximum parallel chunks       | `16`          |
+| `-t, --timeout SECONDS` | Request timeout               | `300`         |
+| `--proxy URL`           | HTTP proxy                    | None            |
+| `--speed-limit BYTES/s` | Limit download speed          | Unlimited       |
+| `--retry N`             | Maximum retry attempts        | `3`           |
+| `-v, --verbose`         | Verbose output                | False           |
+| `--temp-dir PATH`      | Temporary files directory     | Same as output  |
 
 ## Download Styles
 
-| Style | Description | Best For |
-|-------|-------------|----------|
-| `single` | Single-threaded download | Small files, servers without Range support |
-| `multi` | Multi-threaded segmented | Large files, stable connections |
-| `adaptive` | Auto-select based on conditions | Most use cases |
-| `hybrid_turbo` | Adaptive with AIMD control | Maximum speed, unstable networks |
-| `auto` | Let littledl analyze and decide | Recommended for beginners |
+| Style            | Description                     | Best For                                   |
+| ---------------- | ------------------------------- | ------------------------------------------ |
+| `single`       | Single-threaded download        | Small files, servers without Range support |
+| `multi`        | Multi-threaded segmented        | Large files, stable connections            |
+| `adaptive`     | Auto-select based on conditions | Most use cases                             |
+| `hybrid_turbo` | Adaptive with AIMD control      | Maximum speed, unstable networks           |
+| `auto`         | Let littledl analyze and decide | Recommended for beginners                  |
 
 ### Examples
 
@@ -104,11 +105,11 @@ littledl "https://example.com/file.zip" | head -c 100
 
 Use `--output-format` to control output style:
 
-| Format | Description |
-|--------|-------------|
+| Format   | Description                                         |
+| -------- | --------------------------------------------------- |
 | `auto` | Automatic (default) - TTY uses text, pipe uses JSON |
-| `text` | Human-readable text output |
-| `json` | Structured JSON for scripting |
+| `text` | Human-readable text output                          |
+| `json` | Structured JSON for scripting                       |
 
 ### JSON Output
 
@@ -158,13 +159,13 @@ Batch download JSON output:
 
 littledl uses specific exit codes for scripting:
 
-| Code | Meaning |
-|------|---------|
-| `0` | Success |
-| `1` | General error |
+| Code  | Meaning                       |
+| ----- | ----------------------------- |
+| `0` | Success                       |
+| `1` | General error                 |
 | `2` | URL error or invalid argument |
 | `3` | Download failed after retries |
-| `4` | Cancelled by user (Ctrl+C) |
+| `4` | Cancelled by user (Ctrl+C)    |
 
 Example in scripts:
 
@@ -236,9 +237,9 @@ littledl "https://example.com/file.zip" -s auto -i
 
 ## Environment Variables
 
-| Variable | Description |
-|----------|-------------|
-| `LANG` | Language selection (e.g., `zh_CN`, `en_US`) |
+| Variable | Description                                    |
+| -------- | ---------------------------------------------- |
+| `LANG` | Language selection (e.g.,`zh_CN`, `en_US`) |
 
 ## Next Steps
 
