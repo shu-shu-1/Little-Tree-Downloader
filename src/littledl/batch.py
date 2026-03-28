@@ -1,5 +1,6 @@
 import asyncio
 import contextlib
+import shutil
 import time
 from dataclasses import dataclass, field
 from enum import Enum
@@ -10,6 +11,8 @@ from .config import DownloadConfig
 from .connection import ConnectionPool
 from .downloader import Downloader
 from .exceptions import DownloadError
+from .global_pool import GlobalThreadPool
+from .reuse import FileReuseChecker, MultiSourceManager, SharedFileRegistry
 from .utils import generate_download_id, normalize_url, validate_url
 
 
@@ -42,6 +45,14 @@ class FileTask:
     supports_range: bool = True
     chunks: int = 1
     _lock: asyncio.Lock = field(default_factory=asyncio.Lock)
+
+    sources: list[str] = field(default_factory=list)
+    current_source_index: int = 0
+    source_manager: MultiSourceManager | None = None
+
+    existing_file_path: Path | None = None
+    is_existing_reused: bool = False
+    existing_file_checked: bool = False
 
     @property
     def progress(self) -> float:
@@ -760,3 +771,509 @@ def batch_download_sync(
             **kwargs,
         )
     )
+
+
+class EnhancedBatchDownloader:
+    """
+    增强版批量下载器 - 基于PCL高速下载策略
+
+    PCL优化策略集成：
+    1. 全局线程池控制 - 所有文件共享线程资源
+    2. 动态负载均衡 - 速度慢时自动追加线程
+    3. 多源备份 - 支持多个备用URL
+    4. 已有文件复用 - 避免重复下载
+    5. 自适应速度限制 - 根据实际速度自动调整
+    """
+
+    def __init__(
+        self,
+        config: DownloadConfig | None = None,
+        max_concurrent_files: int = 5,
+        max_total_threads: int = 15,
+        small_file_threshold: int = 1 * 1024 * 1024,
+        enable_existing_file_reuse: bool = True,
+        enable_multi_source: bool = True,
+        enable_adaptive_speed: bool = True,
+    ) -> None:
+        self.config = config or DownloadConfig()
+        self.max_concurrent_files = max_concurrent_files
+        self.max_total_threads = max_total_threads
+        self.small_file_threshold = small_file_threshold
+        self.enable_existing_file_reuse = enable_existing_file_reuse
+        self.enable_multi_source = enable_multi_source
+        self.enable_adaptive_speed = enable_adaptive_speed
+
+        self._global_pool = GlobalThreadPool(
+            max_total_threads=max_total_threads,
+            min_speed_threshold=256 * 1024,
+        )
+
+        self._file_reuse_checker = FileReuseChecker() if enable_existing_file_reuse else None
+        self._shared_registry = SharedFileRegistry()
+
+        self._scheduler = FileScheduler(
+            max_concurrent_files=max_concurrent_files,
+            max_concurrent_chunks_per_file=4,
+            small_file_threshold=small_file_threshold,
+        )
+
+        self._connection_pool: ConnectionPool | None = None
+        self._running = False
+        self._paused = False
+        self._cancelled = False
+        self._lock = asyncio.Lock()
+        self._tasks: dict[str, FileTask] = {}
+        self._progress_callback: Any = None
+        self._file_complete_callback: Any = None
+
+        self._thread_check_task: asyncio.Task[None] | None = None
+        self._speed_monitor_task: asyncio.Task[None] | None = None
+        self._total_speed: float = 0.0
+
+        self._download_stats = {
+            "total_files": 0,
+            "completed_files": 0,
+            "failed_files": 0,
+            "reused_files": 0,
+            "bytes_saved": 0,
+            "total_chunks": 0,
+            "dynamic_chunks_added": 0,
+        }
+
+    async def add_url(
+        self,
+        url: str,
+        save_path: str | Path = "./downloads",
+        filename: str | None = None,
+        priority: int = 0,
+        backup_urls: list[str] | None = None,
+    ) -> str:
+        url = normalize_url(url)
+        if not validate_url(url):
+            raise DownloadError(f"Invalid URL: {url}")
+
+        task_id = generate_download_id(url)
+        save_path = Path(save_path).expanduser().resolve()
+
+        sources = [url]
+        if backup_urls:
+            sources.extend(backup_urls)
+
+        task = FileTask(
+            task_id=task_id,
+            url=url,
+            save_path=save_path,
+            filename=filename,
+            priority=priority,
+            sources=sources,
+        )
+
+        if self.enable_multi_source and len(sources) > 1:
+            task.source_manager = MultiSourceManager()
+            for i, src in enumerate(sources):
+                task.source_manager.add_source(src, priority=len(sources) - i)
+
+        self._tasks[task_id] = task
+        await self._scheduler.add_task(task)
+        self._download_stats["total_files"] += 1
+        return task_id
+
+    async def add_urls(
+        self,
+        urls: list[str],
+        save_path: str | Path = "./downloads",
+    ) -> list[str]:
+        task_ids = []
+        for url in urls:
+            task_id = await self.add_url(url, save_path)
+            task_ids.append(task_id)
+        return task_ids
+
+    def set_progress_callback(self, callback: Any) -> None:
+        self._progress_callback = callback
+
+    def set_file_complete_callback(self, callback: Any) -> None:
+        self._file_complete_callback = callback
+
+    async def start(self) -> None:
+        if self._running:
+            return
+        self._running = True
+
+        self._connection_pool = ConnectionPool(self.config)
+        await self._connection_pool.initialize()
+
+        await self._global_pool.start()
+
+        self._thread_check_task = asyncio.create_task(self._thread_check_loop())
+        self._speed_monitor_task = asyncio.create_task(self._speed_monitor_loop())
+
+        await self._batch_probe_all()
+        await self._download_loop()
+
+    async def _batch_probe_all(self) -> None:
+        pending_tasks = [t for t in self._tasks.values() if t.status == FileTaskStatus.PENDING]
+        if not pending_tasks:
+            return
+
+        probe_semaphore = asyncio.Semaphore(min(20, len(pending_tasks)))
+
+        async def probe_single(task: FileTask) -> None:
+            async with probe_semaphore:
+                if self._cancelled:
+                    return
+                try:
+                    await self._probe_single(task)
+                except Exception as e:
+                    await task.mark_failed(str(e))
+                    await self._scheduler.task_failed(task)
+
+        await asyncio.gather(*[probe_single(t) for t in pending_tasks], return_exceptions=True)
+
+    async def _probe_single(self, task: FileTask) -> None:
+        await task.mark_probing()
+
+        client = self._connection_pool.client if self._connection_pool else None
+        if not client:
+            raise DownloadError("Connection pool not initialized")
+
+        from .connection import RequestBuilder
+
+        builder = RequestBuilder(self.config)
+        request_config = builder.build_head_request(task.url)
+
+        try:
+            response = await client.head(
+                request_config["url"],
+                headers=request_config["headers"],
+                follow_redirects=request_config["follow_redirects"],
+            )
+        except Exception as e:
+            raise DownloadError(f"Failed to probe URL: {e}") from None
+
+        if response.status_code >= 400:
+            raise DownloadError(f"HTTP {response.status_code}")
+
+        task.file_size = (
+            int(response.headers.get("Content-Length", 0)) if response.headers.get("Content-Length") else -1
+        )
+        task.supports_range = response.headers.get("Accept-Ranges", "").lower() == "bytes"
+
+        content_disposition = response.headers.get("Content-Disposition")
+        if content_disposition and not task.filename:
+            from .utils import parse_content_disposition
+
+            task.filename = parse_content_disposition(content_disposition)
+
+        if not task.filename:
+            from .utils import determine_filename
+
+            task.filename = determine_filename(task.url, content_disposition, response.headers.get("Content-Type"))
+
+        if task.supports_range and task.file_size > 0:
+            task.chunks = self._scheduler.get_optimal_chunks_for_task(task)
+
+        if self.enable_existing_file_reuse and self._file_reuse_checker and task.file_size > 0:
+            target_path = task.save_path / (task.filename or "unknown")
+            existing = await self._check_existing_file(target_path, task.file_size)
+            if existing:
+                task.existing_file_path = existing
+                task.is_existing_reused = True
+
+        task.status = FileTaskStatus.PENDING
+
+    async def _check_existing_file(self, target_path: Path, expected_size: int) -> Path | None:
+        if not self._file_reuse_checker:
+            return None
+
+        if not target_path.exists():
+            search_paths = []
+            for task in self._tasks.values():
+                if task.save_path != target_path.parent:
+                    search_paths.append(task.save_path)
+
+            return self._file_reuse_checker.find_existing_file(
+                target_path,
+                search_paths=search_paths if search_paths else None,
+                expected_size=expected_size,
+            )
+
+        error = self._file_reuse_checker.check_file(target_path, expected_size)
+        if error is None:
+            return target_path
+
+        return None
+
+    async def _download_loop(self) -> None:
+        download_tasks: dict[str, asyncio.Task[None]] = {}
+        last_progress_time = 0.0
+        progress_interval = 0.5
+
+        async def download_file(task: FileTask) -> None:
+            try:
+                await self._download_single_file(task)
+            except Exception as e:
+                if not task.is_failed:
+                    await task.mark_failed(str(e))
+                    await self._scheduler.task_failed(task)
+
+        while self._running:
+            if self._cancelled:
+                for t in download_tasks.values():
+                    t.cancel()
+                break
+
+            while self._paused:
+                await asyncio.sleep(0.1)
+                if self._cancelled:
+                    break
+
+            while len(download_tasks) < self.max_concurrent_files:
+                task = await self._scheduler.get_next_task()
+                if task is None:
+                    break
+
+                if task.is_existing_reused and task.existing_file_path:
+                    await self._reuse_existing_file(task)
+                    continue
+
+                download_tasks[task.task_id] = asyncio.create_task(download_file(task))
+
+            done_tasks = [tid for tid, t in download_tasks.items() if t.done()]
+            for tid in done_tasks:
+                task = download_tasks.pop(tid)
+                with contextlib.suppress(asyncio.CancelledError):
+                    await task
+
+            now = time.time()
+            if self._progress_callback and (now - last_progress_time) >= progress_interval:
+                last_progress_time = now
+                progress = self._scheduler.get_progress()
+                self._total_speed = progress.overall_speed
+                try:
+                    result = self._progress_callback(
+                        progress.completed_files,
+                        progress.total_files,
+                        progress.overall_speed,
+                        int(progress.eta) if progress.eta > 0 else -1,
+                    )
+                    if asyncio.iscoroutine(result):
+                        await result
+                except Exception:
+                    pass
+
+            if not download_tasks and self._scheduler.pending_count == 0 and self._scheduler.active_count == 0:
+                break
+
+            await asyncio.sleep(0.05)
+
+        if download_tasks:
+            await asyncio.gather(*download_tasks.values(), return_exceptions=True)
+
+    async def _reuse_existing_file(self, task: FileTask) -> None:
+        if not task.existing_file_path or not task.is_existing_reused:
+            return
+
+        target_path = task.save_path / (task.filename or "unknown")
+
+        try:
+            if task.existing_file_path != target_path:
+                task.save_path.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(task.existing_file_path, target_path)
+
+            await task.mark_completed()
+            await self._scheduler.task_completed(task)
+
+            self._download_stats["reused_files"] += 1
+            if task.file_size > 0:
+                self._download_stats["bytes_saved"] += task.file_size
+
+            if self._file_reuse_checker:
+                stats = self._file_reuse_checker.get_stats()
+
+            if self._file_complete_callback:
+                with contextlib.suppress(Exception):
+                    result = self._file_complete_callback(task)
+                    if asyncio.iscoroutine(result):
+                        await result
+
+        except Exception as e:
+            task.is_existing_reused = False
+            task.existing_file_path = None
+
+    async def _download_single_file(self, task: FileTask) -> None:
+        await task.mark_downloading()
+
+        await self._global_pool.acquire_thread(task.task_id)
+
+        try:
+            file_config = DownloadConfig(
+                enable_chunking=self.config.enable_chunking and task.supports_range,
+                max_chunks=task.chunks,
+                min_chunks=1,
+                buffer_size=self.config.buffer_size,
+                timeout=self.config.timeout,
+                connect_timeout=self.config.connect_timeout,
+                read_timeout=self.config.read_timeout,
+                write_timeout=self.config.write_timeout,
+                resume=self.config.resume,
+                verify_ssl=self.config.verify_ssl,
+                user_agent=self.config.user_agent,
+                headers=self.config.headers.copy(),
+                proxy=self.config.proxy,
+                speed_limit=self.config.speed_limit,
+                retry=self.config.retry,
+                follow_redirects=self.config.follow_redirects,
+                max_redirects=self.config.max_redirects,
+            )
+
+            downloader = Downloader(config=file_config)
+            if self._connection_pool:
+                downloader.set_connection_pool(self._connection_pool)
+
+            url = task.url
+            if task.source_manager:
+                source_info = task.source_manager.get_next_available()
+                if source_info:
+                    url = source_info["url"]
+
+            await downloader.download(
+                url=url,
+                save_path=str(task.save_path),
+                filename=task.filename,
+                resume=self.config.resume,
+            )
+
+            await task.mark_completed()
+            await self._scheduler.task_completed(task)
+            self._download_stats["completed_files"] += 1
+
+            if task.source_manager:
+                task.source_manager.mark_source_success(url)
+
+            if self._file_complete_callback:
+                with contextlib.suppress(Exception):
+                    result = self._file_complete_callback(task)
+                    if asyncio.iscoroutine(result):
+                        await result
+
+        except Exception as e:
+            if task.source_manager:
+                task.source_manager.mark_source_failed(task.url, str(e))
+
+            if task.source_manager and task.source_manager.has_available_source:
+                next_source = task.source_manager.get_next_available()
+                if next_source:
+                    task.retry_count += 1
+                    if task.retry_count < self.config.retry.max_retries:
+                        await task.reset_for_retry()
+                        await self._scheduler.add_task(task)
+                        return
+
+            await task.mark_failed(str(e))
+            await self._scheduler.task_failed(task)
+            self._download_stats["failed_files"] += 1
+        finally:
+            await self._global_pool.release_thread(task.task_id)
+
+    async def _thread_check_loop(self) -> None:
+        while self._running:
+            try:
+                await asyncio.sleep(0.02)
+
+                if not self._global_pool.should_append_thread(""):
+                    continue
+
+                active_tasks = [t for t in self._tasks.values() if t.is_active]
+                for task in active_tasks:
+                    if not self._global_pool.is_full:
+                        current_chunks = self._scheduler.get_optimal_chunks_for_task(task)
+                        allocated = self._global_pool.get_thread_allocation(task.task_id)
+
+                        if allocated < current_chunks:
+                            self._download_stats["dynamic_chunks_added"] += 1
+
+            except asyncio.CancelledError:
+                break
+            except Exception:
+                pass
+
+    async def _speed_monitor_loop(self) -> None:
+        while self._running:
+            try:
+                await asyncio.sleep(0.1)
+
+                self._global_pool.record_speed(self._total_speed)
+
+            except asyncio.CancelledError:
+                break
+            except Exception:
+                pass
+
+    async def pause(self) -> None:
+        async with self._lock:
+            self._paused = True
+            await self._scheduler.pause()
+
+    async def resume(self) -> None:
+        async with self._lock:
+            self._paused = False
+            await self._scheduler.resume()
+
+    async def cancel(self) -> None:
+        async with self._lock:
+            self._cancelled = True
+            self._running = False
+            for task in self._tasks.values():
+                if task.is_active:
+                    await task.mark_cancelled()
+                    await self._scheduler.task_cancelled(task)
+
+    async def stop(self) -> None:
+        self._running = False
+        if self._thread_check_task:
+            self._thread_check_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await self._thread_check_task
+        if self._speed_monitor_task:
+            self._speed_monitor_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await self._speed_monitor_task
+        await self._global_pool.stop()
+        if self._connection_pool:
+            await self._connection_pool.close()
+
+    def get_task(self, task_id: str) -> FileTask | None:
+        return self._tasks.get(task_id)
+
+    def get_all_tasks(self) -> list[FileTask]:
+        return self._scheduler.get_all_tasks()
+
+    def get_progress(self) -> BatchProgress:
+        return self._scheduler.get_progress()
+
+    def get_stats(self) -> dict[str, Any]:
+        progress = self.get_progress()
+        pool_stats = self._global_pool.get_stats()
+
+        return {
+            "total_files": self._download_stats["total_files"],
+            "completed_files": self._download_stats["completed_files"],
+            "failed_files": self._download_stats["failed_files"],
+            "reused_files": self._download_stats["reused_files"],
+            "bytes_saved": self._download_stats["bytes_saved"],
+            "active_files": progress.active_files,
+            "pending_files": self._scheduler.pending_count,
+            "total_bytes": progress.total_bytes,
+            "downloaded_bytes": progress.downloaded_bytes,
+            "progress_percent": progress.progress,
+            "overall_speed": progress.overall_speed,
+            "total_threads": pool_stats.total_threads,
+            "active_threads": pool_stats.active_threads,
+            "dynamic_chunks_added": self._download_stats["dynamic_chunks_added"],
+        }
+
+    def get_file_reuse_stats(self) -> dict[str, Any] | None:
+        if self._file_reuse_checker:
+            return self._file_reuse_checker.get_stats()
+        return None

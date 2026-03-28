@@ -23,6 +23,23 @@ MIME_SIGNATURES: dict[bytes, str] = {
     b"\x50\x4b\x03\x04\x14\x00\x00\x00": ".pptx",
 }
 
+INVALID_FILENAME_CHARS = re.compile(r'[<>:"|?*\x00-\x1f]')
+PATH_TRAVERSAL_PATTERN = re.compile(r"(^|/)\.\.(/|$)")
+
+
+def safe_filename(filename: str | None, default: str = "download") -> str:
+    if not filename:
+        return default
+    filename = filename.strip()
+    if not filename or filename in (".", ".."):
+        return default
+    filename = INVALID_FILENAME_CHARS.sub("_", filename)
+    filename = PATH_TRAVERSAL_PATTERN.sub("_", filename)
+    if filename.startswith("."):
+        filename = "_" + filename[1:]
+    return filename[:255] or default
+
+
 OFFICE_MIME_MAP: dict[str, str] = {
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": ".xlsx",
@@ -61,7 +78,7 @@ def format_time(seconds: float) -> str:
 
 
 def generate_download_id(url: str) -> str:
-    url_hash = hashlib.md5(url.encode()).hexdigest()[:12]
+    url_hash = hashlib.sha256(url.encode()).hexdigest()[:12]
     return f"dl_{url_hash}"
 
 
@@ -106,10 +123,10 @@ def parse_content_disposition(content_disposition: str | None) -> str | None:
         value = match_star[-1].strip().strip('"').strip("'")
         if "''" in value:
             _, value = value.split("''", 1)
-        return unquote(value)
+        return safe_filename(unquote(value))
     match = re.findall(r"filename\s*=\s*([^;]+)", content_disposition, re.IGNORECASE)
     if match:
-        return match[-1].strip().strip('"').strip("'")
+        return safe_filename(match[-1].strip().strip('"').strip("'"))
     return None
 
 
@@ -134,7 +151,7 @@ def extract_filename_from_url(url: str) -> str | None:
     parsed = urlparse(url)
     path = unquote(parsed.path)
     filename = Path(path).name
-    return filename if filename else None
+    return safe_filename(filename) if filename else None
 
 
 def extract_filename_from_query(url: str) -> str | None:
@@ -319,3 +336,43 @@ class MovingAverage:
         if older_avg == 0:
             return 0.0
         return (recent_avg - older_avg) / older_avg
+
+
+def is_path_safe(save_path: Path, final_path: Path, allowed_dir: Path) -> bool:
+    try:
+        resolved = final_path.resolve()
+        allowed = allowed_dir.resolve()
+        return str(resolved).startswith(str(allowed))
+    except Exception:
+        return False
+
+
+def resolve_download_path(save_path: Path, filename: str | None, allowed_dir: Path | None = None) -> tuple[Path, Path]:
+    save_path = save_path.expanduser().resolve()
+    if filename:
+        filename = safe_filename(filename, "download")
+    if save_path.is_dir():
+        if not filename:
+            filename = "download.bin"
+        final_path = save_path / filename
+    else:
+        final_path = save_path
+        save_path = final_path.parent
+    if allowed_dir:
+        resolved_final = final_path.resolve()
+        resolved_allowed = allowed_dir.resolve()
+        if not str(resolved_final).startswith(str(resolved_allowed)):
+            raise ValueError(f"Path {resolved_final} is outside allowed directory {resolved_allowed}")
+    return save_path, final_path
+
+
+def calculate_file_hash(file_path: Path, algorithm: str = "md5") -> str:
+    """计算文件哈希值"""
+    hash_func = hashlib.new(algorithm)
+    with open(file_path, "rb") as f:
+        while True:
+            data = f.read(1024 * 1024)
+            if not data:
+                break
+            hash_func.update(data)
+    return hash_func.hexdigest()

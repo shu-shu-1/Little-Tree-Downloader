@@ -20,6 +20,10 @@ DEFAULT_RESPLIT_COOLDOWN = 5.0
 DEFAULT_ADAPTIVE_INTERVAL = 3.0
 DEFAULT_LOW_SPEED_LIMIT = 1024
 DEFAULT_LOW_SPEED_TIME = 30
+DEFAULT_HYBRID_TARGET_CHUNK_TIME = 1.5
+DEFAULT_HYBRID_SPEEDUP_THRESHOLD = 0.08
+DEFAULT_HYBRID_SLOW_CHUNK_RATIO = 0.45
+DEFAULT_HYBRID_MIN_REMAINING_BYTES = 512 * 1024
 
 
 class ProxyMode(Enum):
@@ -185,6 +189,14 @@ class DownloadConfig:
     resplit_cooldown: float = DEFAULT_RESPLIT_COOLDOWN
     enable_adaptive: bool = True
     adaptive_interval: float = DEFAULT_ADAPTIVE_INTERVAL
+    enable_hybrid_turbo: bool = True
+    hybrid_target_chunk_time: float = DEFAULT_HYBRID_TARGET_CHUNK_TIME
+    hybrid_aimd_increase_step: int = 1
+    hybrid_aimd_decrease_factor: float = 0.5
+    hybrid_speedup_threshold: float = DEFAULT_HYBRID_SPEEDUP_THRESHOLD
+    hybrid_slow_chunk_ratio: float = DEFAULT_HYBRID_SLOW_CHUNK_RATIO
+    hybrid_min_remaining_bytes: int = DEFAULT_HYBRID_MIN_REMAINING_BYTES
+    hybrid_max_resplit_per_chunk: int = 2
     enable_predictive_scheduling: bool = True
     enable_connection_health_check: bool = True
     health_check_interval: float = 10.0
@@ -231,8 +243,56 @@ class DownloadConfig:
             self.chunk_size = self.max_chunk_size
         if self.resplit_threshold <= 0 or self.resplit_threshold >= 1:
             self.resplit_threshold = 0.5
+        if self.hybrid_target_chunk_time <= 0:
+            self.hybrid_target_chunk_time = DEFAULT_HYBRID_TARGET_CHUNK_TIME
+        if self.hybrid_aimd_increase_step < 1:
+            self.hybrid_aimd_increase_step = 1
+        if self.hybrid_aimd_decrease_factor <= 0 or self.hybrid_aimd_decrease_factor >= 1:
+            self.hybrid_aimd_decrease_factor = 0.5
+        if self.hybrid_speedup_threshold <= 0:
+            self.hybrid_speedup_threshold = DEFAULT_HYBRID_SPEEDUP_THRESHOLD
+        if self.hybrid_slow_chunk_ratio <= 0 or self.hybrid_slow_chunk_ratio >= 1:
+            self.hybrid_slow_chunk_ratio = DEFAULT_HYBRID_SLOW_CHUNK_RATIO
+        if self.hybrid_min_remaining_bytes < 64 * 1024:
+            self.hybrid_min_remaining_bytes = DEFAULT_HYBRID_MIN_REMAINING_BYTES
+        if self.hybrid_max_resplit_per_chunk < 1:
+            self.hybrid_max_resplit_per_chunk = 1
         if self.proxy is None:
             self.proxy = ProxyConfig()
+
+    def apply_style(self, style: Any) -> "DownloadConfig":
+        """Apply a download style to configuration parameters."""
+        style_name = getattr(style, "name", str(style)).upper()
+
+        if style_name == "SINGLE":
+            self.enable_chunking = False
+            self.min_chunks = 1
+            self.max_chunks = 1
+            self.enable_adaptive = False
+            self.enable_smart_resplit = False
+            self.enable_hybrid_turbo = False
+        elif style_name == "MULTI":
+            self.enable_chunking = True
+            self.min_chunks = max(2, self.min_chunks)
+            self.enable_adaptive = False
+            self.enable_smart_resplit = False
+            self.enable_hybrid_turbo = False
+        elif style_name == "ADAPTIVE":
+            self.enable_chunking = True
+            self.enable_adaptive = True
+            self.enable_smart_resplit = True
+            self.enable_hybrid_turbo = False
+        elif style_name == "HYBRID_TURBO":
+            self.enable_chunking = True
+            self.enable_adaptive = True
+            self.enable_smart_resplit = True
+            self.enable_hybrid_turbo = True
+            self.hybrid_slow_chunk_ratio = min(self.hybrid_slow_chunk_ratio, 0.45)
+            self.hybrid_aimd_increase_step = max(1, self.hybrid_aimd_increase_step)
+            self.hybrid_aimd_decrease_factor = max(0.1, min(0.9, self.hybrid_aimd_decrease_factor))
+            self.adaptive_interval = min(self.adaptive_interval, 2.0)
+            
+        return self
 
     @property
     def speed_limit_bytes(self) -> int:
@@ -321,6 +381,7 @@ class DownloadConfig:
             "resume": self.resume,
             "verify_ssl": self.verify_ssl,
             "user_agent": self.user_agent,
+            "enable_hybrid_turbo": self.enable_hybrid_turbo,
         }
 
     @classmethod

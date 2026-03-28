@@ -3,6 +3,7 @@ from .batch import (
     AdaptiveConcurrencyController,
     BatchDownloader,
     BatchProgress,
+    EnhancedBatchDownloader,
     FileScheduler,
     FileTask,
     FileTaskStatus,
@@ -44,6 +45,7 @@ from .exceptions import (
     TimeoutError,
     ValidationError,
 )
+from .global_pool import GlobalThreadPool, SpeedAdaptiveController
 from .i18n import (
     LANGUAGE_ENV_VAR,
     get_available_languages,
@@ -56,8 +58,10 @@ from .i18n import (
 from .limiter import AdaptiveLimiter, SpeedLimiter, TokenBucketLimiter
 from .monitor import DownloadMonitor, DownloadStats
 from .proxy import ProxyDetector, ProxyInfo, ProxyManager
+from .reuse import FileReuseChecker, MultiSourceManager, SharedFileRegistry
 from .resume import DownloadMetadata, ResumeManager
 from .scheduler import AdaptiveChunkSizer, ConnectionOptimizer, SmartScheduler
+from .strategy import DownloadStyle, DynamicStyleAllocator, FileProfile, NetworkProfile, StrategySelector, StyleDecision
 from .utils import SpeedCalculator
 from .worker import DownloadWorker, WorkerPool
 from .writer import BufferedFileWriter, DirectFileWriter
@@ -67,6 +71,7 @@ __all__ = [
     "download_file",
     "download_file_sync",
     "BatchDownloader",
+    "EnhancedBatchDownloader",
     "BatchProgress",
     "FileScheduler",
     "FileTask",
@@ -112,6 +117,12 @@ __all__ = [
     "SpeedCalculator",
     "BufferedFileWriter",
     "DirectFileWriter",
+    "DownloadStyle",
+    "StrategySelector",
+    "DynamicStyleAllocator",
+    "FileProfile",
+    "NetworkProfile",
+    "StyleDecision",
     "DownloadError",
     "NetworkError",
     "ConnectionError",
@@ -130,6 +141,11 @@ __all__ = [
     "ConfigurationError",
     "ValidationError",
     "CancelledError",
+    "GlobalThreadPool",
+    "SpeedAdaptiveController",
+    "FileReuseChecker",
+    "MultiSourceManager",
+    "SharedFileRegistry",
     "gettext",
     "ngettext",
     "pgettext",

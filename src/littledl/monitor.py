@@ -30,6 +30,7 @@ class DownloadStats:
     start_time: float = 0.0
     elapsed_time: float = 0.0
     is_active: bool = False
+    unknown_size: bool = False
 
     @property
     def remaining(self) -> int:
@@ -132,7 +133,7 @@ class DownloadMonitor:
         self,
         total_size: int = 0,
         update_interval: float = 0.5,
-        progress_callback: Callable[[int, int, float, int], None] | None = None,
+        progress_callback: Callable[..., None] | None = None,
         speed_window_size: int = 10,
     ) -> None:
         self.total_size = total_size
@@ -156,13 +157,19 @@ class DownloadMonitor:
         return self._downloaded
 
     @property
+    def unknown_size(self) -> bool:
+        return self.total_size <= 0
+
+    @property
     def progress(self) -> float:
         if self.total_size <= 0:
-            return 0.0
+            return -1.0
         return (self._downloaded / self.total_size) * 100
 
     @property
     def eta(self) -> float:
+        if self.total_size <= 0:
+            return -1.0
         speed = self._speed_monitor.average_speed
         if speed <= 0:
             return -1.0
@@ -227,6 +234,7 @@ class DownloadMonitor:
             start_time=self._start_time,
             elapsed_time=self.elapsed_time,
             is_active=self._is_active,
+            unknown_size=self.unknown_size,
         )
 
     def _maybe_notify_callback(self) -> None:
@@ -240,6 +248,7 @@ class DownloadMonitor:
                 self.total_size,
                 self._speed_monitor.current_speed,
                 int(self.eta),
+                unknown_size=self.unknown_size,
             )
             if inspect.isawaitable(result):
                 asyncio.create_task(result)

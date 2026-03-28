@@ -20,7 +20,7 @@ from .limiter import SpeedLimiter
 from .monitor import DownloadMonitor
 from .resume import ResumeManager
 from .scheduler import SmartScheduler
-from .utils import generate_download_id, normalize_url, validate_url
+from .utils import generate_download_id, normalize_url, resolve_download_path, safe_filename, validate_url
 from .writer import BufferedFileWriter
 
 
@@ -33,6 +33,7 @@ class ProgressEvent:
     progress: float
     remaining: int
     timestamp: float
+    unknown_size: bool = False
 
 
 @dataclass(frozen=True)
@@ -87,12 +88,12 @@ class ProgressCallbackAdapter:
 
         return "legacy"
 
-    async def emit(self, downloaded: int, total: int, speed: float, eta: int) -> None:
+    async def emit(self, downloaded: int, total: int, speed: float, eta: int, unknown_size: bool = False) -> None:
         if self._callback is None:
             return
 
-        total_for_calc = max(total, 0)
-        progress = (downloaded / total_for_calc) * 100 if total_for_calc > 0 else 0.0
+        total_for_calc = max(total, 0) if not unknown_size else 0
+        progress = (downloaded / total_for_calc) * 100 if total_for_calc > 0 else -1.0
         event = ProgressEvent(
             downloaded=downloaded,
             total=total,
@@ -101,6 +102,7 @@ class ProgressCallbackAdapter:
             progress=progress,
             remaining=max(total_for_calc - downloaded, 0),
             timestamp=time.time(),
+            unknown_size=unknown_size,
         )
         payload = {
             "downloaded": event.downloaded,
@@ -110,6 +112,7 @@ class ProgressCallbackAdapter:
             "progress": event.progress,
             "remaining": event.remaining,
             "timestamp": event.timestamp,
+            "unknown_size": event.unknown_size,
         }
 
         result: Any
@@ -125,9 +128,9 @@ class ProgressCallbackAdapter:
         if inspect.isawaitable(result):
             await result
 
-    def __call__(self, downloaded: int, total: int, speed: float, eta: int) -> Any:
+    def __call__(self, downloaded: int, total: int, speed: float, eta: int, unknown_size: bool = False) -> Any:
         # Keep a sync signature so monitor can call it and schedule awaitables.
-        return self.emit(downloaded, total, speed, eta)
+        return self.emit(downloaded, total, speed, eta, unknown_size)
 
 
 class ChunkCallbackAdapter:
@@ -407,7 +410,10 @@ class Downloader:
             self._validate_file_size_constraints(file_size)
 
             final_filename = filename or suggested_filename
-            final_path = save_path / final_filename if save_path.is_dir() else save_path
+            final_filename = safe_filename(final_filename, "download.bin")
+            save_path, final_path = resolve_download_path(
+                save_path, final_filename, save_path if save_path.is_dir() else None
+            )
 
             if final_path.exists() and not resume and not self.config.overwrite:
                 logger.info(f"File already exists: {final_path}")
@@ -580,11 +586,14 @@ class Downloader:
                     await f.write(chunk_data)
                     downloaded += len(chunk_data)
 
-                    if progress_callback and total_size > 0:
+                    if progress_callback:
                         elapsed = time.time() - start_time
                         speed = downloaded / elapsed if elapsed > 0 else 0
-                        eta = (total_size - downloaded) / speed if speed > 0 else -1
-                        await progress_callback.emit(downloaded, total_size, speed, int(eta))
+                        if total_size > 0:
+                            eta = (total_size - downloaded) / speed if speed > 0 else -1
+                            await progress_callback.emit(downloaded, total_size, speed, int(eta), unknown_size=False)
+                        else:
+                            await progress_callback.emit(downloaded, -1, speed, -1, unknown_size=True)
 
         with contextlib.suppress(Exception):
             temp_path.rename(output_path)
@@ -647,6 +656,11 @@ class Downloader:
                 if not self._h2_downloader:
                     return chunk.index, False, "Downloader not initialized"
 
+                if self._scheduler:
+                    self._scheduler.register_worker()
+                if self._monitor and self._scheduler:
+                    self._monitor.set_active_workers(self._scheduler.get_stats().active_workers)
+
                 try:
                     await self._h2_downloader.download_chunk(
                         chunk=chunk,
@@ -656,6 +670,11 @@ class Downloader:
                     return chunk.index, True, None
                 except Exception as e:
                     return chunk.index, False, str(e)
+                finally:
+                    if self._scheduler:
+                        self._scheduler.unregister_worker()
+                    if self._monitor and self._scheduler:
+                        self._monitor.set_active_workers(self._scheduler.get_stats().active_workers)
 
         checkpoint_task: asyncio.Task[None] | None = None
 

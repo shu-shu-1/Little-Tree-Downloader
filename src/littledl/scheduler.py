@@ -42,6 +42,8 @@ class SmartScheduler:
         self._lock = asyncio.Lock()
         self._current_workers: int = 0
         self._target_workers: int = 0
+        self._last_speed: float = 0.0
+        self._chunk_resplit_count: dict[int, int] = {}
 
     @property
     def max_workers(self) -> int:
@@ -86,26 +88,80 @@ class SmartScheduler:
         stats = self.monitor.get_stats()
         current_speed = stats.speed
         self._speed_average.add(current_speed)
-        self._speed_average.get_average()
+        avg_speed = self._speed_average.get_average()
         trend = self._speed_average.get_trend()
+        previous_speed = self._last_speed
+        self._last_speed = current_speed
         now = time.time()
-        cooldown = 5.0
+        cooldown = max(2.0, self.config.adaptive_interval)
         if now - self._last_adjustment_time < cooldown:
             return
-        if trend < -0.3 and self._current_workers > self.min_workers or trend > 0.2 and self._current_workers < self.max_workers:
+
+        if previous_speed <= 0:
+            speed_gain = 0.0
+        else:
+            speed_gain = (current_speed - previous_speed) / max(previous_speed, 1.0)
+
+        if self._target_workers <= 0:
+            self._target_workers = max(self.min_workers, self._current_workers)
+
+        changed = False
+        if self.config.enable_hybrid_turbo:
+            if (
+                trend > 0.1
+                and speed_gain >= self.config.hybrid_speedup_threshold
+                and self._target_workers < self.max_workers
+            ):
+                self._target_workers = min(
+                    self.max_workers,
+                    self._target_workers + self.config.hybrid_aimd_increase_step,
+                )
+                changed = True
+            elif (
+                (trend < -0.12 or speed_gain < -self.config.hybrid_speedup_threshold)
+                and self._target_workers > self.min_workers
+            ):
+                self._target_workers = max(
+                    self.min_workers,
+                    int(self._target_workers * self.config.hybrid_aimd_decrease_factor),
+                )
+                changed = True
+        else:
+            if trend > 0.2 and self._target_workers < self.max_workers:
+                self._target_workers += 1
+                changed = True
+            elif trend < -0.3 and self._target_workers > self.min_workers:
+                self._target_workers -= 1
+                changed = True
+
+        # 速度非常低时触发保护，避免盲目维持高并发。
+        if avg_speed > 0 and current_speed < avg_speed * 0.4 and self._target_workers > self.min_workers:
+            self._target_workers = max(self.min_workers, self._target_workers - 1)
+            changed = True
+
+        if changed:
             self._adjustment_count += 1
             self._last_adjustment_time = now
 
     async def _check_slow_chunks(self) -> None:
         if not self.config.enable_smart_resplit:
             return
-        slow_chunks = self.chunk_manager.get_slow_chunks(self.config.resplit_threshold)
+        threshold = self.config.resplit_threshold
+        if self.config.enable_hybrid_turbo:
+            threshold = self.config.hybrid_slow_chunk_ratio
+        slow_chunks = self.chunk_manager.get_slow_chunks(threshold)
         now = time.time()
         if now - self._last_resplit_time < self.config.resplit_cooldown:
             return
         for chunk in slow_chunks:
+            if chunk.remaining < self.config.hybrid_min_remaining_bytes:
+                continue
+            resplit_times = self._chunk_resplit_count.get(chunk.index, 0)
+            if resplit_times >= self.config.hybrid_max_resplit_per_chunk:
+                continue
             if chunk.can_resplit(self.config.resplit_cooldown) and await self._resplit_chunk(chunk):
                 self._resplit_count += 1
+                self._chunk_resplit_count[chunk.index] = resplit_times + 1
                 self._last_resplit_time = now
                 break
 
@@ -116,7 +172,7 @@ class SmartScheduler:
             if chunk.progress > 80:
                 return False
             new_chunks = self.chunk_manager.resplit_chunk(chunk.index)
-            return new_chunks
+            return new_chunks is not None and len(new_chunks) > 0
 
     def get_stats(self) -> SchedulerStats:
         avg_speed = self._speed_average.get_average()
@@ -143,7 +199,8 @@ class SmartScheduler:
     def should_spawn_worker(self) -> bool:
         pending = len(self.chunk_manager.pending_chunks)
         active = self._current_workers
-        return pending > 0 and active < self.max_workers
+        limit = self.max_workers if self._target_workers <= 0 else min(self._target_workers, self.max_workers)
+        return pending > 0 and active < limit
 
     def get_optimal_worker_count(self) -> int:
         if not self.monitor:
@@ -154,7 +211,8 @@ class SmartScheduler:
         pending = len(self.chunk_manager.pending_chunks)
         if pending <= 0:
             return self._current_workers
-        optimal = min(self.config.max_chunks, pending)
+        target = self._target_workers if self._target_workers > 0 else self.config.max_chunks
+        optimal = min(target, pending, self.config.max_chunks)
         if self._speed_average.get_trend() < -0.2:
             optimal = max(self.config.min_chunks, optimal - 1)
         return optimal

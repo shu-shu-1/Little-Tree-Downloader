@@ -17,6 +17,7 @@ Welcome to the littledl documentation.
 ## Advanced Topics
 
 - [Advanced Usage](advanced/index.md) - Advanced features and optimizations
+- [Batch Download](batch-download/index.md) - Multi-file batch download
 - [API Reference](api-reference/index.md) - Complete API reference
 
 ## Other

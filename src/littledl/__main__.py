@@ -8,21 +8,39 @@ import httpx
 
 from . import DownloadConfig, download_file_sync
 from .i18n import gettext as _
+from .strategy import DownloadStyle, StrategySelector
 from .utils import determine_filename
 
 
 def parse_args(args: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         prog="littledl",
-        description=_("A high-performance download tool with multi-threaded chunked downloading"),
+        description=_(
+            "A high-performance download tool with aria2-style multi-threaded segmented downloading and intelligent strategy selection"
+        ),
     )
     parser.add_argument("url", help=_("URL to download"))
     parser.add_argument("-o", "--output", dest="output", help=_("Output directory or file path"))
     parser.add_argument("-f", "--filename", dest="filename", help=_("Specify output filename"))
+    parser.add_argument(
+        "-s",
+        "--style",
+        dest="style",
+        choices=["single", "multi", "adaptive", "hybrid", "hybrid_turbo", "auto"],
+        default="hybrid_turbo",
+        help=_(
+            "Download style: single (单线程), multi (多线程分段), adaptive (传统自适应), hybrid_turbo (极速稳态), auto (自动分析)"
+        ),
+    )
     parser.add_argument("-i", "--info", dest="info_only", action="store_true", help=_("Show file info and exit"))
     parser.add_argument("--no-resume", dest="resume", action="store_false", default=True, help=_("Disable resume"))
     parser.add_argument(
-        "-c", "--max-chunks", dest="max_chunks", type=int, default=16, help=_("Maximum number of chunks")
+        "-c",
+        "--max-chunks",
+        dest="max_chunks",
+        type=int,
+        default=16,
+        help=_("Maximum number of chunks for multi-threaded download"),
     )
     parser.add_argument("-t", "--timeout", dest="timeout", type=int, default=300, help=_("Timeout in seconds"))
     parser.add_argument("--proxy", dest="proxy", help=_("HTTP proxy (e.g., http://proxy:8080)"))
@@ -35,6 +53,21 @@ def parse_args(args: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--retry", dest="retry", type=int, default=3, help=_("Maximum retry attempts"))
     parser.add_argument("-v", "--verbose", action="store_true", help=_("Verbose output"))
     return parser.parse_args(args)
+
+
+def style_to_enum(style_str: str) -> DownloadStyle:
+    """Convert CLI style string to DownloadStyle enum"""
+    mapping = {
+        "single": DownloadStyle.SINGLE,
+        "multi": DownloadStyle.MULTI,
+        "adaptive": DownloadStyle.ADAPTIVE,
+        "hybrid": DownloadStyle.HYBRID_TURBO,
+        "hybrid_turbo": DownloadStyle.HYBRID_TURBO,
+        "auto": DownloadStyle.HYBRID_TURBO,
+    }
+    return mapping.get(style_str.lower(), DownloadStyle.HYBRID_TURBO)
+
+
 
 
 async def probe_url(url: str, config: DownloadConfig) -> dict:
@@ -76,6 +109,63 @@ def print_file_info(info: dict) -> None:
         print(f"  {_('Size')}: {_('Unknown')}")
     print(f"  {_('Content-Type')}: {info['content_type'] or _('Unknown')}")
     print(f"  {_('Resume Support')}: {_('Yes') if info['supports_resume'] else _('No')}")
+
+
+async def analyze_and_recommend(url: str, config: DownloadConfig) -> dict:
+    """Analyze URL and recommend download strategy"""
+    info = await probe_url(url, config)
+
+    selector = StrategySelector(
+        default_style=DownloadStyle.HYBRID_TURBO,
+        enable_single=True,
+        enable_multi=True,
+    )
+
+    profile = selector.analyze_file(
+        url=url,
+        size=info["size"],
+        supports_range=info["supports_range"],
+        content_type=info.get("content_type", ""),
+    )
+
+    decision = selector.select_style(profile)
+
+    return {
+        "file_info": info,
+        "style": decision.style,
+        "recommended_chunks": decision.recommended_chunks,
+        "estimated_speedup": decision.estimated_speedup,
+        "reason": decision.reason,
+    }
+
+
+def print_strategy_recommendation(recommendation: dict) -> None:
+    """Print strategy recommendation"""
+    info = recommendation["file_info"]
+    style = recommendation["style"]
+    chunks = recommendation["recommended_chunks"]
+    speedup = recommendation["estimated_speedup"]
+    reason = recommendation["reason"]
+
+    print(f"\n{_('Strategy Analysis')}:")
+    print(f"  {_('File')}: {info['filename']}")
+    if info["size"] > 0:
+        print(f"  {_('Size')}: {format_size(info['size'])}")
+    print(f"  {_('Recommended Style')}: {style.value.upper()}")
+    print(f"  {_('Recommended Chunks')}: {chunks}")
+    print(f"  {_('Estimated Speedup')}: {speedup:.1f}x")
+    print(f"  {_('Reason')}: {reason}")
+
+    if info["size"] > 0:
+        if info["size"] < 5 * 1024 * 1024:
+            size_category = "small (< 5MB)"
+        elif info["size"] < 100 * 1024 * 1024:
+            size_category = "medium (5MB - 100MB)"
+        else:
+            size_category = "large (> 100MB)"
+        print(f"  {_('Size Category')}: {size_category}")
+
+    print(f"  {_('Range Support')}: {_('Yes') if info['supports_range'] else _('No')}")
 
 
 def get_unique_path(path: Path) -> Path:
@@ -152,6 +242,17 @@ def format_time(seconds: int) -> str:
     return f"{seconds // 3600}h {(seconds % 3600) // 60:02d}m"
 
 
+async def run_analyze(url: str, config: DownloadConfig) -> int:
+    try:
+        recommendation = await analyze_and_recommend(url, config)
+        print_file_info(recommendation["file_info"])
+        print_strategy_recommendation(recommendation)
+        return 0
+    except Exception as e:
+        print(f"\n{_('Failed to analyze URL')}: {e}")
+        return 1
+
+
 async def run_probe(url: str, config: DownloadConfig) -> int:
     try:
         info = await probe_url(url, config)
@@ -190,20 +291,44 @@ def main() -> int:
 
         config.retry = RetryConfig(max_retries=args.retry)
 
+    style = style_to_enum(args.style)
+    if args.style != "auto":
+        config.apply_style(style)
+
     if args.info_only:
-        return asyncio.run(run_probe(args.url, config))
+        if args.style != "auto":
+            return asyncio.run(run_probe(args.url, config))
+        else:
+            return asyncio.run(run_analyze(args.url, config))
 
     output_path = Path(args.output or "./downloads").expanduser().resolve()
     progress = ProgressDisplay()
 
     if args.verbose:
         print(f"{_('Starting download')}: {args.url}")
+        print(f"{_('Style')}: {style.value.upper()}")
         print(f"{_('Output')}: {output_path}")
 
     final_filename = args.filename
+    probe_info: dict | None = None
     if output_path.is_dir() and not final_filename:
-        info = asyncio.run(probe_url(args.url, config))
-        final_filename = info["filename"]
+        probe_info = asyncio.run(probe_url(args.url, config))
+        final_filename = probe_info["filename"]
+
+    if args.style == "auto":
+        if probe_info is None:
+            probe_info = asyncio.run(probe_url(args.url, config))
+        selector = StrategySelector(enable_single=True, enable_multi=True)
+        profile = selector.analyze_file(
+            args.url,
+            probe_info["size"],
+            probe_info["supports_range"],
+            probe_info.get("content_type", ""),
+        )
+        decision = selector.select_style(profile)
+        config.apply_style(decision.style)
+        if args.verbose:
+            print(f"{_('Auto-selected style')}: {decision.style.value.upper()} ({decision.reason})")
 
     save_path = output_path / final_filename if output_path.is_dir() else output_path
     save_path = get_unique_path(save_path)
@@ -235,3 +360,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
+

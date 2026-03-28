@@ -32,6 +32,12 @@ config = DownloadConfig(
 | `resume` | bool | True | Enable resume support |
 | `verify_ssl` | bool | True | Verify SSL certificates |
 | `fallback_to_single_on_failure` | bool | True | Auto fallback to single-stream mode on chunked failure |
+| `enable_adaptive` | bool | True | Enable adaptive network scheduling |
+| `enable_hybrid_turbo` | bool | True | Enable hybrid turbo download with AIMD congestion control and smart chunk fallback |
+| `hybrid_aimd_increase_step` | int | 1 | Target worker increase step size (Additive Increase) |
+| `hybrid_aimd_decrease_factor` | float | 0.5 | Factor used to multiply target workers on speed decline (Multiplicative Decrease) |
+| `hybrid_speedup_threshold` | float | 0.08 | Minimum relative speedup threshold required to trigger AIMD |
+| `hybrid_slow_chunk_ratio` | float | 0.45 | Threshold ratio defining extremely slow chunks |
 | `verify_hash` | bool | False | Verify downloaded file hash |
 | `expected_hash` | str | None | Expected hash value |
 | `hash_algorithm` | str | `sha256` | Hash algorithm used in verification |

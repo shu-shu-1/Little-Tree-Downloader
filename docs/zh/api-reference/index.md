@@ -59,6 +59,13 @@ config = DownloadConfig(
     progress_callback: Callable | None = None,
     chunk_callback: Callable | None = None,
 )
+```
+
+#### 方法
+
+**`apply_style(style: Any) -> "DownloadConfig"`**
+
+根据相应的下载风格（支持 `DownloadStyle` 枚举对象，或对应名称的字符串如 `"SINGLE"`, `"MULTI"`, `"ADAPTIVE"`, `"HYBRID_TURBO"`）一次性更改当前所有相关的调度算法配置、分块开关与 AIMD 网络拥塞控制参数，返回修改后的配置对象自身。
 
 ## 回调事件
 

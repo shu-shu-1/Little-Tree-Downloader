@@ -32,6 +32,12 @@ config = DownloadConfig(
 | `resume` | bool | True | 启用断点续传 |
 | `verify_ssl` | bool | True | 验证 SSL 证书 |
 | `fallback_to_single_on_failure` | bool | True | 分块失败时自动回退到单连接下载 |
+| `enable_adaptive` | bool | True | 启用自适应网络调度 |
+| `enable_hybrid_turbo` | bool | True | 启用具有 AIMD 拥塞控制和智能重切策略的混合涡轮加速 |
+| `hybrid_aimd_increase_step` | int | 1 | 每次增加的并发目标线程数 (加性增) |
+| `hybrid_aimd_decrease_factor` | float | 0.5 | 遇到速度骤降时的并发减少系数 (乘性减) |
+| `hybrid_speedup_threshold` | float | 0.08 | 触发 AIMD 提速的最小相对网络加速阈值 |
+| `hybrid_slow_chunk_ratio` | float | 0.45 | 被视为极慢资源块的耗时占比阈值 |
 | `verify_hash` | bool | False | 校验下载文件哈希 |
 | `expected_hash` | str | None | 预期哈希值 |
 | `hash_algorithm` | str | `sha256` | 校验使用的哈希算法 |

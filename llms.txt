@@ -83,6 +83,21 @@ config = DownloadConfig(
 | timeout | float | 300 | Read/write timeout in seconds |
 | resume | bool | True | Enable resume support |
 | verify_ssl | bool | True | Verify SSL certificates |
+| fallback_to_single_on_failure | bool | True | Auto fallback to single-stream mode on chunked failure |
+| enable_adaptive | bool | True | Enable adaptive network scheduling |
+| enable_hybrid_turbo | bool | True | Enable hybrid turbo download with AIMD congestion control and smart chunk fallback |
+| hybrid_aimd_increase_step | int | 1 | Target worker increase step size (Additive Increase) |
+| hybrid_aimd_decrease_factor | float | 0.5 | Factor used to multiply target workers on speed decline (Multiplicative Decrease) |
+| hybrid_speedup_threshold | float | 0.08 | Minimum relative speedup threshold required to trigger AIMD |
+| hybrid_slow_chunk_ratio | float | 0.45 | Threshold ratio defining extremely slow chunks |
+| verify_hash | bool | False | Verify downloaded file hash |
+
+<details>
+<summary>Methods</summary>
+
+- `apply_style(style: Any) -> "DownloadConfig"`: Quickly reconfigures scheduling variables, chunking thresholds, and AIMD control parameters based on a provided style. (e.g. `DownloadStyle.HYBRID_TURBO` or `"HYBRID_TURBO"`).
+
+</details>
 
 ## Speed Limiting
 
@@ -469,6 +484,203 @@ from littledl import set_language, get_available_languages
 
 set_language("zh")  # or "en"
 print(get_available_languages())  # {'en': 'English', 'zh': '中文'}
+```
+
+# High-Speed Download Mode
+
+## DownloadStyle Enum
+
+Download style options for single-file downloads.
+
+```python
+from littledl import DownloadStyle
+
+DownloadStyle.SINGLE    # Single-threaded download
+DownloadStyle.MULTI     # Multi-threaded segmented download (aria2-style)
+DownloadStyle.ADAPTIVE  # Automatically select best style
+```
+
+## StrategySelector
+
+Intelligent strategy selector that analyzes file characteristics and network conditions to automatically choose the optimal download style.
+
+### Algorithm
+
+1. File size + server Range support → base style
+2. Network stability prediction → whether to add more threads
+3. Historical performance → dynamically adjust thresholds
+
+### Usage
+
+```python
+from littledl import StrategySelector, DownloadStyle
+
+selector = StrategySelector(
+    default_style=DownloadStyle.ADAPTIVE,
+    enable_single=True,
+    enable_multi=True,
+    max_chunks=16,
+)
+
+# Analyze file
+profile = selector.analyze_file(
+    url="https://example.com/file.zip",
+    size=100 * 1024 * 1024,
+    supports_range=True,
+)
+
+# Get style decision
+decision = selector.select_style(profile)
+print(f"Recommended style: {decision.style.value}")
+print(f"Recommended chunks: {decision.recommended_chunks}")
+print(f"Estimated speedup: {decision.estimated_speedup:.1f}x")
+```
+
+### Style Decision Result
+
+```python
+@dataclass
+class StyleDecision:
+    style: DownloadStyle           # SINGLE, MULTI, or ADAPTIVE
+    confidence: float             # 0.0 - 1.0
+    reason: str                   # Human-readable explanation
+    recommended_chunks: int       # Recommended number of chunks
+    estimated_speedup: float       # Estimated speedup vs single-threaded
+```
+
+## DynamicStyleAllocator
+
+Dynamic style allocator for multi-file batch downloads.
+
+```python
+from littledl import DynamicStyleAllocator, DownloadStyle
+
+allocator = DynamicStyleAllocator(
+    selector=selector,
+    max_concurrent_files=5,
+    max_total_chunks=16,
+)
+
+# Add file and get allocation
+decision = await allocator.add_file(
+    file_id="file1",
+    url="https://example.com/file.zip",
+    size=100 * 1024 * 1024,
+    supports_range=True,
+    priority=1,
+)
+```
+
+## EnhancedBatchDownloader
+
+High-performance batch downloader with intelligent scheduling and aria2-style multi-threaded segmented downloads.
+
+```python
+from littledl import EnhancedBatchDownloader
+
+downloader = EnhancedBatchDownloader(
+    max_concurrent_files=5,
+    max_total_threads=15,
+    enable_existing_file_reuse=True,
+    enable_multi_source=True,
+)
+
+await downloader.add_url(
+    "https://example.com/file.zip",
+    backup_urls=["https://backup.com/file.zip"]
+)
+await downloader.start()
+```
+
+### Statistics
+
+```python
+stats = downloader.get_stats()
+# {
+#     "total_files": 10,
+#     "completed_files": 5,
+#     "failed_files": 0,
+#     "reused_files": 2,
+#     "total_threads": 8,
+#     "active_threads": 5,
+#     "dynamic_chunks_added": 3,
+# }
+```
+
+### File Reuse Statistics
+
+```python
+reuse_stats = downloader.get_file_reuse_stats()
+# {
+#     "checks": 100,
+#     "hits": 45,
+#     "hit_rate": "45.0%",
+#     "bytes_saved": "1.2 GB",
+#     "quick_hash_hits": 30,
+#     "content_matched": 15,
+# }
+```
+
+## GlobalThreadPool
+
+Global thread pool for unified thread management across multiple file downloads.
+
+```python
+from littledl import GlobalThreadPool
+
+pool = GlobalThreadPool(
+    max_total_threads=15,
+    min_speed_threshold=256 * 1024,
+    ewma_alpha=0.3,
+)
+
+stats = pool.get_stats()
+# {
+#     "total_threads": 8,
+#     "active_threads": 5,
+#     "avg_speed": 5242880.0,
+#     "speed_trend": 0.15,
+#     "speed_variance": 0.25,
+#     "predicted_speed": 5500000.0,
+# }
+```
+
+## FileReuseChecker
+
+Content-aware file matching for reusing existing files.
+
+```python
+from littledl import FileReuseChecker
+
+checker = FileReuseChecker(
+    check_hash=True,
+    hash_algorithm="md5",
+    enable_content_matching=True,
+    quick_hash_size=64 * 1024,
+)
+
+# Find existing file by content
+existing = checker.find_matching_file_by_content(
+    target_path=Path("target.jar"),
+    search_directory=Path("./minecraft/libraries"),
+    size_tolerance=0.01,
+)
+```
+
+## MultiSourceManager
+
+Multi-source backup with automatic failover.
+
+```python
+from littledl import MultiSourceManager
+
+manager = MultiSourceManager()
+manager.add_source("https://primary.com/file.zip", priority=1)
+manager.add_source("https://backup.com/file.zip", priority=0)
+
+source = manager.get_next_available()
+manager.mark_source_failed(source["url"], "404")
+manager.mark_source_success(source["url"])
 ```
 
 # License

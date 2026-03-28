@@ -1,18 +1,18 @@
-# 批量下载
+# Batch Download
 
-littledl 支持多文件批量下载，针对大量小文件、大文件或混合场景进行了专门优化。
+littledl supports multi-file batch downloading with specialized optimizations for large numbers of small/large files or mixed scenarios.
 
-## 核心特性
+## Core Features
 
-- **自适应并发**：根据网络状况动态调整同时下载的文件数
-- **小文件优先**：自动识别小文件并优先处理，提升用户体验
-- **连接复用**：所有文件共享连接池，减少连接建立开销
-- **批量Probe**：并行发送 HEAD 请求获取文件信息
-- **智能分块**：根据文件大小自动选择最优分块策略
+- **Adaptive Concurrency**: Dynamically adjusts concurrent downloads based on network conditions
+- **Small File Priority**: Automatically identifies and prioritizes small files for better UX
+- **Connection Pooling**: All files share a connection pool to reduce connection overhead
+- **Batch Probe**: Parallel HEAD requests to fetch file information
+- **Smart Chunking**: Automatically selects optimal chunk strategy based on file size
 
-## 快速开始
+## Quick Start
 
-### 同步批量下载
+### Synchronous Batch Download
 
 ```python
 from littledl import batch_download_sync
@@ -34,7 +34,7 @@ for url, path, error in results:
         print(f"✗ {url}: {error}")
 ```
 
-### 异步批量下载
+### Async Batch Download
 
 ```python
 import asyncio
@@ -57,42 +57,42 @@ async def main():
 asyncio.run(main())
 ```
 
-## 进度回调
+## Progress Callback
 
-### 批量进度回调
+### Batch Progress Callback
 
 ```python
 import asyncio
 from littledl import BatchDownloader
 
 def on_batch_progress(completed: int, total: int, speed: float, eta: int):
-    print(f"批量进度: {completed}/{total} | 速度: {speed/1024/1024:.1f} MB/s | 预计剩余: {eta}s")
+    print(f"Batch Progress: {completed}/{total} | Speed: {speed/1024/1024:.1f} MB/s | ETA: {eta}s")
 
 downloader = BatchDownloader()
 downloader.set_progress_callback(on_batch_progress)
 ```
 
-### 单文件完成回调
+### File Complete Callback
 
 ```python
 from littledl import FileTask
 
 def on_file_complete(task: FileTask):
-    print(f"文件完成: {task.filename} ({task.file_size} bytes)")
+    print(f"File Complete: {task.filename} ({task.file_size} bytes)")
 
 downloader = BatchDownloader()
 downloader.set_file_complete_callback(on_file_complete)
 ```
 
-## 高级配置
+## Advanced Configuration
 
-### 自适应并发控制
+### Adaptive Concurrency Control
 
-默认启用自适应并发控制，系统会根据下载速度自动调整并发数：
+Adaptive concurrency is enabled by default. The system automatically adjusts concurrency based on download speed:
 
-- 速度持续下降 → 增加并发利用更多带宽
-- 速度稳定上升 → 维持或增加并发
-- 错误率上升 → 自动降低并发
+- Speed continuously decreasing → Increase concurrency to utilize more bandwidth
+- Speed stable or increasing → Maintain or increase concurrency
+- Error rate rising → Automatically reduce concurrency
 
 ```python
 downloader = BatchDownloader(
@@ -101,9 +101,9 @@ downloader = BatchDownloader(
 )
 ```
 
-### 手动并发控制
+### Manual Concurrency Control
 
-禁用自适应模式，手动设置固定并发数：
+Disable adaptive mode and manually set a fixed concurrency:
 
 ```python
 downloader = BatchDownloader(
@@ -112,32 +112,31 @@ downloader = BatchDownloader(
 )
 ```
 
-### 文件优先级
+### File Priority
 
-支持手动设置文件下载优先级：
+Support manual file download priority setting:
 
 ```python
 downloader = BatchDownloader()
 
-# 添加文件时可指定优先级（数字越小优先级越高）
-await downloader.add_url(url1, priority=0)  # 高优先级
-await downloader.add_url(url2, priority=1)  # 普通优先级
-await downloader.add_url(url3, priority=2)  # 低优先级
+await downloader.add_url(url1, priority=0)  # High priority
+await downloader.add_url(url2, priority=1)  # Normal priority
+await downloader.add_url(url3, priority=2)  # Low priority
 ```
 
-## 智能分块策略
+## Smart Chunking Strategy
 
-系统会根据文件大小自动选择最优分块策略：
+The system automatically selects the optimal chunking strategy based on file size:
 
-| 文件大小 | 分块策略 | 说明 |
-|----------|----------|------|
-| < 5 MB | 单分块 | 避免分片开销 |
-| 5 MB ~ 100 MB | 4 分块 | 平衡并发和开销 |
-| > 100 MB | 8 分块 | 最大化吞吐 |
+| File Size | Chunk Strategy | Description |
+|----------|---------------|-------------|
+| < 5 MB | Single chunk | Avoid chunking overhead |
+| 5 MB ~ 100 MB | 4 chunks | Balance concurrency and overhead |
+| > 100 MB | 8 chunks | Maximize throughput |
 
-## 获取下载状态
+## Getting Download Status
 
-### 获取所有任务
+### Get All Tasks
 
 ```python
 downloader = BatchDownloader()
@@ -149,53 +148,48 @@ for task in tasks:
     print(f"{task.filename}: {task.status.value} ({task.progress:.1f}%)")
 ```
 
-### 获取统计信息
+### Get Statistics
 
 ```python
 stats = downloader.get_stats()
-print(f"总文件数: {stats['total_files']}")
-print(f"已完成: {stats['completed_files']}")
-print(f"失败: {stats['failed_files']}")
-print(f"当前并发: {stats['current_concurrency']}")
-print(f"总进度: {stats['progress_percent']:.1f}%")
+print(f"Total files: {stats['total_files']}")
+print(f"Completed: {stats['completed_files']}")
+print(f"Failed: {stats['failed_files']}")
+print(f"Current concurrency: {stats['current_concurrency']}")
+print(f"Total progress: {stats['progress_percent']:.1f}%")
 ```
 
-### 获取批量进度
+### Get Batch Progress
 
 ```python
 progress = downloader.get_progress()
-print(f"总大小: {progress.total_bytes / 1024 / 1024:.1f} MB")
-print(f"已下载: {progress.downloaded_bytes / 1024 / 1024:.1f} MB")
-print(f"速度: {progress.overall_speed / 1024 / 1024:.1f} MB/s")
-print(f"预计剩余: {progress.eta:.0f}s")
+print(f"Total size: {progress.total_bytes / 1024 / 1024:.1f} MB")
+print(f"Downloaded: {progress.downloaded_bytes / 1024 / 1024:.1f} MB")
+print(f"Speed: {progress.overall_speed / 1024 / 1024:.1f} MB/s")
+print(f"ETA: {progress.eta:.0f}s")
 ```
 
-## 暂停、恢复和取消
+## Pause, Resume and Cancel
 
 ```python
 downloader = BatchDownloader()
 await downloader.add_urls(urls, "./downloads")
 
-# 启动下载
 task = asyncio.create_task(downloader.start())
 
-# 暂停
 await asyncio.sleep(5)
 await downloader.pause()
 
-# 恢复
 await asyncio.sleep(2)
 await downloader.resume()
 
-# 取消
 await asyncio.sleep(5)
 await downloader.cancel()
 
-# 等待完成
 await task
 ```
 
-## API 参考
+## API Reference
 
 ### BatchDownloader
 
@@ -218,7 +212,7 @@ class BatchDownloader:
         filename: str | None = None,
         priority: int = 0,
     ) -> str:
-        """添加单个URL到下载队列"""
+        """Add a single URL to the download queue"""
         ...
 
     async def add_urls(
@@ -226,51 +220,51 @@ class BatchDownloader:
         urls: list[str],
         save_path: str | Path = "./downloads",
     ) -> list[str]:
-        """批量添加URL到下载队列"""
+        """Batch add URLs to the download queue"""
         ...
 
     def set_progress_callback(self, callback) -> None:
-        """设置批量进度回调 (completed, total, speed, eta)"""
+        """Set batch progress callback (completed, total, speed, eta)"""
         ...
 
     def set_file_complete_callback(self, callback) -> None:
-        """设置单文件完成回调 (task: FileTask)"""
+        """Set file complete callback (task: FileTask)"""
         ...
 
     async def start(self) -> None:
-        """启动批量下载"""
+        """Start batch download"""
         ...
 
     async def pause(self) -> None:
-        """暂停下载"""
+        """Pause download"""
         ...
 
     async def resume(self) -> None:
-        """恢复下载"""
+        """Resume download"""
         ...
 
     async def cancel(self) -> None:
-        """取消下载"""
+        """Cancel download"""
         ...
 
     async def stop(self) -> None:
-        """停止下载并关闭连接池"""
+        """Stop download and close connection pool"""
         ...
 
     def get_task(self, task_id: str) -> FileTask | None:
-        """根据ID获取任务"""
+        """Get task by ID"""
         ...
 
     def get_all_tasks(self) -> list[FileTask]:
-        """获取所有任务"""
+        """Get all tasks"""
         ...
 
     def get_progress(self) -> BatchProgress:
-        """获取批量下载进度"""
+        """Get batch download progress"""
         ...
 
     def get_stats(self) -> dict:
-        """获取统计信息"""
+        """Get statistics"""
         ...
 ```
 
@@ -327,7 +321,7 @@ class BatchProgress:
     def files_completed_ratio(self) -> float: ...
 ```
 
-### 便捷函数
+### Convenience Functions
 
 ```python
 async def batch_download(
@@ -339,7 +333,7 @@ async def batch_download(
     progress_callback=None,
     file_complete_callback=None,
 ) -> list[tuple[str, Path | None, str | None]]:
-    """异步批量下载，返回 [(url, path, error), ...]"""
+    """Async batch download, returns [(url, path, error), ...]"""
     ...
 
 def batch_download_sync(
@@ -348,26 +342,26 @@ def batch_download_sync(
     config: DownloadConfig | None = None,
     **kwargs,
 ) -> list[tuple[str, Path | None, str | None]]:
-    """同步批量下载"""
+    """Synchronous batch download"""
     ...
 ```
 
-## 高速下载模式 (EnhancedBatchDownloader)
+## High-Speed Download Mode (EnhancedBatchDownloader)
 
-`EnhancedBatchDownloader` 是基于aria2风格优化的高性能批量下载器，提供更智能的下载调度。
+`EnhancedBatchDownloader` is a high-performance batch downloader optimized with aria2-style features, providing smarter download scheduling.
 
-### 核心特性
+### Core Features
 
-| 特性 | 说明 |
-|------|------|
-| 智能风格选择 | 根据文件大小、服务器支持、网络状况自动选择最优下载风格 |
-| 动态线程分配 | 全局线程池统一调度，避免资源浪费 |
-| 多源备份 | 支持多个备用URL，故障自动切换 |
-| 文件复用 | 内容感知匹配，避免重复下载 |
+| Feature | Description |
+|---------|-------------|
+| Intelligent Style Selection | Automatically select optimal download style based on file size, server support, and network conditions |
+| Dynamic Thread Allocation | Global thread pool unified scheduling to avoid resource waste |
+| Multi-source Backup | Support for multiple backup URLs with automatic failover |
+| File Reuse | Content-aware matching to avoid duplicate downloads |
 
-### 风格选择算法
+### Style Selection Algorithm
 
-系统会自动分析并选择最佳下载风格：
+The system automatically analyzes and selects the best download style:
 
 ```python
 from littledl import DownloadStyle, StrategySelector
@@ -378,21 +372,19 @@ selector = StrategySelector(
     enable_multi=True,
 )
 
-# 文件分析
 profile = selector.analyze_file(
     url="https://example.com/file.zip",
-    size=100 * 1024 * 1024,  # 100MB
+    size=100 * 1024 * 1024,
     supports_range=True,
 )
 
-# 风格决策
 decision = selector.select_style(profile)
-print(f"推荐风格: {decision.style.value}")
-print(f"推荐分块: {decision.recommended_chunks}")
-print(f"预估加速: {decision.estimated_speedup:.1f}x")
+print(f"Recommended style: {decision.style.value}")
+print(f"Recommended chunks: {decision.recommended_chunks}")
+print(f"Estimated speedup: {decision.estimated_speedup:.1f}x")
 ```
 
-### 使用示例
+### Usage Example
 
 ```python
 import asyncio
@@ -406,7 +398,6 @@ async def main():
         enable_multi_source=True,
     )
     
-    # 支持备份URL
     await downloader.add_url(
         "https://example.com/file.zip",
         backup_urls=["https://backup.com/file.zip"]
@@ -417,9 +408,9 @@ async def main():
 asyncio.run(main())
 ```
 
-### 动态风格分配
+### Dynamic Style Allocation
 
-多文件下载时，系统会根据全局资源动态分配风格：
+When downloading multiple files, the system dynamically allocates styles based on global resources:
 
 ```python
 from littledl import DynamicStyleAllocator, DownloadStyle
@@ -430,7 +421,6 @@ allocator = DynamicStyleAllocator(
     max_total_chunks=16,
 )
 
-# 添加文件并获取分配
 decision = await allocator.add_file(
     file_id="file1",
     url="https://example.com/file.zip",
@@ -438,19 +428,19 @@ decision = await allocator.add_file(
     supports_range=True,
     priority=1,
 )
-print(f"分配风格: {decision.style.value}")
+print(f"Allocated style: {decision.style.value}")
 ```
 
-### 文件复用统计
+### File Reuse Statistics
 
 ```python
 reuse_stats = downloader.get_file_reuse_stats()
-print(f"检查次数: {reuse_stats['checks']}")
-print(f"命中次数: {reuse_stats['hits']}")
-print(f"节省流量: {reuse_stats['bytes_saved_formatted']}")
+print(f"Checks: {reuse_stats['checks']}")
+print(f"Hits: {reuse_stats['hits']}")
+print(f"Bytes saved: {reuse_stats['bytes_saved_formatted']}")
 ```
 
-### API 参考
+### API Reference
 
 ```python
 from littledl import (
@@ -460,7 +450,6 @@ from littledl import (
     DownloadStyle,
 )
 
-# 策略选择器
 selector = StrategySelector(
     default_style=DownloadStyle.ADAPTIVE,
     enable_single=True,
@@ -468,14 +457,12 @@ selector = StrategySelector(
     max_chunks=16,
 )
 
-# 动态分配器
 allocator = DynamicStyleAllocator(
     selector=selector,
     max_concurrent_files=5,
     max_total_chunks=16,
 )
 
-# EnhancedBatchDownloader
 downloader = EnhancedBatchDownloader(
     config: DownloadConfig | None = None,
     max_concurrent_files: int = 5,

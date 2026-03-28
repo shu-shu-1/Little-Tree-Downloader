@@ -15,12 +15,17 @@ from littledl import (
     DownloadConfig,
     DownloadMonitor,
     Downloader,
+    DownloadStyle,
     ProgressEvent,
     ResumeManager,
+    StrategySelector,
 )
 from littledl.exceptions import ConfigurationError, HTTPError
 from littledl.chunk import Chunk as ChunkClass
+from littledl.monitor import DownloadStats
 from littledl.downloader import ChunkCallbackAdapter, ProgressCallbackAdapter
+from littledl.scheduler import SmartScheduler
+from littledl.__main__ import style_to_enum
 
 
 class TestDownloadConfig:
@@ -30,6 +35,7 @@ class TestDownloadConfig:
         assert config.max_chunks == 16
         assert config.resume is True
         assert config.retry.max_retries == 3
+        assert config.enable_hybrid_turbo is True
 
     def test_config_validation(self) -> None:
         config = DownloadConfig(max_chunks=4, min_chunks=8)
@@ -454,6 +460,81 @@ class TestDownloader:
         await adapter.emit(chunk, "started", speed=0.0)
 
         assert captured == ["started"]
+
+
+class TestStrategyAndHybridStyle:
+    def test_strategy_prefers_hybrid_turbo_for_large_range_file(self) -> None:
+        selector = StrategySelector()
+        profile = selector.analyze_file(
+            url="https://example.com/large.iso",
+            size=200 * 1024 * 1024,
+            supports_range=True,
+            content_type="application/octet-stream",
+        )
+        decision = selector.select_style(profile)
+
+        assert decision.style == DownloadStyle.HYBRID_TURBO
+        assert decision.recommended_chunks >= 4
+
+    def test_style_to_enum_supports_hybrid_alias(self) -> None:
+        assert style_to_enum("hybrid") == DownloadStyle.HYBRID_TURBO
+        assert style_to_enum("hybrid_turbo") == DownloadStyle.HYBRID_TURBO
+
+    def test_apply_style_to_config_single_and_hybrid(self) -> None:
+        single_config = DownloadConfig()
+        single_config.apply_style(DownloadStyle.SINGLE)
+        assert single_config.max_chunks == 1
+        assert single_config.enable_chunking is False
+        assert single_config.enable_hybrid_turbo is False
+
+        hybrid_config = DownloadConfig(enable_hybrid_turbo=False, adaptive_interval=3.0)
+        hybrid_config.apply_style(DownloadStyle.HYBRID_TURBO)
+        assert hybrid_config.enable_hybrid_turbo is True
+        assert hybrid_config.enable_adaptive is True
+        assert hybrid_config.adaptive_interval <= 2.0
+
+
+class TestSmartSchedulerHybrid:
+    class _FakeMonitor:
+        def __init__(self, speed: float) -> None:
+            self.speed = speed
+
+        def get_stats(self) -> DownloadStats:
+            return DownloadStats(total_size=1, downloaded=1, speed=self.speed, is_active=True)
+
+    @pytest.mark.asyncio
+    async def test_aimd_increases_target_workers_on_speedup(self) -> None:
+        config = DownloadConfig(min_chunks=1, max_chunks=8, enable_hybrid_turbo=True)
+        manager = ChunkManager(file_size=8 * 1024 * 1024, max_chunks=8, min_chunk_size=1024 * 1024)
+        manager.initialize_chunks()
+        scheduler = SmartScheduler(manager, config=config, monitor=self._FakeMonitor(speed=1500.0))
+        scheduler._current_workers = 2
+        scheduler._target_workers = 2
+        scheduler._last_speed = 1000.0
+        scheduler._speed_average.add(1000.0)
+        scheduler._speed_average.add(1200.0)
+        scheduler._last_adjustment_time = 0.0
+
+        await scheduler._run_adaptive_adjustments()
+
+        assert scheduler.get_optimal_worker_count() >= 3
+
+    @pytest.mark.asyncio
+    async def test_aimd_decreases_target_workers_on_decline(self) -> None:
+        config = DownloadConfig(min_chunks=1, max_chunks=8, enable_hybrid_turbo=True)
+        manager = ChunkManager(file_size=8 * 1024 * 1024, max_chunks=8, min_chunk_size=1024 * 1024)
+        manager.initialize_chunks()
+        scheduler = SmartScheduler(manager, config=config, monitor=self._FakeMonitor(speed=700.0))
+        scheduler._current_workers = 5
+        scheduler._target_workers = 5
+        scheduler._last_speed = 1200.0
+        scheduler._speed_average.add(1200.0)
+        scheduler._speed_average.add(1000.0)
+        scheduler._last_adjustment_time = 0.0
+
+        await scheduler._run_adaptive_adjustments()
+
+        assert scheduler.get_optimal_worker_count() <= 4
 
 
 class TestIntegration:

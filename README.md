@@ -1,15 +1,13 @@
-English | [简体中文](README.zh.md)
-
 # littledl
 
-High-performance download library with IDM-style multi-threaded chunked downloading, intelligent scheduling, and resume support.
+High-performance download library with aria2-style multi-threaded segmented downloading, intelligent strategy selection, and adaptive optimization.
 
 ## Features
 
 ### Core Features
-- 🚀 **Multi-threaded Chunked Downloads**: Split files into chunks and download in parallel for maximum speed
+- 🚀 **Aria2-style Multi-threaded Segmented Download**: Split files into chunks and download in parallel using HTTP Range requests for maximum speed
+- 🧠 **Intelligent Strategy Selection**: Automatically choose optimal download style (single/multi/adaptive) based on file size, server capabilities, and network conditions
 - 🎯 **Direct File Writing**: Write directly to final file, no temporary file merging
-- 🧠 **Intelligent Scheduling**: Smart chunk reassignment and adaptive concurrency
 - ⏯️ **Resume Support**: Continue interrupted downloads from where they left off
 - 📊 **Real-time Speed Monitoring**: Live speed calculation, ETA estimation, and trend analysis
 - 🔁 **Reliable Fallback**: Auto fallback to single-stream mode when chunked download fails
@@ -20,6 +18,8 @@ High-performance download library with IDM-style multi-threaded chunked download
 - ⏱️ **Speed Limiting**: Token bucket, leaky bucket, and adaptive algorithms
 - ✅ **Integrity Verification**: Optional post-download hash verification (`verify_hash`, `expected_hash`)
 - 🔍 **Server Detection**: Automatic detection of server capabilities for optimal download strategy
+- 💾 **File Reuse**: Content-aware matching to reuse existing files and save bandwidth
+- 🔄 **Multi-source Backup**: Support for multiple backup URLs with automatic failover
 - 💻 **Cross-platform**: Windows, macOS, Linux, FreeBSD
 - 🔒 **Security**: SSL verification, safe path handling
 
@@ -41,6 +41,7 @@ For full documentation, visit [https://littledl.zsxiaoshu.cn/](https://littledl.
 
 - [Getting Started](https://littledl.zsxiaoshu.cn/getting-started/) - Quick start guide
 - [Configuration](https://littledl.zsxiaoshu.cn/configuration/) - Configuration options
+- [Batch Download](https://littledl.zsxiaoshu.cn/batch-download/) - Multi-file batch download
 - [Proxy](https://littledl.zsxiaoshu.cn/proxy/) - Proxy configuration
 - [Error Handling](https://littledl.zsxiaoshu.cn/error-handling/) - Error handling
 - [Advanced](https://littledl.zsxiaoshu.cn/advanced/) - Advanced features
@@ -74,7 +75,78 @@ async def main():
 asyncio.run(main())
 ```
 
-### Progress Callback
+## Download Styles
+
+littledl supports three download styles that you can choose based on your needs:
+
+| Style | Description | Best For |
+|-------|-------------|----------|
+| `single` | Single-threaded download | Small files, servers without Range support |
+| `multi` | Multi-threaded segmented download (aria2-style) | Large files, stable connections |
+| `adaptive` | Automatically select best style | Most use cases |
+
+### Automatic Style Selection (Recommended)
+
+```bash
+littledl "https://example.com/file.zip" --style adaptive
+```
+
+```python
+from littledl import DownloadStyle
+
+# Automatic selection based on file and network
+config = DownloadConfig()
+# System automatically chooses optimal style
+```
+
+### Manual Style Selection
+
+```bash
+# Force single-threaded
+littledl "https://example.com/file.zip" --style single
+
+# Force multi-threaded
+littledl "https://example.com/file.zip" --style multi --max-chunks 8
+```
+
+```python
+from littledl import StrategySelector, DownloadStyle
+
+selector = StrategySelector(
+    default_style=DownloadStyle.MULTI,
+    enable_single=True,
+    enable_multi=True,
+)
+```
+
+### Analyze Before Download
+
+Use `--info` flag to analyze and get download strategy recommendations:
+
+```bash
+littledl "https://example.com/large_file.zip" --info
+```
+
+Output:
+```
+File Info:
+  Filename: large_file.zip
+  Size: 1.5 GB
+  Content-Type: application/zip
+  Resume Support: Yes
+
+Strategy Analysis:
+  File: large_file.zip
+  Size: 1.5 GB
+  Recommended Style: MULTI
+  Recommended Chunks: 8
+  Estimated Speedup: 3.5x
+  Reason: Large file + stable fast network
+  Size Category: large (> 100MB)
+  Range Support: Yes
+```
+
+## Progress Callback
 
 ```python
 from littledl import download_file_sync
@@ -104,28 +176,30 @@ def on_kwargs(**payload):
     print(payload["eta"])
 ```
 
-### Chunk Status Callback
+## Batch Download
+
+### High-Performance Batch Download
 
 ```python
-from littledl import ChunkEvent, download_file_sync
+from littledl import EnhancedBatchDownloader
 
-def on_chunk(event: ChunkEvent):
-    print(
-        f"chunk={event.chunk_index} status={event.status} "
-        f"progress={event.progress:.1f}% speed={event.speed/1024:.1f}KB/s"
-    )
-
-path = download_file_sync(
-    "https://example.com/large_file.zip",
-    chunk_callback=on_chunk,
+downloader = EnhancedBatchDownloader(
+    max_concurrent_files=5,
+    max_total_threads=15,
+    enable_existing_file_reuse=True,
+    enable_multi_source=True,
 )
+
+# Add files with backup URLs
+await downloader.add_url(
+    "https://example.com/file.zip",
+    backup_urls=["https://backup.com/file.zip"]
+)
+
+await downloader.start()
 ```
 
-## Advanced Usage
-
-### Batch Download
-
-Multi-file batch download with specialized optimizations for large numbers of small/large files:
+### Simple Batch Download
 
 ```python
 from littledl import batch_download_sync
@@ -147,78 +221,6 @@ for url, path, error in results:
         print(f"✗ {url}: {error}")
 ```
 
-Async version:
-
-```python
-from littledl import BatchDownloader
-
-downloader = BatchDownloader(max_concurrent_files=5)
-await downloader.add_urls(urls, "./downloads")
-await downloader.start()
-```
-
-### Authentication Configuration
-
-```python
-from littledl import DownloadConfig, AuthConfig, AuthType
-
-auth = AuthConfig(
-    auth_type=AuthType.BEARER,
-    token="your-api-token",
-)
-
-config = DownloadConfig(auth=auth)
-```
-
-### Proxy Configuration
-
-```python
-from littledl import DownloadConfig, ProxyConfig, ProxyMode
-
-# System proxy (auto-detect)
-proxy = ProxyConfig(mode=ProxyMode.SYSTEM)
-
-# Custom proxy
-proxy = ProxyConfig(
-    mode=ProxyMode.CUSTOM,
-    http_proxy="http://proxy.example.com:8080",
-)
-
-config = DownloadConfig(proxy=proxy)
-```
-
-### Speed Limiting
-
-```python
-from littledl import DownloadConfig, SpeedLimitConfig, SpeedLimitMode
-
-speed_limit = SpeedLimitConfig(
-    enabled=True,
-    mode=SpeedLimitMode.GLOBAL,
-    max_speed=1024 * 1024,  # 1 MB/s
-)
-
-config = DownloadConfig(speed_limit=speed_limit)
-```
-
-## Multi-language Support
-
-Set language via environment variable:
-
-```bash
-export LITTLELDL_LANGUAGE=zh  # Chinese
-export LITTLELDL_LANGUAGE=en  # English
-```
-
-Or in code:
-
-```python
-from littledl import set_language, get_available_languages
-
-set_language("zh")  # Switch to Chinese
-print(get_available_languages())  # {'en': 'English', 'zh': '中文'}
-```
-
 ## Configuration Options
 
 | Option | Type | Default | Description |
@@ -237,10 +239,29 @@ print(get_available_languages())  # {'en': 'English', 'zh': '中文'}
 | `min_file_size` | int | None | Reject files smaller than this size |
 | `max_file_size` | int | None | Reject files larger than this size |
 
+## CLI Usage
+
+```bash
+# Download with automatic style selection
+littledl "https://example.com/file.zip" -o ./downloads
+
+# Analyze and recommend strategy
+littledl "https://example.com/file.zip" --info
+
+# Force multi-threaded mode
+littledl "https://example.com/file.zip" --style multi --max-chunks 8
+
+# Download with speed limit
+littledl "https://example.com/file.zip" --speed-limit 1048576
+
+# Resume disabled
+littledl "https://example.com/file.zip" --no-resume
+```
+
 ## Cross-platform Support
 
 | Feature | Windows | macOS | Linux | FreeBSD |
-|---------|---------|-------|-------|---------|
+|--------|---------|-------|-------|---------|
 | Multi-threaded download | ✅ | ✅ | ✅ | ✅ |
 | Resume support | ✅ | ✅ | ✅ | ✅ |
 | System proxy detection | ✅ | ✅ | ✅ | ✅ |
