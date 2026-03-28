@@ -7,6 +7,46 @@ English | 简体中文
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)，
 本项目遵循 [语义化版本](https://semver.org/spec/v2.0.0.html)。
 
+## 0.4.0 - 2026-03-29
+
+### 新增
+
+- **CLI 批量下载支持**：完整的批量文件下载功能
+  - `-F, --batch-file` 选项：从文本文件读取 URL 进行批量下载
+  - `--max-concurrent` 选项：控制并发下载数量
+  - `read_urls_from_file()` 函数：支持验证和注释行处理
+
+- **CLI 输出格式控制**：多种输出模式适应不同使用场景
+  - `--output-format {auto,json,text}` 选项
+  - `OutputMode` 类：智能 TTY 检测
+  - JSON 输出：程序化调用（第三方集成）
+  - 文本输出：人类可读
+
+- **CLI 进度显示改进**：
+  - `BatchProgressDisplay` 类：多文件进度追踪
+  - TTY 检测自动切换模式
+  - 安静模式 (`-q, --quiet`)：最小化输出
+  - 批量下载完成时显示统计摘要
+
+- **CLI 退出码**：为脚本处理定义的退出码
+  - `0` 成功、`1` 一般错误、`2` 参数无效、`3` 重试失败、`4` 用户取消
+
+- **CLI 版本选项**：`--version` 显示版本信息
+
+### 优化变更
+
+- 重构 callback adapters，提取 `_detect_callback_mode()` 消除重复代码
+- 将 `DownloadConfig.__post_init__` 验证逻辑拆分为独立方法
+- 改进 `H2MultiPlexDownloader.download_chunk()` 异常处理的具体性
+- `ChunkManager` 添加 `_chunk_index_map` 实现 O(1) 分块查找
+- 删除重复的 `DirectFileWriter` 类（已存在于 `writer.py`）
+- 更新 `apply_style()` 类型签名以接受 `DownloadStyle | str`
+
+### 文档
+
+- 新增完整 CLI 文档（`docs/en/cli/index.md`、`docs/zh/cli/index.md`）
+- 更新 `mkdocs.yml` 导航结构
+
 ## 0.3.0 - 2026-03-28
 
 ### 新增

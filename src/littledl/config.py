@@ -3,6 +3,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
+from .strategy import DownloadStyle
+
 DEFAULT_MIN_CHUNK_SIZE = 2 * 1024 * 1024
 DEFAULT_MAX_CHUNK_SIZE = 8 * 1024 * 1024
 DEFAULT_CHUNK_SIZE = 4 * 1024 * 1024
@@ -235,12 +237,19 @@ class DownloadConfig:
     progress_update_interval: float = 0.5
 
     def __post_init__(self) -> None:
+        self._validate_chunk_constraints()
+        self._validate_hybrid_parameters()
+        self._ensure_proxy_initialized()
+
+    def _validate_chunk_constraints(self) -> None:
         if self.max_chunks < self.min_chunks:
             self.max_chunks = self.min_chunks
         if self.chunk_size < self.min_chunk_size:
             self.chunk_size = self.min_chunk_size
         if self.chunk_size > self.max_chunk_size:
             self.chunk_size = self.max_chunk_size
+
+    def _validate_hybrid_parameters(self) -> None:
         if self.resplit_threshold <= 0 or self.resplit_threshold >= 1:
             self.resplit_threshold = 0.5
         if self.hybrid_target_chunk_time <= 0:
@@ -257,10 +266,12 @@ class DownloadConfig:
             self.hybrid_min_remaining_bytes = DEFAULT_HYBRID_MIN_REMAINING_BYTES
         if self.hybrid_max_resplit_per_chunk < 1:
             self.hybrid_max_resplit_per_chunk = 1
+
+    def _ensure_proxy_initialized(self) -> None:
         if self.proxy is None:
             self.proxy = ProxyConfig()
 
-    def apply_style(self, style: Any) -> "DownloadConfig":
+    def apply_style(self, style: DownloadStyle | str) -> "DownloadConfig":
         """Apply a download style to configuration parameters."""
         style_name = getattr(style, "name", str(style)).upper()
 
@@ -291,7 +302,7 @@ class DownloadConfig:
             self.hybrid_aimd_increase_step = max(1, self.hybrid_aimd_increase_step)
             self.hybrid_aimd_decrease_factor = max(0.1, min(0.9, self.hybrid_aimd_decrease_factor))
             self.adaptive_interval = min(self.adaptive_interval, 2.0)
-            
+
         return self
 
     @property

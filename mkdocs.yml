@@ -1,6 +1,6 @@
 site_name: littledl
 site_description: High-performance download library with IDM-style multi-threaded chunked downloading
-site_url: https://littledl.zsxiaoshu.cn/
+site_url: https://shu-shu-1.github.io/Little-Tree-Downloader/
 repo_name: little-tree/little-tree-downloader
 repo_url: https://github.com/little-tree/little-tree-downloader
 
@@ -56,6 +56,7 @@ plugins:
         Getting Started:
           - en/index.md: Home
           - en/getting-started/index.md: Getting Started
+          - en/cli/index.md: CLI Reference
         Configuration:
           - en/configuration/index.md: Configuration Guide
           - en/authentication/index.md: Authentication
@@ -66,6 +67,7 @@ plugins:
           - en/api-reference/index.md: API Reference
 
 extra:
+  base: /Little-Tree-Downloader/
   social:
     - icon: fontawesome/brands/github
       link: https://github.com/little-tree/little-tree-downloader
@@ -85,6 +87,7 @@ markdown_extensions:
 nav:
   - Home: index.md
   - Getting Started: getting-started/index.md
+  - CLI Reference: cli/index.md
   - Configuration: configuration/index.md
   - Authentication: authentication/index.md
   - Proxy: proxy/index.md

@@ -159,6 +159,7 @@ class ChunkManager:
         self.max_chunks = max_chunks
         self.min_chunk_size = min_chunk_size
         self.chunks: list[Chunk] = []
+        self._chunk_index_map: dict[int, int] = {}
         self._lock = asyncio.Lock()
         self._chunk_counter = 0
 
@@ -198,6 +199,7 @@ class ChunkManager:
 
     def initialize_chunks(self, existing_progress: dict[int, int] | None = None) -> None:
         self.chunks.clear()
+        self._chunk_index_map.clear()
         self._chunk_counter = 0
         optimal_chunks = self._calculate_optimal_chunks()
         chunk_size = self.file_size // optimal_chunks
@@ -216,6 +218,7 @@ class ChunkManager:
                 if chunk.downloaded >= chunk.size:
                     chunk.complete()
             self.chunks.append(chunk)
+            self._chunk_index_map[chunk.index] = len(self.chunks) - 1
             current_pos = chunk_end
         self._chunk_counter = optimal_chunks
 
@@ -293,10 +296,10 @@ class ChunkManager:
         return [c for c in active if c.average_speed > 0 and c.average_speed < threshold]
 
     def get_chunk_by_index(self, index: int) -> Chunk | None:
-        for chunk in self.chunks:
-            if chunk.index == index:
-                return chunk
-        return None
+        pos = self._chunk_index_map.get(index)
+        if pos is None or pos >= len(self.chunks):
+            return None
+        return self.chunks[pos]
 
     def get_stats(self) -> dict[str, Any]:
         return {

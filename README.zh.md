@@ -44,13 +44,13 @@ uv add littledl
 
 完整的文档请参阅 [https://shu-shu-1.github.io/Little-Tree-Downloader/](https://shu-shu-1.github.io/Little-Tree-Downloader/)
 
-- [快速入门](https://littledl.zsxiaoshu.cn/zh/getting-started/) - 快速入门指南
-- [配置指南](https://littledl.zsxiaoshu.cn/zh/configuration/) - 配置选项
-- [批量下载](https://littledl.zsxiaoshu.cn/zh/batch-download/) - 多文件批量下载
-- [代理配置](https://littledl.zsxiaoshu.cn/zh/proxy/) - 代理配置
-- [错误处理](https://littledl.zsxiaoshu.cn/zh/error-handling/) - 错误处理
-- [高级用法](https://littledl.zsxiaoshu.cn/zh/advanced/) - 高级功能
-- [API 参考](https://littledl.zsxiaoshu.cn/zh/api-reference/) - 完整的 API 参考
+- [快速入门](https://shu-shu-1.github.io/Little-Tree-Downloader/zh/getting-started/) - 快速入门指南
+- [配置指南](https://shu-shu-1.github.io/Little-Tree-Downloader/zh/configuration/) - 配置选项
+- [批量下载](https://shu-shu-1.github.io/Little-Tree-Downloader/zh/batch-download/) - 多文件批量下载
+- [代理配置](https://shu-shu-1.github.io/Little-Tree-Downloader/zh/proxy/) - 代理配置
+- [错误处理](https://shu-shu-1.github.io/Little-Tree-Downloader/zh/error-handling/) - 错误处理
+- [高级用法](https://shu-shu-1.github.io/Little-Tree-Downloader/zh/advanced/) - 高级功能
+- [API 参考](https://shu-shu-1.github.io/Little-Tree-Downloader/zh/api-reference/) - 完整的 API 参考
 
 ## 快速开始
 

@@ -44,13 +44,13 @@ uv add littledl
 
 For full documentation, visit [https://shu-shu-1.github.io/Little-Tree-Downloader/](https://shu-shu-1.github.io/Little-Tree-Downloader/)
 
-- [Getting Started](https://littledl.zsxiaoshu.cn/getting-started/) - Quick start guide
-- [Configuration](https://littledl.zsxiaoshu.cn/configuration/) - Configuration options
-- [Batch Download](https://littledl.zsxiaoshu.cn/batch-download/) - Multi-file batch download
-- [Proxy](https://littledl.zsxiaoshu.cn/proxy/) - Proxy configuration
-- [Error Handling](https://littledl.zsxiaoshu.cn/error-handling/) - Error handling
-- [Advanced](https://littledl.zsxiaoshu.cn/advanced/) - Advanced features
-- [API Reference](https://littledl.zsxiaoshu.cn/api-reference/) - Complete API reference
+- [Getting Started](https://shu-shu-1.github.io/Little-Tree-Downloader/getting-started/) - Quick start guide
+- [Configuration](https://shu-shu-1.github.io/Little-Tree-Downloader/configuration/) - Configuration options
+- [Batch Download](https://shu-shu-1.github.io/Little-Tree-Downloader/batch-download/) - Multi-file batch download
+- [Proxy](https://shu-shu-1.github.io/Little-Tree-Downloader/proxy/) - Proxy configuration
+- [Error Handling](https://shu-shu-1.github.io/Little-Tree-Downloader/error-handling/) - Error handling
+- [Advanced](https://shu-shu-1.github.io/Little-Tree-Downloader/advanced/) - Advanced features
+- [API Reference](https://shu-shu-1.github.io/Little-Tree-Downloader/api-reference/) - Complete API reference
 
 ## Quick Start
 

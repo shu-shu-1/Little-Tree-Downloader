@@ -48,45 +48,53 @@ class ChunkEvent:
     timestamp: float
 
 
+CallbackMode = str
+CALLBACK_MODE_NONE = "none"
+CALLBACK_MODE_LEGACY = "legacy"
+CALLBACK_MODE_KWARGS = "kwargs"
+CALLBACK_MODE_DICT = "dict"
+CALLBACK_MODE_EVENT = "event"
+
+
+def _detect_callback_mode(callback: Callable[..., Any] | None) -> CallbackMode:
+    """Detect the callback signature style to normalize invocation."""
+    if callback is None:
+        return CALLBACK_MODE_NONE
+
+    try:
+        sig = inspect.signature(callback)
+    except (TypeError, ValueError):
+        return CALLBACK_MODE_LEGACY
+
+    params = list(sig.parameters.values())
+    if any(p.kind == inspect.Parameter.VAR_KEYWORD for p in params):
+        return CALLBACK_MODE_KWARGS
+    if any(p.kind == inspect.Parameter.VAR_POSITIONAL for p in params):
+        return CALLBACK_MODE_LEGACY
+
+    positional = [
+        p for p in params if p.kind in (inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD)
+    ]
+
+    if len(positional) >= 4:
+        return CALLBACK_MODE_LEGACY
+    if len(positional) == 1:
+        name = positional[0].name.lower()
+        if name in {"data", "payload", "info", "state", "stats"}:
+            return CALLBACK_MODE_DICT
+        return CALLBACK_MODE_EVENT
+    if len(positional) == 0:
+        return CALLBACK_MODE_KWARGS
+
+    return CALLBACK_MODE_LEGACY
+
+
 class ProgressCallbackAdapter:
     """Normalize different callback styles into one internal path."""
 
     def __init__(self, callback: Callable[..., Any] | None) -> None:
         self._callback = callback
-        self._mode = self._detect_mode(callback)
-
-    @staticmethod
-    def _detect_mode(callback: Callable[..., Any] | None) -> str:
-        if callback is None:
-            return "none"
-
-        try:
-            sig = inspect.signature(callback)
-        except (TypeError, ValueError):
-            # Builtin/c-extension callables may not expose a signature.
-            return "legacy"
-
-        params = list(sig.parameters.values())
-        if any(p.kind == inspect.Parameter.VAR_KEYWORD for p in params):
-            return "kwargs"
-        if any(p.kind == inspect.Parameter.VAR_POSITIONAL for p in params):
-            return "legacy"
-
-        positional = [
-            p for p in params if p.kind in (inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD)
-        ]
-
-        if len(positional) >= 4:
-            return "legacy"
-        if len(positional) == 1:
-            name = positional[0].name.lower()
-            if name in {"data", "payload", "info", "state", "stats"}:
-                return "dict"
-            return "event"
-        if len(positional) == 0:
-            return "kwargs"
-
-        return "legacy"
+        self._mode = _detect_callback_mode(callback)
 
     async def emit(self, downloaded: int, total: int, speed: float, eta: int, unknown_size: bool = False) -> None:
         if self._callback is None:
@@ -116,11 +124,11 @@ class ProgressCallbackAdapter:
         }
 
         result: Any
-        if self._mode == "event":
+        if self._mode == CALLBACK_MODE_EVENT:
             result = self._callback(event)
-        elif self._mode == "dict":
+        elif self._mode == CALLBACK_MODE_DICT:
             result = self._callback(payload)
-        elif self._mode == "kwargs":
+        elif self._mode == CALLBACK_MODE_KWARGS:
             result = self._callback(**payload)
         else:
             result = self._callback(event.downloaded, event.total, event.speed, event.eta)
@@ -129,7 +137,6 @@ class ProgressCallbackAdapter:
             await result
 
     def __call__(self, downloaded: int, total: int, speed: float, eta: int, unknown_size: bool = False) -> Any:
-        # Keep a sync signature so monitor can call it and schedule awaitables.
         return self.emit(downloaded, total, speed, eta, unknown_size)
 
 
@@ -138,7 +145,7 @@ class ChunkCallbackAdapter:
 
     def __init__(self, callback: Callable[..., Any] | None) -> None:
         self._callback = callback
-        self._mode = ProgressCallbackAdapter._detect_mode(callback)
+        self._mode = _detect_callback_mode(callback)
 
     async def emit(self, chunk: Chunk, status: str, speed: float = 0.0, error: str | None = None) -> None:
         if self._callback is None:
@@ -169,11 +176,11 @@ class ChunkCallbackAdapter:
         }
 
         result: Any
-        if self._mode == "event":
+        if self._mode == CALLBACK_MODE_EVENT:
             result = self._callback(event)
-        elif self._mode == "dict":
+        elif self._mode == CALLBACK_MODE_DICT:
             result = self._callback(payload)
-        elif self._mode == "kwargs":
+        elif self._mode == CALLBACK_MODE_KWARGS:
             result = self._callback(**payload)
         else:
             result = self._callback(
@@ -188,42 +195,6 @@ class ChunkCallbackAdapter:
 
         if inspect.isawaitable(result):
             await result
-
-
-class DirectFileWriter:
-    def __init__(self, file_path: Path, mode: str = "wb") -> None:
-        self.file_path = file_path
-        self.mode = mode
-        self._file = None
-        self._lock = asyncio.Lock()
-        self._positions: dict[int, int] = {}
-
-    async def open(self) -> None:
-        self.file_path.parent.mkdir(parents=True, exist_ok=True)
-        if self.mode == "wb":
-            self._file = await aiofiles.open(self.file_path, "wb")
-        else:
-            self._file = await aiofiles.open(self.file_path, "r+b")
-
-    async def close(self) -> None:
-        if self._file:
-            await self._file.close()
-            self._file = None
-
-    async def write_at(self, offset: int, data: bytes) -> int:
-        async with self._lock:
-            if not self._file:
-                raise OSError("File not opened")
-            await self._file.seek(offset)
-            await self._file.write(data)
-            return len(data)
-
-    async def read_at(self, offset: int, size: int) -> bytes:
-        async with self._lock:
-            if not self._file:
-                raise OSError("File not opened")
-            await self._file.seek(offset)
-            return await self._file.read(size)
 
 
 class H2MultiPlexDownloader:
@@ -352,6 +323,21 @@ class H2MultiPlexDownloader:
                 if self._chunk_callback:
                     await self._chunk_callback.emit(chunk, "completed", speed=self._download_speed)
 
+        except CancelledError:
+            chunk.fail("Download cancelled")
+            if self._chunk_callback:
+                await self._chunk_callback.emit(chunk, "failed", speed=self._download_speed, error="Download cancelled")
+            raise
+        except httpx.HTTPError as e:
+            chunk.fail(str(e))
+            if self._chunk_callback:
+                await self._chunk_callback.emit(chunk, "failed", speed=self._download_speed, error=str(e))
+            raise
+        except OSError as e:
+            chunk.fail(str(e))
+            if self._chunk_callback:
+                await self._chunk_callback.emit(chunk, "failed", speed=self._download_speed, error=str(e))
+            raise
         except Exception as e:
             chunk.fail(str(e))
             if self._chunk_callback:
