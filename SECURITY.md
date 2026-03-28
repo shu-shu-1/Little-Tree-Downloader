@@ -8,7 +8,7 @@ We actively support the following versions with security updates:
 
 | Version | Supported |
 | ------- | --------- |
-| 0.1.x   | ✅        |
+| 0.4.x   | ✅        |
 
 ## Reporting a Vulnerability
 
@@ -134,7 +134,7 @@ Security updates will be announced via:
 
 For security concerns:
 
-- **Security Advisories**: [GitHub Security](https://github.com/little-tree/little-tree-downloader/security)
+- **Security Advisories**: [GitHub Security](https://github.com/shu-shu-1/Little-Tree-Downloader/security)
 - **Email**: zsxiaoshu@outlook.com
 
 Thank you for helping keep littledl secure!

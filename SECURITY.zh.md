@@ -8,7 +8,7 @@ English | 简体中文
 
 | 版本  | 支持状态 |
 | ----- | -------- |
-| 0.1.x | ✅       |
+| 0.4.x | ✅       |
 
 ## 报告漏洞
 
@@ -134,7 +134,7 @@ config = DownloadConfig(
 
 安全问题：
 
-- **安全公告**：[GitHub Security](https://github.com/little-tree/little-tree-downloader/security)
+- **安全公告**：[GitHub Security](https://github.com/shu-shu-1/Little-Tree-Downloader/security)
 - **电子邮件**：zsxiaoshu@outlook.com
 
 感谢您帮助保护 littledl 的安全！
