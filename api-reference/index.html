@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://littledl.zsxiaoshu.cn/api-reference/">
+        <link rel="canonical" href="https://shu-shu-1.github.io/Little-Tree-Downloader/api-reference/">
       
       
         <link rel="prev" href="../advanced/">
@@ -291,6 +291,25 @@
   
   
     <li class="md-tabs__item">
+      <a href="../cli/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  CLI Reference
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
       <a href="../configuration/" class="md-tabs__link">
         
   
@@ -490,6 +509,33 @@
     
   
     Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
   
 
     
@@ -763,6 +809,51 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="DownloadConfig">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Methods
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#callback-events" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Callback Events
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Callback Events">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#progressevent" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ProgressEvent
+      
+    </span>
+  </a>
+  
 </li>
         
           <li class="md-nav__item">
@@ -978,13 +1069,13 @@
     <span class="n">progress_callback</span><span class="p">:</span> <span class="n">Callable</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">chunk_callback</span><span class="p">:</span> <span class="n">Callable</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span>
-
-<span class="c1">## Callback Events</span>
-
-<span class="c1">### ProgressEvent</span>
-
-<span class="err">```</span><span class="n">python</span>
-<span class="n">ProgressEvent</span><span class="p">(</span>
+</code></pre></div>
+<h4 id="methods">Methods<a class="headerlink" href="#methods" title="Permanent link">&para;</a></h4>
+<p><strong><code>apply_style(style: Any) -&gt; "DownloadConfig"</code></strong></p>
+<p>Quickly reconfigures all internal scheduling variables, chunking thresholds, and AIMD congestion control parameters based on a provided style. Supports either a <code>DownloadStyle</code> enum or a standard string style name (e.g., <code>"SINGLE"</code>, <code>"MULTI"</code>, <code>"ADAPTIVE"</code>, or <code>"HYBRID_TURBO"</code>). Returns the modified <code>DownloadConfig</code> instance.</p>
+<h2 id="callback-events">Callback Events<a class="headerlink" href="#callback-events" title="Permanent link">&para;</a></h2>
+<h3 id="progressevent">ProgressEvent<a class="headerlink" href="#progressevent" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="n">ProgressEvent</span><span class="p">(</span>
     <span class="n">downloaded</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
     <span class="n">total</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
     <span class="n">speed</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>

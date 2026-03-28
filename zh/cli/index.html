@@ -10,17 +10,17 @@
       
       
       
-        <link rel="canonical" href="https://shu-shu-1.github.io/Little-Tree-Downloader/zh/error-handling/">
+        <link rel="canonical" href="https://shu-shu-1.github.io/Little-Tree-Downloader/zh/cli/">
       
       
-        <link rel="prev" href="../proxy/">
+        <link rel="prev" href="../getting-started/">
       
       
-        <link rel="next" href="../advanced/">
+        <link rel="next" href="../configuration/">
       
       
         
-          <link rel="alternate" href="../../error-handling/" hreflang="en">
+          <link rel="alternate" href="../../cli/" hreflang="en">
         
           <link rel="alternate" href="./" hreflang="zh">
         
@@ -31,7 +31,7 @@
     
     
       
-        <title>Error Handling - littledl</title>
+        <title>CLI Reference - littledl</title>
       
     
     
@@ -116,7 +116,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Error Handling
+              CLI Reference
             
           </span>
         </div>
@@ -163,7 +163,7 @@
       <ul class="md-select__list">
         
           <li class="md-select__item">
-            <a href="../../error-handling/" hreflang="en" class="md-select__link">
+            <a href="../../cli/" hreflang="en" class="md-select__link">
               English
             </a>
           </li>
@@ -291,9 +291,11 @@
   
   
   
+    
   
-    <li class="md-tabs__item">
-      <a href="../cli/" class="md-tabs__link">
+  
+    <li class="md-tabs__item md-tabs__item--active">
+      <a href="./" class="md-tabs__link">
         
   
   
@@ -367,11 +369,9 @@
   
   
   
-    
   
-  
-    <li class="md-tabs__item md-tabs__item--active">
-      <a href="./" class="md-tabs__link">
+    <li class="md-tabs__item">
+      <a href="../error-handling/" class="md-tabs__link">
         
   
   
@@ -527,10 +527,37 @@
       
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../cli/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -546,6 +573,320 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="目录">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      目录
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        安装
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        基本用法
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="基本用法">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        下载单个文件
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        批量下载
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        常用选项
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        下载模式
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="下载模式">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_8" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        示例
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_9" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        进度显示
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="进度显示">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tty" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        交互模式 (TTY)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_10" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        非交互模式 (管道/重定向)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_11" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        输出格式
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="输出格式">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#json" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        JSON 输出
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_12" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        退出码
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_13" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        高级示例
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="高级示例">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_14" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        断点续传
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ssl" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        跳过 SSL 验证（不推荐）
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_15" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        使用代理
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_16" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        限速下载
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_17" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        批量下载并发控制
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_18" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        安静模式（最小输出）
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_19" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        仅显示文件信息
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_20" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        自动分析并选择最佳模式
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_21" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        环境变量
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_22" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        进阶阅读
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -635,37 +976,10 @@
       
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Error Handling
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../error-handling/" class="md-nav__link">
         
   
   
@@ -681,137 +995,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="目录">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      目录
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#_2" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        异常类型
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="异常类型">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#downloadexception" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        DownloadException
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#networkerror" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        NetworkError
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#authenticationerror" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        AuthenticationError
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#fileexistserror" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        FileExistsError
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#_3" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        重试配置
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#_4" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        验证错误
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="验证错误">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#url" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        URL 验证
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#_5" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        文件大小限制
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -890,79 +1073,293 @@
   
 
 
-<h1 id="_1">错误处理<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h1>
-<p>littledl 如何处理错误和异常。</p>
-<h2 id="_2">异常类型<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
-<h3 id="downloadexception">DownloadException<a class="headerlink" href="#downloadexception" title="Permanent link">&para;</a></h3>
-<p>所有下载相关错误的基础异常。</p>
-<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">littledl</span><span class="w"> </span><span class="kn">import</span> <span class="n">DownloadException</span>
-
-<span class="k">try</span><span class="p">:</span>
-    <span class="n">path</span> <span class="o">=</span> <span class="n">download_file_sync</span><span class="p">(</span><span class="s2">&quot;https://example.com/file.zip&quot;</span><span class="p">)</span>
-<span class="k">except</span> <span class="n">DownloadException</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;下载失败: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<h1 id="_1">命令行界面<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h1>
+<p>littledl 提供功能完整的命令行界面，既支持交互式使用，也支持脚本调用。</p>
+<h2 id="_2">安装<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
+<p>安装 littledl 后，CLI 命令 <code>littledl</code> 即可使用：</p>
+<div class="highlight"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span>littledl
 </code></pre></div>
-<h3 id="networkerror">NetworkError<a class="headerlink" href="#networkerror" title="Permanent link">&para;</a></h3>
-<p>网络相关错误（连接超时、DNS 失败等）。</p>
-<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">littledl</span><span class="w"> </span><span class="kn">import</span> <span class="n">NetworkError</span>
-
-<span class="k">try</span><span class="p">:</span>
-    <span class="n">path</span> <span class="o">=</span> <span class="n">download_file_sync</span><span class="p">(</span><span class="s2">&quot;https://example.com/file.zip&quot;</span><span class="p">)</span>
-<span class="k">except</span> <span class="n">NetworkError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;网络错误: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<p>验证安装：</p>
+<div class="highlight"><pre><span></span><code>littledl<span class="w"> </span>--version
+<span class="c1"># 输出: littledl 0.3.0</span>
 </code></pre></div>
-<h3 id="authenticationerror">AuthenticationError<a class="headerlink" href="#authenticationerror" title="Permanent link">&para;</a></h3>
-<p>认证失败。</p>
-<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">littledl</span><span class="w"> </span><span class="kn">import</span> <span class="n">AuthenticationError</span>
-
-<span class="k">try</span><span class="p">:</span>
-    <span class="n">path</span> <span class="o">=</span> <span class="n">download_file_sync</span><span class="p">(</span><span class="s2">&quot;https://example.com/protected.zip&quot;</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">)</span>
-<span class="k">except</span> <span class="n">AuthenticationError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;认证失败: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<h2 id="_3">基本用法<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h2>
+<h3 id="_4">下载单个文件<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>littledl<span class="w"> </span><span class="s2">&quot;https://example.com/large-file.zip&quot;</span><span class="w"> </span>-o<span class="w"> </span>./downloads
 </code></pre></div>
-<h3 id="fileexistserror">FileExistsError<a class="headerlink" href="#fileexistserror" title="Permanent link">&para;</a></h3>
-<p>文件已存在且 <code>overwrite</code> 设置为 <code>False</code>。</p>
-<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">littledl</span><span class="w"> </span><span class="kn">import</span> <span class="ne">FileExistsError</span>
-
-<span class="k">try</span><span class="p">:</span>
-    <span class="n">path</span> <span class="o">=</span> <span class="n">download_file_sync</span><span class="p">(</span><span class="s2">&quot;https://example.com/file.zip&quot;</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-<span class="k">except</span> <span class="ne">FileExistsError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;文件已存在: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<h3 id="_5">批量下载<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h3>
+<p>创建文件 <code>urls.txt</code>，每行一个 URL：</p>
+<div class="highlight"><pre><span></span><code># 支持注释行
+https://example.com/file1.zip
+https://example.com/file2.pdf
+https://example.com/file3.doc
 </code></pre></div>
-<h2 id="_3">重试配置<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h2>
-<p>为失败的下载配置自动重试。</p>
-<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">littledl</span><span class="w"> </span><span class="kn">import</span> <span class="n">DownloadConfig</span><span class="p">,</span> <span class="n">RetryConfig</span><span class="p">,</span> <span class="n">RetryMode</span>
-
-<span class="n">retry</span> <span class="o">=</span> <span class="n">RetryConfig</span><span class="p">(</span>
-    <span class="n">enabled</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-    <span class="n">mode</span><span class="o">=</span><span class="n">RetryMode</span><span class="o">.</span><span class="n">EXPONENTIAL</span><span class="p">,</span>
-    <span class="n">max_retries</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
-    <span class="n">initial_delay</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
-    <span class="n">max_delay</span><span class="o">=</span><span class="mf">60.0</span><span class="p">,</span>
-<span class="p">)</span>
-
-<span class="n">config</span> <span class="o">=</span> <span class="n">DownloadConfig</span><span class="p">(</span><span class="n">retry</span><span class="o">=</span><span class="n">retry</span><span class="p">)</span>
+<p>然后执行下载：</p>
+<div class="highlight"><pre><span></span><code>littledl<span class="w"> </span>-F<span class="w"> </span>urls.txt<span class="w"> </span>-o<span class="w"> </span>./downloads
 </code></pre></div>
-<h2 id="_4">验证错误<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h2>
-<h3 id="url">URL 验证<a class="headerlink" href="#url" title="Permanent link">&para;</a></h3>
-<p>下载前始终验证 URL：</p>
-<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">urllib.parse</span><span class="w"> </span><span class="kn">import</span> <span class="n">urlparse</span>
+<h2 id="_6">常用选项<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>选项</th>
+<th>说明</th>
+<th>默认值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>-o, --output 路径</code></td>
+<td>输出目录或文件路径</td>
+<td><code>./downloads</code></td>
+</tr>
+<tr>
+<td><code>-f, --filename 名称</code></td>
+<td>指定输出文件名</td>
+<td>服务器提供</td>
+</tr>
+<tr>
+<td><code>-c, --max-chunks N</code></td>
+<td>最大并行分块数</td>
+<td><code>16</code></td>
+</tr>
+<tr>
+<td><code>-t, --timeout 秒</code></td>
+<td>请求超时时间</td>
+<td><code>300</code></td>
+</tr>
+<tr>
+<td><code>--proxy URL</code></td>
+<td>HTTP 代理</td>
+<td>无</td>
+</tr>
+<tr>
+<td><code>--speed-limit 字节/秒</code></td>
+<td>限速</td>
+<td>不限速</td>
+</tr>
+<tr>
+<td><code>--retry N</code></td>
+<td>最大重试次数</td>
+<td><code>3</code></td>
+</tr>
+<tr>
+<td><code>-v, --verbose</code></td>
+<td>详细输出</td>
+<td>False</td>
+</tr>
+</tbody>
+</table>
+<h2 id="_7">下载模式<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>模式</th>
+<th>说明</th>
+<th>适用场景</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>single</code></td>
+<td>单线程下载</td>
+<td>小文件、不支持 Range 的服务器</td>
+</tr>
+<tr>
+<td><code>multi</code></td>
+<td>多线程分段下载</td>
+<td>大文件、稳定连接</td>
+</tr>
+<tr>
+<td><code>adaptive</code></td>
+<td>根据条件自动选择</td>
+<td>大多数场景</td>
+</tr>
+<tr>
+<td><code>hybrid_turbo</code></td>
+<td>自适应 + AIMD 拥塞控制</td>
+<td>追求极致速度、不稳定网络</td>
+</tr>
+<tr>
+<td><code>auto</code></td>
+<td>由 littledl 分析后决定</td>
+<td>推荐给新手用户</td>
+</tr>
+</tbody>
+</table>
+<h3 id="_8">示例<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 自动选择最佳模式</span>
+littledl<span class="w"> </span><span class="s2">&quot;https://example.com/file.zip&quot;</span><span class="w"> </span>-s<span class="w"> </span>auto
 
-<span class="k">def</span><span class="w"> </span><span class="nf">validate_url</span><span class="p">(</span><span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-    <span class="n">parsed</span> <span class="o">=</span> <span class="n">urlparse</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">parsed</span><span class="o">.</span><span class="n">scheme</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;http&#39;</span><span class="p">,</span> <span class="s1">&#39;https&#39;</span><span class="p">)</span>
+<span class="c1"># 强制单线程</span>
+littledl<span class="w"> </span><span class="s2">&quot;https://example.com/file.zip&quot;</span><span class="w"> </span>-s<span class="w"> </span>single
 
-<span class="k">if</span> <span class="ow">not</span> <span class="n">validate_url</span><span class="p">(</span><span class="n">url</span><span class="p">):</span>
-    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;无效的 URL&quot;</span><span class="p">)</span>
+<span class="c1"># 最高性能</span>
+littledl<span class="w"> </span><span class="s2">&quot;https://example.com/file.zip&quot;</span><span class="w"> </span>-s<span class="w"> </span>hybrid_turbo<span class="w"> </span>-c<span class="w"> </span><span class="m">32</span>
 </code></pre></div>
-<h3 id="_5">文件大小限制<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h3>
-<p>设置最大文件大小以防止过度下载：</p>
-<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">littledl</span><span class="w"> </span><span class="kn">import</span> <span class="n">DownloadConfig</span>
-
-<span class="n">config</span> <span class="o">=</span> <span class="n">DownloadConfig</span><span class="p">(</span>
-    <span class="n">max_file_size</span><span class="o">=</span><span class="mi">100</span> <span class="o">*</span> <span class="mi">1024</span> <span class="o">*</span> <span class="mi">1024</span><span class="p">,</span>  <span class="c1"># 100MB</span>
-<span class="p">)</span>
+<h2 id="_9">进度显示<a class="headerlink" href="#_9" title="Permanent link">&para;</a></h2>
+<h3 id="tty">交互模式 (TTY)<a class="headerlink" href="#tty" title="Permanent link">&para;</a></h3>
+<p>当标准输出是终端时，littledl 显示动态进度条：</p>
+<div class="highlight"><pre><span></span><code>[=============&gt;                ]  45.2% |  45.2MB / 100.0MB | 10.5MB/s | 预计剩余: 00:05
 </code></pre></div>
+<h3 id="_10">非交互模式 (管道/重定向)<a class="headerlink" href="#_10" title="Permanent link">&para;</a></h3>
+<p>当输出被管道传输或重定向时，littledl 自动切换到最小化输出：</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># 输出到文件</span>
+littledl<span class="w"> </span><span class="s2">&quot;https://example.com/file.zip&quot;</span><span class="w"> </span>&gt;<span class="w"> </span>download.log
+
+<span class="c1"># 管道到其他工具</span>
+littledl<span class="w"> </span><span class="s2">&quot;https://example.com/file.zip&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>head<span class="w"> </span>-c<span class="w"> </span><span class="m">100</span>
+</code></pre></div>
+<h2 id="_11">输出格式<a class="headerlink" href="#_11" title="Permanent link">&para;</a></h2>
+<p>使用 <code>--output-format</code> 控制输出样式：</p>
+<table>
+<thead>
+<tr>
+<th>格式</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>auto</code></td>
+<td>自动检测（默认）- TTY 使用文本，管道使用 JSON</td>
+</tr>
+<tr>
+<td><code>text</code></td>
+<td>人类可读的文本输出</td>
+</tr>
+<tr>
+<td><code>json</code></td>
+<td>结构化 JSON，用于脚本调用</td>
+</tr>
+</tbody>
+</table>
+<h3 id="json">JSON 输出<a class="headerlink" href="#json" title="Permanent link">&para;</a></h3>
+<p>程序化调用时，指定 JSON 输出：</p>
+<div class="highlight"><pre><span></span><code>littledl<span class="w"> </span><span class="s2">&quot;https://example.com/file.zip&quot;</span><span class="w"> </span>-o<span class="w"> </span>/tmp<span class="w"> </span>--output-format<span class="w"> </span>json
+</code></pre></div>
+<p>JSON 输出示例：</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;download&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;success&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;path&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/tmp/file.zip&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;size&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">104857600</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>批量下载 JSON 输出：</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;batch&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;success&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;total&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;completed&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">9</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;failed&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;total_bytes&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">104857600</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;elapsed_seconds&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">120.5</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;average_speed&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">870123.45</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;tasks&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;filename&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;file1.zip&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;url&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://example.com/file1.zip&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;completed&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;size&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10485760</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;downloaded&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10485760</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;error&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">]</span>
+<span class="p">}</span>
+</code></pre></div>
+<h2 id="_12">退出码<a class="headerlink" href="#_12" title="Permanent link">&para;</a></h2>
+<p>littledl 使用特定的退出码，便于脚本处理：</p>
+<table>
+<thead>
+<tr>
+<th>代码</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>0</code></td>
+<td>成功</td>
+</tr>
+<tr>
+<td><code>1</code></td>
+<td>一般错误</td>
+</tr>
+<tr>
+<td><code>2</code></td>
+<td>URL 错误或参数无效</td>
+</tr>
+<tr>
+<td><code>3</code></td>
+<td>重试后下载失败</td>
+</tr>
+<tr>
+<td><code>4</code></td>
+<td>用户取消 (Ctrl+C)</td>
+</tr>
+</tbody>
+</table>
+<p>脚本中的使用示例：</p>
+<div class="highlight"><pre><span></span><code>littledl<span class="w"> </span><span class="s2">&quot;https://example.com/file.zip&quot;</span><span class="w"> </span>-o<span class="w"> </span>/tmp
+<span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="nv">$?</span><span class="w"> </span>-eq<span class="w"> </span><span class="m">0</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;下载成功&quot;</span>
+<span class="k">else</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;下载失败，退出码 </span><span class="nv">$?</span><span class="s2">&quot;</span>
+<span class="k">fi</span>
+</code></pre></div>
+<h2 id="_13">高级示例<a class="headerlink" href="#_13" title="Permanent link">&para;</a></h2>
+<h3 id="_14">断点续传<a class="headerlink" href="#_14" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>littledl<span class="w"> </span><span class="s2">&quot;https://example.com/large-file.zip&quot;</span><span class="w"> </span>-o<span class="w"> </span>./downloads<span class="w"> </span>--resume
+</code></pre></div>
+<h3 id="ssl">跳过 SSL 验证（不推荐）<a class="headerlink" href="#ssl" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>littledl<span class="w"> </span><span class="s2">&quot;https://example.com/file.zip&quot;</span><span class="w"> </span>--no-verify-ssl
+</code></pre></div>
+<h3 id="_15">使用代理<a class="headerlink" href="#_15" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>littledl<span class="w"> </span><span class="s2">&quot;https://example.com/file.zip&quot;</span><span class="w"> </span>--proxy<span class="w"> </span><span class="s2">&quot;http://proxy:8080&quot;</span>
+</code></pre></div>
+<h3 id="_16">限速下载<a class="headerlink" href="#_16" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 限制为 1MB/s</span>
+littledl<span class="w"> </span><span class="s2">&quot;https://example.com/file.zip&quot;</span><span class="w"> </span>--speed-limit<span class="w"> </span><span class="m">1048576</span>
+</code></pre></div>
+<h3 id="_17">批量下载并发控制<a class="headerlink" href="#_17" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>littledl<span class="w"> </span>-F<span class="w"> </span>urls.txt<span class="w"> </span>-o<span class="w"> </span>./downloads<span class="w"> </span>--max-concurrent<span class="w"> </span><span class="m">3</span>
+</code></pre></div>
+<h3 id="_18">安静模式（最小输出）<a class="headerlink" href="#_18" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>littledl<span class="w"> </span>-F<span class="w"> </span>urls.txt<span class="w"> </span>--quiet
+</code></pre></div>
+<h3 id="_19">仅显示文件信息<a class="headerlink" href="#_19" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>littledl<span class="w"> </span><span class="s2">&quot;https://example.com/file.zip&quot;</span><span class="w"> </span>-i
+<span class="c1"># 输出：</span>
+<span class="c1"># 文件信息:</span>
+<span class="c1">#   文件名: example.zip</span>
+<span class="c1">#   大小: 104.5 MB</span>
+<span class="c1">#   Content-Type: application/zip</span>
+<span class="c1">#   断点续传: 支持</span>
+</code></pre></div>
+<h3 id="_20">自动分析并选择最佳模式<a class="headerlink" href="#_20" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>littledl<span class="w"> </span><span class="s2">&quot;https://example.com/file.zip&quot;</span><span class="w"> </span>-s<span class="w"> </span>auto<span class="w"> </span>-i
+</code></pre></div>
+<h2 id="_21">环境变量<a class="headerlink" href="#_21" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>变量</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>LANG</code></td>
+<td>语言选择（如 <code>zh_CN</code>、<code>en_US</code>）</td>
+</tr>
+</tbody>
+</table>
+<h2 id="_22">进阶阅读<a class="headerlink" href="#_22" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="../configuration/">配置指南</a> - 所有配置选项详解</li>
+<li><a href="../batch-download/">批量下载</a> - 高级批量下载功能</li>
+<li><a href="../api-reference/">API 参考</a> - 将 littledl 作为库使用</li>
+</ul>
 
 
 

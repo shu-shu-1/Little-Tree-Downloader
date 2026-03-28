@@ -10,19 +10,19 @@
       
       
       
-        <link rel="canonical" href="https://shu-shu-1.github.io/Little-Tree-Downloader/advanced/">
+        <link rel="canonical" href="https://shu-shu-1.github.io/Little-Tree-Downloader/cli/">
       
       
-        <link rel="prev" href="../error-handling/">
+        <link rel="prev" href="../getting-started/">
       
       
-        <link rel="next" href="../api-reference/">
+        <link rel="next" href="../configuration/">
       
       
         
           <link rel="alternate" href="./" hreflang="en">
         
-          <link rel="alternate" href="../zh/advanced/" hreflang="zh">
+          <link rel="alternate" href="../zh/cli/" hreflang="zh">
         
       
       
@@ -31,7 +31,7 @@
     
     
       
-        <title>Advanced - littledl</title>
+        <title>CLI Reference - littledl</title>
       
     
     
@@ -82,7 +82,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#advanced-usage" class="md-skip">
+        <a href="#command-line-interface" class="md-skip">
           Skip to content
         </a>
       
@@ -116,7 +116,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Advanced
+              CLI Reference
             
           </span>
         </div>
@@ -169,7 +169,7 @@
           </li>
         
           <li class="md-select__item">
-            <a href="../zh/advanced/" hreflang="zh" class="md-select__link">
+            <a href="../zh/cli/" hreflang="zh" class="md-select__link">
               简体中文
             </a>
           </li>
@@ -291,9 +291,11 @@
   
   
   
+    
   
-    <li class="md-tabs__item">
-      <a href="../cli/" class="md-tabs__link">
+  
+    <li class="md-tabs__item md-tabs__item--active">
+      <a href="./" class="md-tabs__link">
         
   
   
@@ -386,11 +388,9 @@
   
   
   
-    
   
-  
-    <li class="md-tabs__item md-tabs__item--active">
-      <a href="./" class="md-tabs__link">
+    <li class="md-tabs__item">
+      <a href="../advanced/" class="md-tabs__link">
         
   
   
@@ -527,10 +527,37 @@
       
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../cli/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -546,6 +573,320 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#installation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Installation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#basic-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Basic Usage
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Basic Usage">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#download-a-single-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Download a Single File
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#batch-download" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Batch Download
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#common-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Common Options
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#download-styles" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Download Styles
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Download Styles">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Examples
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#progress-display" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Progress Display
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Progress Display">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#interactive-mode-tty" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Interactive Mode (TTY)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#non-interactive-mode-piperedirect" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Non-Interactive Mode (Pipe/Redirect)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#output-formats" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Output Formats
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Output Formats">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#json-output" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        JSON Output
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#exit-codes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Exit Codes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#advanced-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Advanced Examples
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Advanced Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#resume-interrupted-download" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Resume Interrupted Download
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#skip-ssl-verification-not-recommended" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Skip SSL Verification (Not Recommended)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#use-proxy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Use Proxy
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#limit-speed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Limit Speed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#batch-download-with-concurrent-limit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Batch Download with Concurrent Limit
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#quiet-mode-minimal-output" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quiet Mode (Minimal Output)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#show-file-info-without-downloading" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Show File Info Without Downloading
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#analyze-and-auto-select-best-style" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Analyze and Auto-Select Best Style
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#environment-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Environment Variables
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#next-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Next Steps
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -662,37 +1003,10 @@
       
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Advanced
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../advanced/" class="md-nav__link">
         
   
   
@@ -708,271 +1022,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#download-styles" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Download Styles
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Download Styles">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#applying-download-style" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Applying Download Style
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#chunk-management" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Chunk Management
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Chunk Management">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#manual-chunk-size" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Manual Chunk Size
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#disabling-chunking" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Disabling Chunking
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#concurrent-downloads" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Concurrent Downloads
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Concurrent Downloads">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#multiple-simultaneous-downloads" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Multiple Simultaneous Downloads
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#custom-headers" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Custom Headers
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#cookie-handling" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Cookie Handling
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#custom-ssl-verification" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Custom SSL Verification
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Custom SSL Verification">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#verify-with-custom-ca" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Verify with Custom CA
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#disable-ssl-verification-not-recommended" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Disable SSL Verification (Not Recommended)
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#stream-processing" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Stream Processing
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#progress-tracking" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Progress Tracking
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Progress Tracking">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#custom-progress-display" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Custom Progress Display
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#chunk-status-tracking" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Chunk Status Tracking
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#performance-tuning" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Performance Tuning
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Performance Tuning">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#buffer-size" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Buffer Size
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#connection-pooling" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Connection Pooling
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1024,10 +1073,83 @@
   
 
 
-<h1 id="advanced-usage">Advanced Usage<a class="headerlink" href="#advanced-usage" title="Permanent link">&para;</a></h1>
-<p>Advanced features and optimizations for littledl.</p>
+<h1 id="command-line-interface">Command Line Interface<a class="headerlink" href="#command-line-interface" title="Permanent link">&para;</a></h1>
+<p>littledl provides a full-featured command-line interface for both interactive use and scripting.</p>
+<h2 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h2>
+<p>After installing littledl, the CLI is available as the <code>littledl</code> command:</p>
+<div class="highlight"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span>littledl
+</code></pre></div>
+<p>Verify installation:</p>
+<div class="highlight"><pre><span></span><code>littledl<span class="w"> </span>--version
+<span class="c1"># Output: littledl 0.3.0</span>
+</code></pre></div>
+<h2 id="basic-usage">Basic Usage<a class="headerlink" href="#basic-usage" title="Permanent link">&para;</a></h2>
+<h3 id="download-a-single-file">Download a Single File<a class="headerlink" href="#download-a-single-file" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>littledl<span class="w"> </span><span class="s2">&quot;https://example.com/large-file.zip&quot;</span><span class="w"> </span>-o<span class="w"> </span>./downloads
+</code></pre></div>
+<h3 id="batch-download">Batch Download<a class="headerlink" href="#batch-download" title="Permanent link">&para;</a></h3>
+<p>Create a file <code>urls.txt</code> with one URL per line:</p>
+<div class="highlight"><pre><span></span><code># Comments are supported
+https://example.com/file1.zip
+https://example.com/file2.pdf
+https://example.com/file3.doc
+</code></pre></div>
+<p>Then download:</p>
+<div class="highlight"><pre><span></span><code>littledl<span class="w"> </span>-F<span class="w"> </span>urls.txt<span class="w"> </span>-o<span class="w"> </span>./downloads
+</code></pre></div>
+<h2 id="common-options">Common Options<a class="headerlink" href="#common-options" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>-o, --output PATH</code></td>
+<td>Output directory or file path</td>
+<td><code>./downloads</code></td>
+</tr>
+<tr>
+<td><code>-f, --filename NAME</code></td>
+<td>Specify output filename</td>
+<td>Server-provided</td>
+</tr>
+<tr>
+<td><code>-c, --max-chunks N</code></td>
+<td>Maximum parallel chunks</td>
+<td><code>16</code></td>
+</tr>
+<tr>
+<td><code>-t, --timeout SECONDS</code></td>
+<td>Request timeout</td>
+<td><code>300</code></td>
+</tr>
+<tr>
+<td><code>--proxy URL</code></td>
+<td>HTTP proxy</td>
+<td>None</td>
+</tr>
+<tr>
+<td><code>--speed-limit BYTES/s</code></td>
+<td>Limit download speed</td>
+<td>Unlimited</td>
+</tr>
+<tr>
+<td><code>--retry N</code></td>
+<td>Maximum retry attempts</td>
+<td><code>3</code></td>
+</tr>
+<tr>
+<td><code>-v, --verbose</code></td>
+<td>Verbose output</td>
+<td>False</td>
+</tr>
+</tbody>
+</table>
 <h2 id="download-styles">Download Styles<a class="headerlink" href="#download-styles" title="Permanent link">&para;</a></h2>
-<p>littledl supports multiple download styles:</p>
 <table>
 <thead>
 <tr>
@@ -1040,155 +1162,204 @@
 <tr>
 <td><code>single</code></td>
 <td>Single-threaded download</td>
-<td>Small files, servers without Range</td>
+<td>Small files, servers without Range support</td>
 </tr>
 <tr>
 <td><code>multi</code></td>
-<td>Multi-threaded segmented download</td>
+<td>Multi-threaded segmented</td>
 <td>Large files, stable connections</td>
 </tr>
 <tr>
 <td><code>adaptive</code></td>
-<td>Automatically select best style</td>
+<td>Auto-select based on conditions</td>
 <td>Most use cases</td>
 </tr>
 <tr>
 <td><code>hybrid_turbo</code></td>
-<td>Adaptive chunk sizing with AIMD congestion control</td>
-<td>Maximum speed on unstable networks</td>
+<td>Adaptive with AIMD control</td>
+<td>Maximum speed, unstable networks</td>
+</tr>
+<tr>
+<td><code>auto</code></td>
+<td>Let littledl analyze and decide</td>
+<td>Recommended for beginners</td>
 </tr>
 </tbody>
 </table>
-<h3 id="applying-download-style">Applying Download Style<a class="headerlink" href="#applying-download-style" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">littledl</span><span class="w"> </span><span class="kn">import</span> <span class="n">DownloadConfig</span><span class="p">,</span> <span class="n">DownloadStyle</span>
+<h3 id="examples">Examples<a class="headerlink" href="#examples" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Auto-select best style</span>
+littledl<span class="w"> </span><span class="s2">&quot;https://example.com/file.zip&quot;</span><span class="w"> </span>-s<span class="w"> </span>auto
 
-<span class="n">config</span> <span class="o">=</span> <span class="n">DownloadConfig</span><span class="p">()</span>
-<span class="n">config</span><span class="o">.</span><span class="n">apply_style</span><span class="p">(</span><span class="n">DownloadStyle</span><span class="o">.</span><span class="n">HYBRID_TURBO</span><span class="p">)</span>
+<span class="c1"># Force single-threaded</span>
+littledl<span class="w"> </span><span class="s2">&quot;https://example.com/file.zip&quot;</span><span class="w"> </span>-s<span class="w"> </span>single
+
+<span class="c1"># Maximum performance</span>
+littledl<span class="w"> </span><span class="s2">&quot;https://example.com/file.zip&quot;</span><span class="w"> </span>-s<span class="w"> </span>hybrid_turbo<span class="w"> </span>-c<span class="w"> </span><span class="m">32</span>
 </code></pre></div>
-<h2 id="chunk-management">Chunk Management<a class="headerlink" href="#chunk-management" title="Permanent link">&para;</a></h2>
-<h3 id="manual-chunk-size">Manual Chunk Size<a class="headerlink" href="#manual-chunk-size" title="Permanent link">&para;</a></h3>
-<p>Override automatic chunk sizing for specific use cases:</p>
-<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">littledl</span><span class="w"> </span><span class="kn">import</span> <span class="n">DownloadConfig</span>
-
-<span class="n">config</span> <span class="o">=</span> <span class="n">DownloadConfig</span><span class="p">(</span>
-    <span class="n">enable_chunking</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-    <span class="n">chunk_size</span><span class="o">=</span><span class="mi">8</span> <span class="o">*</span> <span class="mi">1024</span> <span class="o">*</span> <span class="mi">1024</span><span class="p">,</span>  <span class="c1"># 8MB chunks</span>
-    <span class="n">max_chunks</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span>
-<span class="p">)</span>
+<h2 id="progress-display">Progress Display<a class="headerlink" href="#progress-display" title="Permanent link">&para;</a></h2>
+<h3 id="interactive-mode-tty">Interactive Mode (TTY)<a class="headerlink" href="#interactive-mode-tty" title="Permanent link">&para;</a></h3>
+<p>When stdout is a terminal, littledl displays an animated progress bar:</p>
+<div class="highlight"><pre><span></span><code>[=============&gt;                ]  45.2% |  45.2MB / 100.0MB | 10.5MB/s | ETA: 00:05
 </code></pre></div>
-<h3 id="disabling-chunking">Disabling Chunking<a class="headerlink" href="#disabling-chunking" title="Permanent link">&para;</a></h3>
-<p>For small files or specific scenarios:</p>
-<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">littledl</span><span class="w"> </span><span class="kn">import</span> <span class="n">DownloadConfig</span>
+<h3 id="non-interactive-mode-piperedirect">Non-Interactive Mode (Pipe/Redirect)<a class="headerlink" href="#non-interactive-mode-piperedirect" title="Permanent link">&para;</a></h3>
+<p>When output is piped or redirected, littledl automatically switches to minimal output:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Piped to file</span>
+littledl<span class="w"> </span><span class="s2">&quot;https://example.com/file.zip&quot;</span><span class="w"> </span>&gt;<span class="w"> </span>download.log
 
-<span class="n">config</span> <span class="o">=</span> <span class="n">DownloadConfig</span><span class="p">(</span><span class="n">enable_chunking</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="c1"># Piped to another tool</span>
+littledl<span class="w"> </span><span class="s2">&quot;https://example.com/file.zip&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>head<span class="w"> </span>-c<span class="w"> </span><span class="m">100</span>
 </code></pre></div>
-<h2 id="concurrent-downloads">Concurrent Downloads<a class="headerlink" href="#concurrent-downloads" title="Permanent link">&para;</a></h2>
-<h3 id="multiple-simultaneous-downloads">Multiple Simultaneous Downloads<a class="headerlink" href="#multiple-simultaneous-downloads" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">littledl</span><span class="w"> </span><span class="kn">import</span> <span class="n">download_file</span>
-
-<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">download_multiple</span><span class="p">(</span><span class="n">urls</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]):</span>
-    <span class="n">tasks</span> <span class="o">=</span> <span class="p">[</span><span class="n">download_file</span><span class="p">(</span><span class="n">url</span><span class="p">)</span> <span class="k">for</span> <span class="n">url</span> <span class="ow">in</span> <span class="n">urls</span><span class="p">]</span>
-    <span class="k">return</span> <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span><span class="o">*</span><span class="n">tasks</span><span class="p">)</span>
-
-<span class="n">paths</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">download_multiple</span><span class="p">([</span>
-    <span class="s2">&quot;https://example.com/file1.zip&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;https://example.com/file2.zip&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;https://example.com/file3.zip&quot;</span><span class="p">,</span>
-<span class="p">]))</span>
+<h2 id="output-formats">Output Formats<a class="headerlink" href="#output-formats" title="Permanent link">&para;</a></h2>
+<p>Use <code>--output-format</code> to control output style:</p>
+<table>
+<thead>
+<tr>
+<th>Format</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>auto</code></td>
+<td>Automatic (default) - TTY uses text, pipe uses JSON</td>
+</tr>
+<tr>
+<td><code>text</code></td>
+<td>Human-readable text output</td>
+</tr>
+<tr>
+<td><code>json</code></td>
+<td>Structured JSON for scripting</td>
+</tr>
+</tbody>
+</table>
+<h3 id="json-output">JSON Output<a class="headerlink" href="#json-output" title="Permanent link">&para;</a></h3>
+<p>For programmatic use, specify JSON output:</p>
+<div class="highlight"><pre><span></span><code>littledl<span class="w"> </span><span class="s2">&quot;https://example.com/file.zip&quot;</span><span class="w"> </span>-o<span class="w"> </span>/tmp<span class="w"> </span>--output-format<span class="w"> </span>json
 </code></pre></div>
-<h2 id="custom-headers">Custom Headers<a class="headerlink" href="#custom-headers" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">littledl</span><span class="w"> </span><span class="kn">import</span> <span class="n">DownloadConfig</span>
-
-<span class="n">config</span> <span class="o">=</span> <span class="n">DownloadConfig</span><span class="p">(</span>
-    <span class="n">headers</span><span class="o">=</span><span class="p">{</span>
-        <span class="s2">&quot;User-Agent&quot;</span><span class="p">:</span> <span class="s2">&quot;MyApp/1.0&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;Accept&quot;</span><span class="p">:</span> <span class="s2">&quot;application/octet-stream&quot;</span><span class="p">,</span>
-    <span class="p">}</span>
-<span class="p">)</span>
+<p>JSON output example:</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;download&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;success&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;path&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/tmp/file.zip&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;size&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">104857600</span>
+<span class="p">}</span>
 </code></pre></div>
-<h2 id="cookie-handling">Cookie Handling<a class="headerlink" href="#cookie-handling" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">littledl</span><span class="w"> </span><span class="kn">import</span> <span class="n">DownloadConfig</span>
-
-<span class="n">config</span> <span class="o">=</span> <span class="n">DownloadConfig</span><span class="p">(</span>
-    <span class="n">cookies</span><span class="o">=</span><span class="p">{</span>
-        <span class="s2">&quot;session_id&quot;</span><span class="p">:</span> <span class="s2">&quot;abc123&quot;</span><span class="p">,</span>
-    <span class="p">}</span>
-<span class="p">)</span>
+<p>Batch download JSON output:</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;batch&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;success&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;total&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;completed&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">9</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;failed&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;total_bytes&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">104857600</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;elapsed_seconds&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">120.5</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;average_speed&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">870123.45</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;tasks&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;filename&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;file1.zip&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;url&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://example.com/file1.zip&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;completed&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;size&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10485760</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;downloaded&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10485760</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;error&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">]</span>
+<span class="p">}</span>
 </code></pre></div>
-<h2 id="custom-ssl-verification">Custom SSL Verification<a class="headerlink" href="#custom-ssl-verification" title="Permanent link">&para;</a></h2>
-<h3 id="verify-with-custom-ca">Verify with Custom CA<a class="headerlink" href="#verify-with-custom-ca" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">littledl</span><span class="w"> </span><span class="kn">import</span> <span class="n">DownloadConfig</span>
-
-<span class="n">config</span> <span class="o">=</span> <span class="n">DownloadConfig</span><span class="p">(</span>
-    <span class="n">verify_ssl</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-    <span class="n">ssl_cert</span><span class="o">=</span><span class="s2">&quot;/path/to/ca-bundle.crt&quot;</span><span class="p">,</span>
-<span class="p">)</span>
+<h2 id="exit-codes">Exit Codes<a class="headerlink" href="#exit-codes" title="Permanent link">&para;</a></h2>
+<p>littledl uses specific exit codes for scripting:</p>
+<table>
+<thead>
+<tr>
+<th>Code</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>0</code></td>
+<td>Success</td>
+</tr>
+<tr>
+<td><code>1</code></td>
+<td>General error</td>
+</tr>
+<tr>
+<td><code>2</code></td>
+<td>URL error or invalid argument</td>
+</tr>
+<tr>
+<td><code>3</code></td>
+<td>Download failed after retries</td>
+</tr>
+<tr>
+<td><code>4</code></td>
+<td>Cancelled by user (Ctrl+C)</td>
+</tr>
+</tbody>
+</table>
+<p>Example in scripts:</p>
+<div class="highlight"><pre><span></span><code>littledl<span class="w"> </span><span class="s2">&quot;https://example.com/file.zip&quot;</span><span class="w"> </span>-o<span class="w"> </span>/tmp
+<span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="nv">$?</span><span class="w"> </span>-eq<span class="w"> </span><span class="m">0</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Download successful&quot;</span>
+<span class="k">else</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Download failed with code </span><span class="nv">$?</span><span class="s2">&quot;</span>
+<span class="k">fi</span>
 </code></pre></div>
-<h3 id="disable-ssl-verification-not-recommended">Disable SSL Verification (Not Recommended)<a class="headerlink" href="#disable-ssl-verification-not-recommended" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">littledl</span><span class="w"> </span><span class="kn">import</span> <span class="n">DownloadConfig</span>
-
-<span class="n">config</span> <span class="o">=</span> <span class="n">DownloadConfig</span><span class="p">(</span><span class="n">verify_ssl</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<h2 id="advanced-examples">Advanced Examples<a class="headerlink" href="#advanced-examples" title="Permanent link">&para;</a></h2>
+<h3 id="resume-interrupted-download">Resume Interrupted Download<a class="headerlink" href="#resume-interrupted-download" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>littledl<span class="w"> </span><span class="s2">&quot;https://example.com/large-file.zip&quot;</span><span class="w"> </span>-o<span class="w"> </span>./downloads<span class="w"> </span>--resume
 </code></pre></div>
-<h2 id="stream-processing">Stream Processing<a class="headerlink" href="#stream-processing" title="Permanent link">&para;</a></h2>
-<p>Download and process content in chunks without saving to disk:</p>
-<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">littledl</span><span class="w"> </span><span class="kn">import</span> <span class="n">download_file_stream</span>
-
-<span class="k">async</span> <span class="k">for</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="n">download_file_stream</span><span class="p">(</span><span class="s2">&quot;https://example.com/large_file.zip&quot;</span><span class="p">):</span>
-    <span class="n">process</span><span class="p">(</span><span class="n">chunk</span><span class="p">)</span>
+<h3 id="skip-ssl-verification-not-recommended">Skip SSL Verification (Not Recommended)<a class="headerlink" href="#skip-ssl-verification-not-recommended" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>littledl<span class="w"> </span><span class="s2">&quot;https://example.com/file.zip&quot;</span><span class="w"> </span>--no-verify-ssl
 </code></pre></div>
-<h2 id="progress-tracking">Progress Tracking<a class="headerlink" href="#progress-tracking" title="Permanent link">&para;</a></h2>
-<h3 id="custom-progress-display">Custom Progress Display<a class="headerlink" href="#custom-progress-display" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">littledl</span><span class="w"> </span><span class="kn">import</span> <span class="n">download_file_sync</span>
-
-<span class="k">class</span><span class="w"> </span><span class="nc">ProgressTracker</span><span class="p">:</span>
-    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">total</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">total</span> <span class="o">=</span> <span class="n">total</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">downloaded</span> <span class="o">=</span> <span class="mi">0</span>
-
-    <span class="k">def</span><span class="w"> </span><span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">downloaded</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">total</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">speed</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">eta</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">downloaded</span> <span class="o">=</span> <span class="n">downloaded</span>
-        <span class="n">percent</span> <span class="o">=</span> <span class="p">(</span><span class="n">downloaded</span> <span class="o">/</span> <span class="n">total</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span>
-        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\r</span><span class="si">{</span><span class="n">percent</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2">% | </span><span class="si">{</span><span class="n">speed</span><span class="o">/</span><span class="mi">1024</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> KB/s | ETA: </span><span class="si">{</span><span class="n">eta</span><span class="si">}</span><span class="s2">s&quot;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
-
-<span class="n">tracker</span> <span class="o">=</span> <span class="n">ProgressTracker</span><span class="p">(</span><span class="n">total</span><span class="o">=</span><span class="mi">1000000</span><span class="p">)</span>
-<span class="n">path</span> <span class="o">=</span> <span class="n">download_file_sync</span><span class="p">(</span>
-    <span class="s2">&quot;https://example.com/file.zip&quot;</span><span class="p">,</span>
-    <span class="n">progress_callback</span><span class="o">=</span><span class="n">tracker</span><span class="p">,</span>
-<span class="p">)</span>
+<h3 id="use-proxy">Use Proxy<a class="headerlink" href="#use-proxy" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>littledl<span class="w"> </span><span class="s2">&quot;https://example.com/file.zip&quot;</span><span class="w"> </span>--proxy<span class="w"> </span><span class="s2">&quot;http://proxy:8080&quot;</span>
 </code></pre></div>
-<h3 id="chunk-status-tracking">Chunk Status Tracking<a class="headerlink" href="#chunk-status-tracking" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">littledl</span><span class="w"> </span><span class="kn">import</span> <span class="n">ChunkEvent</span><span class="p">,</span> <span class="n">download_file_sync</span>
-
-<span class="k">def</span><span class="w"> </span><span class="nf">on_chunk</span><span class="p">(</span><span class="n">event</span><span class="p">:</span> <span class="n">ChunkEvent</span><span class="p">):</span>
-    <span class="nb">print</span><span class="p">(</span>
-        <span class="sa">f</span><span class="s2">&quot;chunk=</span><span class="si">{</span><span class="n">event</span><span class="o">.</span><span class="n">chunk_index</span><span class="si">}</span><span class="s2"> status=</span><span class="si">{</span><span class="n">event</span><span class="o">.</span><span class="n">status</span><span class="si">}</span><span class="s2"> &quot;</span>
-        <span class="sa">f</span><span class="s2">&quot;progress=</span><span class="si">{</span><span class="n">event</span><span class="o">.</span><span class="n">progress</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2">%&quot;</span>
-    <span class="p">)</span>
-
-<span class="n">path</span> <span class="o">=</span> <span class="n">download_file_sync</span><span class="p">(</span>
-    <span class="s2">&quot;https://example.com/file.zip&quot;</span><span class="p">,</span>
-    <span class="n">chunk_callback</span><span class="o">=</span><span class="n">on_chunk</span><span class="p">,</span>
-<span class="p">)</span>
+<h3 id="limit-speed">Limit Speed<a class="headerlink" href="#limit-speed" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Limit to 1MB/s</span>
+littledl<span class="w"> </span><span class="s2">&quot;https://example.com/file.zip&quot;</span><span class="w"> </span>--speed-limit<span class="w"> </span><span class="m">1048576</span>
 </code></pre></div>
-<h2 id="performance-tuning">Performance Tuning<a class="headerlink" href="#performance-tuning" title="Permanent link">&para;</a></h2>
-<h3 id="buffer-size">Buffer Size<a class="headerlink" href="#buffer-size" title="Permanent link">&para;</a></h3>
-<p>Adjust buffer size for your storage:</p>
-<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">littledl</span><span class="w"> </span><span class="kn">import</span> <span class="n">DownloadConfig</span>
-
-<span class="n">config</span> <span class="o">=</span> <span class="n">DownloadConfig</span><span class="p">(</span>
-    <span class="n">buffer_size</span><span class="o">=</span><span class="mi">256</span> <span class="o">*</span> <span class="mi">1024</span><span class="p">,</span>  <span class="c1"># 256KB buffer</span>
-<span class="p">)</span>
+<h3 id="batch-download-with-concurrent-limit">Batch Download with Concurrent Limit<a class="headerlink" href="#batch-download-with-concurrent-limit" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>littledl<span class="w"> </span>-F<span class="w"> </span>urls.txt<span class="w"> </span>-o<span class="w"> </span>./downloads<span class="w"> </span>--max-concurrent<span class="w"> </span><span class="m">3</span>
 </code></pre></div>
-<h3 id="connection-pooling">Connection Pooling<a class="headerlink" href="#connection-pooling" title="Permanent link">&para;</a></h3>
-<p>Configure connection pool settings:</p>
-<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">littledl</span><span class="w"> </span><span class="kn">import</span> <span class="n">DownloadConfig</span>
-
-<span class="n">config</span> <span class="o">=</span> <span class="n">DownloadConfig</span><span class="p">(</span>
-    <span class="n">max_connections</span><span class="o">=</span><span class="mi">32</span><span class="p">,</span>
-    <span class="n">max_keepalive_connections</span><span class="o">=</span><span class="mi">16</span><span class="p">,</span>
-<span class="p">)</span>
+<h3 id="quiet-mode-minimal-output">Quiet Mode (Minimal Output)<a class="headerlink" href="#quiet-mode-minimal-output" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>littledl<span class="w"> </span>-F<span class="w"> </span>urls.txt<span class="w"> </span>--quiet
 </code></pre></div>
+<h3 id="show-file-info-without-downloading">Show File Info Without Downloading<a class="headerlink" href="#show-file-info-without-downloading" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>littledl<span class="w"> </span><span class="s2">&quot;https://example.com/file.zip&quot;</span><span class="w"> </span>-i
+<span class="c1"># Output:</span>
+<span class="c1"># File Info:</span>
+<span class="c1">#   Filename: example.zip</span>
+<span class="c1">#   Size: 104.5 MB</span>
+<span class="c1">#   Content-Type: application/zip</span>
+<span class="c1">#   Resume Support: Yes</span>
+</code></pre></div>
+<h3 id="analyze-and-auto-select-best-style">Analyze and Auto-Select Best Style<a class="headerlink" href="#analyze-and-auto-select-best-style" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>littledl<span class="w"> </span><span class="s2">&quot;https://example.com/file.zip&quot;</span><span class="w"> </span>-s<span class="w"> </span>auto<span class="w"> </span>-i
+</code></pre></div>
+<h2 id="environment-variables">Environment Variables<a class="headerlink" href="#environment-variables" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>LANG</code></td>
+<td>Language selection (e.g., <code>zh_CN</code>, <code>en_US</code>)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="next-steps">Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="../configuration/">Configuration Guide</a> - All configuration options</li>
+<li><a href="../batch-download/">Batch Download</a> - Advanced batch download features</li>
+<li><a href="../api-reference/">API Reference</a> - Use littledl as a library</li>
+</ul>
 
 
 

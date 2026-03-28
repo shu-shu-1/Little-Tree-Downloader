@@ -51,6 +51,6 @@ asyncio.run(main())
 
 ## Next Steps
 
-- [Configuration Guide](https://littledl.zsxiaoshu.cn/configuration/index.md) - Learn about all configuration options
-- [Authentication](https://littledl.zsxiaoshu.cn/authentication/index.md) - Set up authentication for protected resources
-- [API Reference](https://littledl.zsxiaoshu.cn/api-reference/index.md) - Detailed API documentation
+- [Configuration Guide](https://shu-shu-1.github.io/Little-Tree-Downloader/configuration/index.md) - Learn about all configuration options
+- [Authentication](https://shu-shu-1.github.io/Little-Tree-Downloader/authentication/index.md) - Set up authentication for protected resources
+- [API Reference](https://shu-shu-1.github.io/Little-Tree-Downloader/api-reference/index.md) - Detailed API documentation

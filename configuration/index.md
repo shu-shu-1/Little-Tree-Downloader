@@ -22,23 +22,29 @@ config = DownloadConfig(
 
 ## Configuration Options
 
-| Option                          | Type     | Default  | Description                                            |
-| ------------------------------- | -------- | -------- | ------------------------------------------------------ |
-| `enable_chunking`               | bool     | True     | Enable multi-threaded chunked download                 |
-| `max_chunks`                    | int      | 16       | Maximum number of concurrent chunks                    |
-| `chunk_size`                    | int      | 4MB      | Default size for each chunk                            |
-| `buffer_size`                   | int      | 64KB     | Disk write buffer size                                 |
-| `timeout`                       | float    | 300      | Read/write timeout in seconds                          |
-| `resume`                        | bool     | True     | Enable resume support                                  |
-| `verify_ssl`                    | bool     | True     | Verify SSL certificates                                |
-| `fallback_to_single_on_failure` | bool     | True     | Auto fallback to single-stream mode on chunked failure |
-| `verify_hash`                   | bool     | False    | Verify downloaded file hash                            |
-| `expected_hash`                 | str      | None     | Expected hash value                                    |
-| `hash_algorithm`                | str      | `sha256` | Hash algorithm used in verification                    |
-| `min_file_size`                 | int      | None     | Reject files smaller than this size                    |
-| `max_file_size`                 | int      | None     | Reject files larger than this size                     |
-| `progress_update_interval`      | float    | 0.5      | Progress callback interval in seconds                  |
-| `chunk_callback`                | Callable | None     | Per-chunk status callback during chunked download      |
+| Option                          | Type     | Default  | Description                                                                        |
+| ------------------------------- | -------- | -------- | ---------------------------------------------------------------------------------- |
+| `enable_chunking`               | bool     | True     | Enable multi-threaded chunked download                                             |
+| `max_chunks`                    | int      | 16       | Maximum number of concurrent chunks                                                |
+| `chunk_size`                    | int      | 4MB      | Default size for each chunk                                                        |
+| `buffer_size`                   | int      | 64KB     | Disk write buffer size                                                             |
+| `timeout`                       | float    | 300      | Read/write timeout in seconds                                                      |
+| `resume`                        | bool     | True     | Enable resume support                                                              |
+| `verify_ssl`                    | bool     | True     | Verify SSL certificates                                                            |
+| `fallback_to_single_on_failure` | bool     | True     | Auto fallback to single-stream mode on chunked failure                             |
+| `enable_adaptive`               | bool     | True     | Enable adaptive network scheduling                                                 |
+| `enable_hybrid_turbo`           | bool     | True     | Enable hybrid turbo download with AIMD congestion control and smart chunk fallback |
+| `hybrid_aimd_increase_step`     | int      | 1        | Target worker increase step size (Additive Increase)                               |
+| `hybrid_aimd_decrease_factor`   | float    | 0.5      | Factor used to multiply target workers on speed decline (Multiplicative Decrease)  |
+| `hybrid_speedup_threshold`      | float    | 0.08     | Minimum relative speedup threshold required to trigger AIMD                        |
+| `hybrid_slow_chunk_ratio`       | float    | 0.45     | Threshold ratio defining extremely slow chunks                                     |
+| `verify_hash`                   | bool     | False    | Verify downloaded file hash                                                        |
+| `expected_hash`                 | str      | None     | Expected hash value                                                                |
+| `hash_algorithm`                | str      | `sha256` | Hash algorithm used in verification                                                |
+| `min_file_size`                 | int      | None     | Reject files smaller than this size                                                |
+| `max_file_size`                 | int      | None     | Reject files larger than this size                                                 |
+| `progress_update_interval`      | float    | 0.5      | Progress callback interval in seconds                                              |
+| `chunk_callback`                | Callable | None     | Per-chunk status callback during chunked download                                  |
 
 ## Proxy Configuration
 

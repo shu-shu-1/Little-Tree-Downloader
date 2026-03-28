@@ -1,115 +1,143 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
     <url>
-        <loc>https://littledl.zsxiaoshu.cn/</loc>
+        <loc>https://shu-shu-1.github.io/Little-Tree-Downloader/</loc>
         <lastmod>2026-03-28</lastmod>
         <changefreq>daily</changefreq>
-        <xhtml:link rel="alternate" hreflang="en" href="https://littledl.zsxiaoshu.cn/"/>
-        <xhtml:link rel="alternate" hreflang="zh" href="https://littledl.zsxiaoshu.cn/zh/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://shu-shu-1.github.io/Little-Tree-Downloader/"/>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://shu-shu-1.github.io/Little-Tree-Downloader/zh/"/>
     </url>
     <url>
-        <loc>https://littledl.zsxiaoshu.cn/advanced/</loc>
+        <loc>https://shu-shu-1.github.io/Little-Tree-Downloader/advanced/</loc>
         <lastmod>2026-03-28</lastmod>
         <changefreq>daily</changefreq>
-        <xhtml:link rel="alternate" hreflang="en" href="https://littledl.zsxiaoshu.cn/advanced/"/>
-        <xhtml:link rel="alternate" hreflang="zh" href="https://littledl.zsxiaoshu.cn/zh/advanced/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://shu-shu-1.github.io/Little-Tree-Downloader/advanced/"/>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://shu-shu-1.github.io/Little-Tree-Downloader/zh/advanced/"/>
     </url>
     <url>
-        <loc>https://littledl.zsxiaoshu.cn/api-reference/</loc>
+        <loc>https://shu-shu-1.github.io/Little-Tree-Downloader/api-reference/</loc>
         <lastmod>2026-03-28</lastmod>
         <changefreq>daily</changefreq>
-        <xhtml:link rel="alternate" hreflang="en" href="https://littledl.zsxiaoshu.cn/api-reference/"/>
-        <xhtml:link rel="alternate" hreflang="zh" href="https://littledl.zsxiaoshu.cn/zh/api-reference/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://shu-shu-1.github.io/Little-Tree-Downloader/api-reference/"/>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://shu-shu-1.github.io/Little-Tree-Downloader/zh/api-reference/"/>
     </url>
     <url>
-        <loc>https://littledl.zsxiaoshu.cn/authentication/</loc>
+        <loc>https://shu-shu-1.github.io/Little-Tree-Downloader/authentication/</loc>
         <lastmod>2026-03-28</lastmod>
         <changefreq>daily</changefreq>
-        <xhtml:link rel="alternate" hreflang="en" href="https://littledl.zsxiaoshu.cn/authentication/"/>
-        <xhtml:link rel="alternate" hreflang="zh" href="https://littledl.zsxiaoshu.cn/zh/authentication/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://shu-shu-1.github.io/Little-Tree-Downloader/authentication/"/>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://shu-shu-1.github.io/Little-Tree-Downloader/zh/authentication/"/>
     </url>
     <url>
-        <loc>https://littledl.zsxiaoshu.cn/configuration/</loc>
+        <loc>https://shu-shu-1.github.io/Little-Tree-Downloader/batch-download/</loc>
         <lastmod>2026-03-28</lastmod>
         <changefreq>daily</changefreq>
-        <xhtml:link rel="alternate" hreflang="en" href="https://littledl.zsxiaoshu.cn/configuration/"/>
-        <xhtml:link rel="alternate" hreflang="zh" href="https://littledl.zsxiaoshu.cn/zh/configuration/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://shu-shu-1.github.io/Little-Tree-Downloader/batch-download/"/>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://shu-shu-1.github.io/Little-Tree-Downloader/zh/batch-download/"/>
     </url>
     <url>
-        <loc>https://littledl.zsxiaoshu.cn/error-handling/</loc>
+        <loc>https://shu-shu-1.github.io/Little-Tree-Downloader/cli/</loc>
         <lastmod>2026-03-28</lastmod>
         <changefreq>daily</changefreq>
-        <xhtml:link rel="alternate" hreflang="en" href="https://littledl.zsxiaoshu.cn/error-handling/"/>
-        <xhtml:link rel="alternate" hreflang="zh" href="https://littledl.zsxiaoshu.cn/zh/error-handling/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://shu-shu-1.github.io/Little-Tree-Downloader/cli/"/>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://shu-shu-1.github.io/Little-Tree-Downloader/zh/cli/"/>
     </url>
     <url>
-        <loc>https://littledl.zsxiaoshu.cn/getting-started/</loc>
+        <loc>https://shu-shu-1.github.io/Little-Tree-Downloader/configuration/</loc>
         <lastmod>2026-03-28</lastmod>
         <changefreq>daily</changefreq>
-        <xhtml:link rel="alternate" hreflang="en" href="https://littledl.zsxiaoshu.cn/getting-started/"/>
-        <xhtml:link rel="alternate" hreflang="zh" href="https://littledl.zsxiaoshu.cn/zh/getting-started/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://shu-shu-1.github.io/Little-Tree-Downloader/configuration/"/>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://shu-shu-1.github.io/Little-Tree-Downloader/zh/configuration/"/>
     </url>
     <url>
-        <loc>https://littledl.zsxiaoshu.cn/proxy/</loc>
+        <loc>https://shu-shu-1.github.io/Little-Tree-Downloader/error-handling/</loc>
         <lastmod>2026-03-28</lastmod>
         <changefreq>daily</changefreq>
-        <xhtml:link rel="alternate" hreflang="en" href="https://littledl.zsxiaoshu.cn/proxy/"/>
-        <xhtml:link rel="alternate" hreflang="zh" href="https://littledl.zsxiaoshu.cn/zh/proxy/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://shu-shu-1.github.io/Little-Tree-Downloader/error-handling/"/>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://shu-shu-1.github.io/Little-Tree-Downloader/zh/error-handling/"/>
     </url>
     <url>
-        <loc>https://littledl.zsxiaoshu.cn/zh/</loc>
+        <loc>https://shu-shu-1.github.io/Little-Tree-Downloader/getting-started/</loc>
         <lastmod>2026-03-28</lastmod>
         <changefreq>daily</changefreq>
-        <xhtml:link rel="alternate" hreflang="zh" href="https://littledl.zsxiaoshu.cn/zh/"/>
-        <xhtml:link rel="alternate" hreflang="en" href="https://littledl.zsxiaoshu.cn/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://shu-shu-1.github.io/Little-Tree-Downloader/getting-started/"/>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://shu-shu-1.github.io/Little-Tree-Downloader/zh/getting-started/"/>
     </url>
     <url>
-        <loc>https://littledl.zsxiaoshu.cn/zh/advanced/</loc>
+        <loc>https://shu-shu-1.github.io/Little-Tree-Downloader/proxy/</loc>
         <lastmod>2026-03-28</lastmod>
         <changefreq>daily</changefreq>
-        <xhtml:link rel="alternate" hreflang="zh" href="https://littledl.zsxiaoshu.cn/zh/advanced/"/>
-        <xhtml:link rel="alternate" hreflang="en" href="https://littledl.zsxiaoshu.cn/advanced/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://shu-shu-1.github.io/Little-Tree-Downloader/proxy/"/>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://shu-shu-1.github.io/Little-Tree-Downloader/zh/proxy/"/>
     </url>
     <url>
-        <loc>https://littledl.zsxiaoshu.cn/zh/api-reference/</loc>
+        <loc>https://shu-shu-1.github.io/Little-Tree-Downloader/zh/</loc>
         <lastmod>2026-03-28</lastmod>
         <changefreq>daily</changefreq>
-        <xhtml:link rel="alternate" hreflang="zh" href="https://littledl.zsxiaoshu.cn/zh/api-reference/"/>
-        <xhtml:link rel="alternate" hreflang="en" href="https://littledl.zsxiaoshu.cn/api-reference/"/>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://shu-shu-1.github.io/Little-Tree-Downloader/zh/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://shu-shu-1.github.io/Little-Tree-Downloader/"/>
     </url>
     <url>
-        <loc>https://littledl.zsxiaoshu.cn/zh/authentication/</loc>
+        <loc>https://shu-shu-1.github.io/Little-Tree-Downloader/zh/advanced/</loc>
         <lastmod>2026-03-28</lastmod>
         <changefreq>daily</changefreq>
-        <xhtml:link rel="alternate" hreflang="zh" href="https://littledl.zsxiaoshu.cn/zh/authentication/"/>
-        <xhtml:link rel="alternate" hreflang="en" href="https://littledl.zsxiaoshu.cn/authentication/"/>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://shu-shu-1.github.io/Little-Tree-Downloader/zh/advanced/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://shu-shu-1.github.io/Little-Tree-Downloader/advanced/"/>
     </url>
     <url>
-        <loc>https://littledl.zsxiaoshu.cn/zh/configuration/</loc>
+        <loc>https://shu-shu-1.github.io/Little-Tree-Downloader/zh/api-reference/</loc>
         <lastmod>2026-03-28</lastmod>
         <changefreq>daily</changefreq>
-        <xhtml:link rel="alternate" hreflang="zh" href="https://littledl.zsxiaoshu.cn/zh/configuration/"/>
-        <xhtml:link rel="alternate" hreflang="en" href="https://littledl.zsxiaoshu.cn/configuration/"/>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://shu-shu-1.github.io/Little-Tree-Downloader/zh/api-reference/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://shu-shu-1.github.io/Little-Tree-Downloader/api-reference/"/>
     </url>
     <url>
-        <loc>https://littledl.zsxiaoshu.cn/zh/error-handling/</loc>
+        <loc>https://shu-shu-1.github.io/Little-Tree-Downloader/zh/authentication/</loc>
         <lastmod>2026-03-28</lastmod>
         <changefreq>daily</changefreq>
-        <xhtml:link rel="alternate" hreflang="zh" href="https://littledl.zsxiaoshu.cn/zh/error-handling/"/>
-        <xhtml:link rel="alternate" hreflang="en" href="https://littledl.zsxiaoshu.cn/error-handling/"/>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://shu-shu-1.github.io/Little-Tree-Downloader/zh/authentication/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://shu-shu-1.github.io/Little-Tree-Downloader/authentication/"/>
     </url>
     <url>
-        <loc>https://littledl.zsxiaoshu.cn/zh/getting-started/</loc>
+        <loc>https://shu-shu-1.github.io/Little-Tree-Downloader/zh/batch-download/</loc>
         <lastmod>2026-03-28</lastmod>
         <changefreq>daily</changefreq>
-        <xhtml:link rel="alternate" hreflang="zh" href="https://littledl.zsxiaoshu.cn/zh/getting-started/"/>
-        <xhtml:link rel="alternate" hreflang="en" href="https://littledl.zsxiaoshu.cn/getting-started/"/>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://shu-shu-1.github.io/Little-Tree-Downloader/zh/batch-download/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://shu-shu-1.github.io/Little-Tree-Downloader/batch-download/"/>
     </url>
     <url>
-        <loc>https://littledl.zsxiaoshu.cn/zh/proxy/</loc>
+        <loc>https://shu-shu-1.github.io/Little-Tree-Downloader/zh/cli/</loc>
         <lastmod>2026-03-28</lastmod>
         <changefreq>daily</changefreq>
-        <xhtml:link rel="alternate" hreflang="zh" href="https://littledl.zsxiaoshu.cn/zh/proxy/"/>
-        <xhtml:link rel="alternate" hreflang="en" href="https://littledl.zsxiaoshu.cn/proxy/"/>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://shu-shu-1.github.io/Little-Tree-Downloader/zh/cli/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://shu-shu-1.github.io/Little-Tree-Downloader/cli/"/>
+    </url>
+    <url>
+        <loc>https://shu-shu-1.github.io/Little-Tree-Downloader/zh/configuration/</loc>
+        <lastmod>2026-03-28</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://shu-shu-1.github.io/Little-Tree-Downloader/zh/configuration/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://shu-shu-1.github.io/Little-Tree-Downloader/configuration/"/>
+    </url>
+    <url>
+        <loc>https://shu-shu-1.github.io/Little-Tree-Downloader/zh/error-handling/</loc>
+        <lastmod>2026-03-28</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://shu-shu-1.github.io/Little-Tree-Downloader/zh/error-handling/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://shu-shu-1.github.io/Little-Tree-Downloader/error-handling/"/>
+    </url>
+    <url>
+        <loc>https://shu-shu-1.github.io/Little-Tree-Downloader/zh/getting-started/</loc>
+        <lastmod>2026-03-28</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://shu-shu-1.github.io/Little-Tree-Downloader/zh/getting-started/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://shu-shu-1.github.io/Little-Tree-Downloader/getting-started/"/>
+    </url>
+    <url>
+        <loc>https://shu-shu-1.github.io/Little-Tree-Downloader/zh/proxy/</loc>
+        <lastmod>2026-03-28</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://shu-shu-1.github.io/Little-Tree-Downloader/zh/proxy/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://shu-shu-1.github.io/Little-Tree-Downloader/proxy/"/>
     </url>
 </urlset>

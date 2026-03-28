@@ -42,7 +42,7 @@ path = await download_file(
 
 ### DownloadConfig
 
-````
+```
 from littledl import DownloadConfig
 
 config = DownloadConfig(
@@ -59,12 +59,19 @@ config = DownloadConfig(
     progress_callback: Callable | None = None,
     chunk_callback: Callable | None = None,
 )
+```
+
+#### Methods
+
+**`apply_style(style: Any) -> "DownloadConfig"`**
+
+Quickly reconfigures all internal scheduling variables, chunking thresholds, and AIMD congestion control parameters based on a provided style. Supports either a `DownloadStyle` enum or a standard string style name (e.g., `"SINGLE"`, `"MULTI"`, `"ADAPTIVE"`, or `"HYBRID_TURBO"`). Returns the modified `DownloadConfig` instance.
 
 ## Callback Events
 
 ### ProgressEvent
 
-```python
+```
 ProgressEvent(
     downloaded: int,
     total: int,
@@ -74,7 +81,7 @@ ProgressEvent(
     remaining: int,
     timestamp: float,
 )
-````
+```
 
 ### ChunkEvent
 

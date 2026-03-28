@@ -2,6 +2,26 @@
 
 Advanced features and optimizations for littledl.
 
+## Download Styles
+
+littledl supports multiple download styles:
+
+| Style          | Description                                        | Best For                           |
+| -------------- | -------------------------------------------------- | ---------------------------------- |
+| `single`       | Single-threaded download                           | Small files, servers without Range |
+| `multi`        | Multi-threaded segmented download                  | Large files, stable connections    |
+| `adaptive`     | Automatically select best style                    | Most use cases                     |
+| `hybrid_turbo` | Adaptive chunk sizing with AIMD congestion control | Maximum speed on unstable networks |
+
+### Applying Download Style
+
+```
+from littledl import DownloadConfig, DownloadStyle
+
+config = DownloadConfig()
+config.apply_style(DownloadStyle.HYBRID_TURBO)
+```
+
 ## Chunk Management
 
 ### Manual Chunk Size

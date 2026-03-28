@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://littledl.zsxiaoshu.cn/zh/advanced/">
+        <link rel="canonical" href="https://shu-shu-1.github.io/Little-Tree-Downloader/zh/advanced/">
       
       
         <link rel="prev" href="../error-handling/">
@@ -293,6 +293,25 @@
   
   
     <li class="md-tabs__item">
+      <a href="../cli/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  CLI Reference
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
       <a href="../configuration/" class="md-tabs__link">
         
   
@@ -511,6 +530,33 @@
   
   
     <li class="md-nav__item">
+      <a href="../cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../configuration/" class="md-nav__link">
         
   
@@ -682,6 +728,34 @@
   <a href="#_2" class="md-nav__link">
     <span class="md-ellipsis">
       
+        下载风格
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="下载风格">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        应用下载风格
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
         分块管理
       
     </span>
@@ -691,7 +765,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#_3" class="md-nav__link">
+  <a href="#_5" class="md-nav__link">
     <span class="md-ellipsis">
       
         手动分块大小
@@ -702,7 +776,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#_4" class="md-nav__link">
+  <a href="#_6" class="md-nav__link">
     <span class="md-ellipsis">
       
         禁用分块
@@ -718,7 +792,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_5" class="md-nav__link">
+  <a href="#_7" class="md-nav__link">
     <span class="md-ellipsis">
       
         并发下载
@@ -730,7 +804,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#_6" class="md-nav__link">
+  <a href="#_8" class="md-nav__link">
     <span class="md-ellipsis">
       
         多个同时下载
@@ -746,7 +820,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_7" class="md-nav__link">
+  <a href="#_9" class="md-nav__link">
     <span class="md-ellipsis">
       
         自定义请求头
@@ -807,7 +881,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_8" class="md-nav__link">
+  <a href="#_10" class="md-nav__link">
     <span class="md-ellipsis">
       
         流式处理
@@ -818,7 +892,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_9" class="md-nav__link">
+  <a href="#_11" class="md-nav__link">
     <span class="md-ellipsis">
       
         进度跟踪
@@ -830,7 +904,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#_10" class="md-nav__link">
+  <a href="#_12" class="md-nav__link">
     <span class="md-ellipsis">
       
         自定义进度显示
@@ -841,7 +915,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#_11" class="md-nav__link">
+  <a href="#_13" class="md-nav__link">
     <span class="md-ellipsis">
       
         分块状态跟踪
@@ -857,7 +931,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_12" class="md-nav__link">
+  <a href="#_14" class="md-nav__link">
     <span class="md-ellipsis">
       
         性能调优
@@ -869,7 +943,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#_13" class="md-nav__link">
+  <a href="#_15" class="md-nav__link">
     <span class="md-ellipsis">
       
         缓冲区大小
@@ -880,7 +954,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#_14" class="md-nav__link">
+  <a href="#_16" class="md-nav__link">
     <span class="md-ellipsis">
       
         连接池
@@ -952,8 +1026,47 @@
 
 <h1 id="_1">高级用法<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h1>
 <p>littledl 的高级功能和优化。</p>
-<h2 id="_2">分块管理<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
-<h3 id="_3">手动分块大小<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h3>
+<h2 id="_2">下载风格<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
+<p>littledl 支持多种下载风格：</p>
+<table>
+<thead>
+<tr>
+<th>风格</th>
+<th>说明</th>
+<th>适用场景</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>single</code></td>
+<td>单线程下载</td>
+<td>小文件、不支持 Range 的服务器</td>
+</tr>
+<tr>
+<td><code>multi</code></td>
+<td>多线程分段下载</td>
+<td>大文件、稳定网络</td>
+</tr>
+<tr>
+<td><code>adaptive</code></td>
+<td>自动选择最优风格</td>
+<td>大多数场景</td>
+</tr>
+<tr>
+<td><code>hybrid_turbo</code></td>
+<td>自适应分块 + AIMD 拥塞控制</td>
+<td>不稳定网络下追求极限速度</td>
+</tr>
+</tbody>
+</table>
+<h3 id="_3">应用下载风格<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">littledl</span><span class="w"> </span><span class="kn">import</span> <span class="n">DownloadConfig</span><span class="p">,</span> <span class="n">DownloadStyle</span>
+
+<span class="n">config</span> <span class="o">=</span> <span class="n">DownloadConfig</span><span class="p">()</span>
+<span class="n">config</span><span class="o">.</span><span class="n">apply_style</span><span class="p">(</span><span class="n">DownloadStyle</span><span class="o">.</span><span class="n">HYBRID_TURBO</span><span class="p">)</span>
+</code></pre></div>
+<h2 id="_4">分块管理<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h2>
+<h3 id="_5">手动分块大小<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h3>
 <p>为特定用例覆盖自动分块大小：</p>
 <div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">littledl</span><span class="w"> </span><span class="kn">import</span> <span class="n">DownloadConfig</span>
 
@@ -963,14 +1076,14 @@
     <span class="n">max_chunks</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span>
 <span class="p">)</span>
 </code></pre></div>
-<h3 id="_4">禁用分块<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h3>
+<h3 id="_6">禁用分块<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h3>
 <p>对于小文件或特定场景：</p>
 <div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">littledl</span><span class="w"> </span><span class="kn">import</span> <span class="n">DownloadConfig</span>
 
 <span class="n">config</span> <span class="o">=</span> <span class="n">DownloadConfig</span><span class="p">(</span><span class="n">enable_chunking</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 </code></pre></div>
-<h2 id="_5">并发下载<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h2>
-<h3 id="_6">多个同时下载<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h3>
+<h2 id="_7">并发下载<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h2>
+<h3 id="_8">多个同时下载<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">littledl</span><span class="w"> </span><span class="kn">import</span> <span class="n">download_file</span>
 
@@ -984,7 +1097,7 @@
     <span class="s2">&quot;https://example.com/file3.zip&quot;</span><span class="p">,</span>
 <span class="p">]))</span>
 </code></pre></div>
-<h2 id="_7">自定义请求头<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h2>
+<h2 id="_9">自定义请求头<a class="headerlink" href="#_9" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">littledl</span><span class="w"> </span><span class="kn">import</span> <span class="n">DownloadConfig</span>
 
 <span class="n">config</span> <span class="o">=</span> <span class="n">DownloadConfig</span><span class="p">(</span>
@@ -1017,15 +1130,15 @@
 
 <span class="n">config</span> <span class="o">=</span> <span class="n">DownloadConfig</span><span class="p">(</span><span class="n">verify_ssl</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 </code></pre></div>
-<h2 id="_8">流式处理<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h2>
+<h2 id="_10">流式处理<a class="headerlink" href="#_10" title="Permanent link">&para;</a></h2>
 <p>下载并分块处理内容而不保存到磁盘：</p>
 <div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">littledl</span><span class="w"> </span><span class="kn">import</span> <span class="n">download_file_stream</span>
 
 <span class="k">async</span> <span class="k">for</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="n">download_file_stream</span><span class="p">(</span><span class="s2">&quot;https://example.com/large_file.zip&quot;</span><span class="p">):</span>
     <span class="n">process</span><span class="p">(</span><span class="n">chunk</span><span class="p">)</span>
 </code></pre></div>
-<h2 id="_9">进度跟踪<a class="headerlink" href="#_9" title="Permanent link">&para;</a></h2>
-<h3 id="_10">自定义进度显示<a class="headerlink" href="#_10" title="Permanent link">&para;</a></h3>
+<h2 id="_11">进度跟踪<a class="headerlink" href="#_11" title="Permanent link">&para;</a></h2>
+<h3 id="_12">自定义进度显示<a class="headerlink" href="#_12" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">littledl</span><span class="w"> </span><span class="kn">import</span> <span class="n">download_file_sync</span>
 
 <span class="k">class</span><span class="w"> </span><span class="nc">ProgressTracker</span><span class="p">:</span>
@@ -1044,7 +1157,7 @@
     <span class="n">progress_callback</span><span class="o">=</span><span class="n">tracker</span><span class="p">,</span>
 <span class="p">)</span>
 </code></pre></div>
-<h3 id="_11">分块状态跟踪<a class="headerlink" href="#_11" title="Permanent link">&para;</a></h3>
+<h3 id="_13">分块状态跟踪<a class="headerlink" href="#_13" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">littledl</span><span class="w"> </span><span class="kn">import</span> <span class="n">ChunkEvent</span><span class="p">,</span> <span class="n">download_file_sync</span>
 
 <span class="k">def</span><span class="w"> </span><span class="nf">on_chunk</span><span class="p">(</span><span class="n">event</span><span class="p">:</span> <span class="n">ChunkEvent</span><span class="p">):</span>
@@ -1058,8 +1171,8 @@
     <span class="n">chunk_callback</span><span class="o">=</span><span class="n">on_chunk</span><span class="p">,</span>
 <span class="p">)</span>
 </code></pre></div>
-<h2 id="_12">性能调优<a class="headerlink" href="#_12" title="Permanent link">&para;</a></h2>
-<h3 id="_13">缓冲区大小<a class="headerlink" href="#_13" title="Permanent link">&para;</a></h3>
+<h2 id="_14">性能调优<a class="headerlink" href="#_14" title="Permanent link">&para;</a></h2>
+<h3 id="_15">缓冲区大小<a class="headerlink" href="#_15" title="Permanent link">&para;</a></h3>
 <p>为您的存储调整缓冲区大小：</p>
 <div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">littledl</span><span class="w"> </span><span class="kn">import</span> <span class="n">DownloadConfig</span>
 
@@ -1067,7 +1180,7 @@
     <span class="n">buffer_size</span><span class="o">=</span><span class="mi">256</span> <span class="o">*</span> <span class="mi">1024</span><span class="p">,</span>  <span class="c1"># 256KB 缓冲区</span>
 <span class="p">)</span>
 </code></pre></div>
-<h3 id="_14">连接池<a class="headerlink" href="#_14" title="Permanent link">&para;</a></h3>
+<h3 id="_16">连接池<a class="headerlink" href="#_16" title="Permanent link">&para;</a></h3>
 <p>配置连接池设置：</p>
 <div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">littledl</span><span class="w"> </span><span class="kn">import</span> <span class="n">DownloadConfig</span>
 

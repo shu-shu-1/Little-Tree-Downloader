@@ -10,10 +10,10 @@
       
       
       
-        <link rel="canonical" href="https://littledl.zsxiaoshu.cn/zh/configuration/">
+        <link rel="canonical" href="https://shu-shu-1.github.io/Little-Tree-Downloader/zh/configuration/">
       
       
-        <link rel="prev" href="../getting-started/">
+        <link rel="prev" href="../cli/">
       
       
         <link rel="next" href="../authentication/">
@@ -291,6 +291,25 @@
   
   
   
+  
+    <li class="md-tabs__item">
+      <a href="../cli/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  CLI Reference
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
     
   
   
@@ -492,6 +511,33 @@
     
   
     Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
   
 
     
@@ -873,6 +919,42 @@
 <td>bool</td>
 <td>True</td>
 <td>分块失败时自动回退到单连接下载</td>
+</tr>
+<tr>
+<td><code>enable_adaptive</code></td>
+<td>bool</td>
+<td>True</td>
+<td>启用自适应网络调度</td>
+</tr>
+<tr>
+<td><code>enable_hybrid_turbo</code></td>
+<td>bool</td>
+<td>True</td>
+<td>启用具有 AIMD 拥塞控制和智能重切策略的混合涡轮加速</td>
+</tr>
+<tr>
+<td><code>hybrid_aimd_increase_step</code></td>
+<td>int</td>
+<td>1</td>
+<td>每次增加的并发目标线程数 (加性增)</td>
+</tr>
+<tr>
+<td><code>hybrid_aimd_decrease_factor</code></td>
+<td>float</td>
+<td>0.5</td>
+<td>遇到速度骤降时的并发减少系数 (乘性减)</td>
+</tr>
+<tr>
+<td><code>hybrid_speedup_threshold</code></td>
+<td>float</td>
+<td>0.08</td>
+<td>触发 AIMD 提速的最小相对网络加速阈值</td>
+</tr>
+<tr>
+<td><code>hybrid_slow_chunk_ratio</code></td>
+<td>float</td>
+<td>0.45</td>
+<td>被视为极慢资源块的耗时占比阈值</td>
 </tr>
 <tr>
 <td><code>verify_hash</code></td>

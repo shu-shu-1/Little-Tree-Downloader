@@ -10,10 +10,10 @@
       
       
       
-        <link rel="canonical" href="https://littledl.zsxiaoshu.cn/configuration/">
+        <link rel="canonical" href="https://shu-shu-1.github.io/Little-Tree-Downloader/configuration/">
       
       
-        <link rel="prev" href="../getting-started/">
+        <link rel="prev" href="../cli/">
       
       
         <link rel="next" href="../authentication/">
@@ -291,6 +291,25 @@
   
   
   
+  
+    <li class="md-tabs__item">
+      <a href="../cli/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  CLI Reference
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
     
   
   
@@ -492,6 +511,33 @@
     
   
     Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
   
 
     
@@ -873,6 +919,42 @@
 <td>bool</td>
 <td>True</td>
 <td>Auto fallback to single-stream mode on chunked failure</td>
+</tr>
+<tr>
+<td><code>enable_adaptive</code></td>
+<td>bool</td>
+<td>True</td>
+<td>Enable adaptive network scheduling</td>
+</tr>
+<tr>
+<td><code>enable_hybrid_turbo</code></td>
+<td>bool</td>
+<td>True</td>
+<td>Enable hybrid turbo download with AIMD congestion control and smart chunk fallback</td>
+</tr>
+<tr>
+<td><code>hybrid_aimd_increase_step</code></td>
+<td>int</td>
+<td>1</td>
+<td>Target worker increase step size (Additive Increase)</td>
+</tr>
+<tr>
+<td><code>hybrid_aimd_decrease_factor</code></td>
+<td>float</td>
+<td>0.5</td>
+<td>Factor used to multiply target workers on speed decline (Multiplicative Decrease)</td>
+</tr>
+<tr>
+<td><code>hybrid_speedup_threshold</code></td>
+<td>float</td>
+<td>0.08</td>
+<td>Minimum relative speedup threshold required to trigger AIMD</td>
+</tr>
+<tr>
+<td><code>hybrid_slow_chunk_ratio</code></td>
+<td>float</td>
+<td>0.45</td>
+<td>Threshold ratio defining extremely slow chunks</td>
 </tr>
 <tr>
 <td><code>verify_hash</code></td>
