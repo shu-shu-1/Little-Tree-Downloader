@@ -66,8 +66,6 @@ extra:
   generator: false
 
 markdown_extensions:
-  - pymdownx.highlight:
-      anchorlink: true
   - pymdownx.inlinehilite
   - pymdownx.snippets
   - pymdownx.superfences
