@@ -1,20 +1,20 @@
 name: Publish to PyPI
 
 on:
-  release:
-    types: [published]
+  push:
+    tags:
+      - "v*"
   workflow_dispatch:
 
 jobs:
-  publish:
+  build:
     runs-on: ubuntu-latest
-    environment:
-      name: production
-      url: https://pypi.org/project/littledl/
-    permissions:
-      id-token: write
     steps:
       - uses: actions/checkout@v4
+
+      - name: Clean previous builds
+        run: |
+          rm -rf dist/ build/ *.egg-info/
 
       - name: Install uv
         uses: astral-sh/setup-uv@v4
@@ -29,6 +29,27 @@ jobs:
 
       - name: Build package
         run: uv build
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish:
+    runs-on: ubuntu-latest
+    needs: [build]
+    environment:
+      name: production
+      url: https://pypi.org/project/littledl/
+    permissions:
+      id-token: write
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
