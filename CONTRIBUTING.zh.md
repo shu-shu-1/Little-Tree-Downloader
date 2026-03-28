@@ -119,29 +119,6 @@ git push origin your-branch-name
 - 为公共模块、函数、类和方法编写文档字符串
 - 最大行长 120 个字符
 
-### 代码组织
-
-```
-src/littledl/
-├── __init__.py      # 公共 API 导出
-├── config.py        # 配置类
-├── downloader.py    # 主下载器实现
-├── chunk.py         # 分块管理
-├── worker.py        # 下载工作器
-├── scheduler.py     # 智能调度
-├── monitor.py       # 速度监控
-├── resume.py        # 断点续传
-├── connection.py    # 连接管理
-├── auth.py          # 认证
-├── proxy.py         # 代理支持
-├── limiter.py       # 限速
-├── detector.py      # 服务器检测
-├── compat.py        # 跨平台兼容
-├── exceptions.py    # 自定义异常
-├── utils.py         # 工具函数
-└── i18n/            # 国际化
-```
-
 ## 提交指南
 
 我们遵循 [Conventional Commits](https://www.conventionalcommits.org/)：
@@ -181,6 +158,8 @@ src/littledl/
 - [Python 类型提示](https://docs.python.org/3/library/typing.html)
 - [pytest 文档](https://docs.pytest.org/)
 - [httpx 文档](https://www.python-httpx.org/)
+- [flet文档](https://docs.flet.dev/)
+- [uv文档](https://docs.astral.sh/uv/)
 
 ## 问题？
 

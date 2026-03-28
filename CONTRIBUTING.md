@@ -6,15 +6,24 @@ First off, thank you for considering contributing to littledl! It's people like 
 
 ## Table of Contents
 
-- [Code of Conduct](#code-of-conduct)
-- [Getting Started](#getting-started)
-- [Development Setup](#development-setup)
-- [How to Contribute](#how-to-contribute)
-- [Coding Standards](#coding-standards)
-- [Commit Guidelines](#commit-guidelines)
-- [Pull Request Process](#pull-request-process)
-- [Reporting Bugs](#reporting-bugs)
-- [Feature Requests](#feature-requests)
+- [Contributing to littledl](#contributing-to-littledl)
+  - [Table of Contents](#table-of-contents)
+  - [Code of Conduct](#code-of-conduct)
+  - [Getting Started](#getting-started)
+    - [Prerequisites](#prerequisites)
+    - [Development Setup](#development-setup)
+  - [How to Contribute](#how-to-contribute)
+    - [Reporting Bugs](#reporting-bugs)
+    - [Suggesting Enhancements](#suggesting-enhancements)
+    - [Pull Requests](#pull-requests)
+  - [Coding Standards](#coding-standards)
+    - [Python Style](#python-style)
+  - [Commit Guidelines](#commit-guidelines)
+    - [Format](#format)
+    - [Types](#types)
+  - [Pull Request Process](#pull-request-process)
+  - [Additional Resources](#additional-resources)
+  - [Questions?](#questions)
 
 ## Code of Conduct
 
@@ -119,28 +128,6 @@ git push origin your-branch-name
 - Write docstrings for public modules, functions, classes, and methods
 - Maximum line length is 120 characters
 
-### Code Organization
-
-```
-src/littledl/
-├── __init__.py      # Public API exports
-├── config.py        # Configuration classes
-├── downloader.py    # Main downloader implementation
-├── chunk.py         # Chunk management
-├── worker.py        # Download workers
-├── scheduler.py     # Smart scheduling
-├── monitor.py       # Speed monitoring
-├── resume.py        # Resume support
-├── connection.py    # Connection management
-├── auth.py          # Authentication
-├── proxy.py         # Proxy support
-├── limiter.py       # Speed limiting
-├── detector.py      # Server detection
-├── compat.py        # Cross-platform compatibility
-├── exceptions.py    # Custom exceptions
-├── utils.py         # Utility functions
-└── i18n/            # Internationalization
-```
 
 ## Commit Guidelines
 
@@ -181,6 +168,8 @@ We follow [Conventional Commits](https://www.conventionalcommits.org/):
 - [Python Type Hints](https://docs.python.org/3/library/typing.html)
 - [pytest Documentation](https://docs.pytest.org/)
 - [httpx Documentation](https://www.python-httpx.org/)
+- [flet Documentation](https://docs.flet.dev/)
+- [uv Documentation](https://docs.astral.sh/uv/)
 
 ## Questions?
 
