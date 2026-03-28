@@ -1,0 +1,17 @@
+# littledl
+
+> High-performance download library with IDM-style multi-threaded chunked downloading
+
+High-performance download library with IDM-style multi-threaded chunked downloading,
+intelligent scheduling, and resume support.
+
+
+## Getting Started
+
+
+## Configuration
+
+
+## Advanced
+
+
