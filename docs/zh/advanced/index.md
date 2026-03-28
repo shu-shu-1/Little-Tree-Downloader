@@ -2,6 +2,26 @@
 
 littledl 的高级功能和优化。
 
+## 下载风格
+
+littledl 支持多种下载风格：
+
+| 风格           | 说明                                     | 适用场景                            |
+| -------------- | ---------------------------------------- | ----------------------------------- |
+| `single`       | 单线程下载                               | 小文件、不支持 Range 的服务器       |
+| `multi`        | 多线程分段下载                           | 大文件、稳定网络                    |
+| `adaptive`     | 自动选择最优风格                         | 大多数场景                          |
+| `hybrid_turbo` | 自适应分块 + AIMD 拥塞控制              | 不稳定网络下追求极限速度            |
+
+### 应用下载风格
+
+```python
+from littledl import DownloadConfig, DownloadStyle
+
+config = DownloadConfig()
+config.apply_style(DownloadStyle.HYBRID_TURBO)
+```
+
 ## 分块管理
 
 ### 手动分块大小

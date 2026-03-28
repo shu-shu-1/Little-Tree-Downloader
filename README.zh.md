@@ -1,20 +1,23 @@
-English | [简体中文](README.zh.md)
+[English](README.md) | 简体中文
 
 # littledl
 
-高性能下载库，支持 aria2 风格的多线程分段下载、智能策略选择和自适应优化。
+高性能下载库，支持多线程分段下载、智能策略选择和自适应优化，参考了 Aria2、IDM 等工具的设计理念。
 
 ## 特性
 
 ### 核心功能
-- 🚀 **Aria2 风格多线程分段下载**：使用 HTTP Range 请求将文件分块并行下载，最大化速度
-- 🧠 **智能策略选择**：根据文件大小、服务器能力和网络状况自动选择最优下载风格（单线程/多线程/自适应）
+
+- 🚀 **多线程分段下载**：使用 HTTP Range 请求将文件分块并行下载，最大化速度（参考 Aria2、IDM 等工具）
+- 🧠 **智能策略选择**：根据文件大小、服务器能力和网络状况自动选择最优下载风格（单线程/多线程/自适应/hybrid_turbo）
+- 🎨 **多种下载风格**：支持单线程、多线程、自适应和 hybrid_turbo 混合加速等多种下载风格，适应不同场景和需求
 - 🎯 **直接写入文件**：直接写入最终文件，无需临时文件合并
 - ⏯️ **断点续传**：支持从上次中断处继续下载
 - 📊 **实时速度监控**：实时速度计算、预计剩余时间和趋势分析
 - 🔁 **可靠回退**：分块下载失败时自动回退到单连接下载
 
 ### 高级功能
+
 - 🔐 **多种认证方式**：Basic、Bearer、Digest、API Key、OAuth2
 - 🌐 **完整代理支持**：系统代理自动检测、PAC 文件、SOCKS5
 - ⏱️ **速度限制**：令牌桶、漏桶和自适应算法
@@ -39,7 +42,7 @@ uv add littledl
 
 ## 文档
 
-完整的文档请参阅 [https://littledl.zsxiaoshu.cn/](https://littledl.zsxiaoshu.cn/)
+完整的文档请参阅 [https://shu-shu-1.github.io/Little-Tree-Downloader/](https://shu-shu-1.github.io/Little-Tree-Downloader/)
 
 - [快速入门](https://littledl.zsxiaoshu.cn/zh/getting-started/) - 快速入门指南
 - [配置指南](https://littledl.zsxiaoshu.cn/zh/configuration/) - 配置选项
@@ -81,11 +84,12 @@ asyncio.run(main())
 
 littledl 支持三种下载风格，您可以根据需要选择：
 
-| 风格 | 说明 | 适用场景 |
-|------|------|---------|
-| `single` | 单线程下载 | 小文件、不支持 Range 的服务器 |
-| `multi` | 多线程分段下载（aria2 风格） | 大文件、稳定网络 |
-| `adaptive` | 自动选择最优风格 | 大多数场景 |
+| 风格           | 说明                                     | 适用场景                            |
+| -------------- | ---------------------------------------- | ----------------------------------- |
+| `single`       | 单线程下载                               | 小文件、不支持 Range 的服务器       |
+| `multi`        | 多线程分段下载                           | 大文件、稳定网络                    |
+| `adaptive`     | 自动选择最优风格                         | 大多数场景                          |
+| `hybrid_turbo` | 自适应分块 + AIMD 拥塞控制               | 不稳定网络下追求极限速度             |
 
 ### 自动风格选择（推荐）
 
@@ -104,11 +108,22 @@ config = DownloadConfig()
 ### 手动风格选择
 
 ```bash
-# 强制单线程
-littledl "https://example.com/file.zip" --style single
-
 # 强制多线程
 littledl "https://example.com/file.zip" --style multi --max-chunks 8
+
+# 强制 hybrid_turbo 模式（推荐用于不稳定网络）
+littledl "https://example.com/file.zip" --style hybrid_turbo
+```
+
+```python
+from littledl import StrategySelector, DownloadStyle
+
+selector = StrategySelector(
+    default_style=DownloadStyle.HYBRID_TURBO,
+    enable_single=True,
+    enable_multi=True,
+    enable_hybrid_turbo=True,
+)
 ```
 
 ```python
@@ -130,6 +145,7 @@ littledl "https://example.com/large_file.zip" --info
 ```
 
 输出：
+
 ```
 文件信息:
   文件名: large_file.zip
@@ -225,21 +241,21 @@ for url, path, error in results:
 
 ## 配置选项
 
-| 选项 | 类型 | 默认值 | 说明 |
-|------|------|--------|------|
-| `enable_chunking` | bool | True | 启用多线程分块下载 |
-| `max_chunks` | int | 16 | 最大并发分块数 |
-| `chunk_size` | int | 4MB | 默认分块大小 |
-| `buffer_size` | int | 64KB | 磁盘写入缓冲区大小 |
-| `timeout` | float | 300 | 读写超时（秒） |
-| `resume` | bool | True | 启用断点续传 |
-| `verify_ssl` | bool | True | 验证 SSL 证书 |
-| `fallback_to_single_on_failure` | bool | True | 分块失败时回退到单连接下载 |
-| `verify_hash` | bool | False | 校验下载文件哈希 |
-| `expected_hash` | str | None | 预期哈希值 |
-| `hash_algorithm` | str | sha256 | 哈希算法 |
-| `min_file_size` | int | None | 最小文件大小限制 |
-| `max_file_size` | int | None | 最大文件大小限制 |
+| 选项                              | 类型  | 默认值 | 说明                       |
+| --------------------------------- | ----- | ------ | -------------------------- |
+| `enable_chunking`               | bool  | True   | 启用多线程分块下载         |
+| `max_chunks`                    | int   | 16     | 最大并发分块数             |
+| `chunk_size`                    | int   | 4MB    | 默认分块大小               |
+| `buffer_size`                   | int   | 64KB   | 磁盘写入缓冲区大小         |
+| `timeout`                       | float | 300    | 读写超时（秒）             |
+| `resume`                        | bool  | True   | 启用断点续传               |
+| `verify_ssl`                    | bool  | True   | 验证 SSL 证书              |
+| `fallback_to_single_on_failure` | bool  | True   | 分块失败时回退到单连接下载 |
+| `verify_hash`                   | bool  | False  | 校验下载文件哈希           |
+| `expected_hash`                 | str   | None   | 预期哈希值                 |
+| `hash_algorithm`                | str   | sha256 | 哈希算法                   |
+| `min_file_size`                 | int   | None   | 最小文件大小限制           |
+| `max_file_size`                 | int   | None   | 最大文件大小限制           |
 
 ## CLI 用法
 
@@ -262,12 +278,12 @@ littledl "https://example.com/file.zip" --no-resume
 
 ## 跨平台支持
 
-| 功能 | Windows | macOS | Linux | FreeBSD |
-|------|---------|-------|-------|---------|
-| 多线程下载 | ✅ | ✅ | ✅ | ✅ |
-| 断点续传 | ✅ | ✅ | ✅ | ✅ |
-| 系统代理检测 | ✅ | ✅ | ✅ | ✅ |
-| 直接文件写入 | ✅ | ✅ | ✅ | ✅ |
+| 功能         | Windows | macOS | Linux | FreeBSD |
+| ------------ | ------- | ----- | ----- | ------- |
+| 多线程下载   | ✅      | ✅    | ✅    | ✅      |
+| 断点续传     | ✅      | ✅    | ✅    | ✅      |
+| 系统代理检测 | ✅      | ✅    | ✅    | ✅      |
+| 直接文件写入 | ✅      | ✅    | ✅    | ✅      |
 
 ## 贡献
 

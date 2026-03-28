@@ -3,14 +3,14 @@ name = "littledl"
 version = "0.3.0"
 description = "A high-performance download library with IDM-style multi-threaded chunked downloading, smart scheduling, and resume support"
 readme = "README.md"
-license = { text = "MIT" }
+license = { text = "Apache-2.0" }
 requires-python = ">=3.10"
 authors = [{ name = "Little Tree", email = "zsxiaoshu@outlook.com" }]
 keywords = ["download", "multi-threaded", "chunked", "resume", "idm", "http2"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
+    "License :: OSI Approved :: Apache License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
