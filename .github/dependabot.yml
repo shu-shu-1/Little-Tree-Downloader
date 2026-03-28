@@ -6,12 +6,17 @@ updates:
       interval: "weekly"
     open-pull-requests-limit: 10
     reviewers:
-      - "little-tree"
+      - "shu-shu-1"
     labels:
       - "dependencies"
     commit-message:
       prefix: "chore"
       include: "scope"
+    groups:
+      production-dependencies:
+        dependency-type: "production"
+      dev-dependencies:
+        dependency-type: "development"
 
   - package-ecosystem: "github-actions"
     directory: "/"
@@ -19,7 +24,7 @@ updates:
       interval: "weekly"
     open-pull-requests-limit: 5
     reviewers:
-      - "little-tree"
+      - "shu-shu-1"
     labels:
       - "github-actions"
       - "dependencies"
