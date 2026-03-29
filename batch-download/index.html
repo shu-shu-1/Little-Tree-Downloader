@@ -778,14 +778,35 @@
 </code></pre></div>
 <h2 id="progress-callback">Progress Callback<a class="headerlink" href="#progress-callback" title="Permanent link">&para;</a></h2>
 <h3 id="batch-progress-callback">Batch Progress Callback<a class="headerlink" href="#batch-progress-callback" title="Permanent link">&para;</a></h3>
+<p>The callback system has been fully upgraded to support multiple invocation styles (event, dict, kwargs, legacy) with detailed per-file progress information.</p>
 <div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">littledl</span><span class="w"> </span><span class="kn">import</span> <span class="n">BatchDownloader</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">littledl</span><span class="w"> </span><span class="kn">import</span> <span class="n">BatchDownloader</span><span class="p">,</span> <span class="n">BatchProgress</span>
 
-<span class="k">def</span><span class="w"> </span><span class="nf">on_batch_progress</span><span class="p">(</span><span class="n">completed</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">total</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">speed</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">eta</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Batch Progress: </span><span class="si">{</span><span class="n">completed</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">total</span><span class="si">}</span><span class="s2"> | Speed: </span><span class="si">{</span><span class="n">speed</span><span class="o">/</span><span class="mi">1024</span><span class="o">/</span><span class="mi">1024</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> MB/s | ETA: </span><span class="si">{</span><span class="n">eta</span><span class="si">}</span><span class="s2">s&quot;</span><span class="p">)</span>
+<span class="c1"># Style 1: Receive BatchProgress object (recommended)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">on_batch_progress</span><span class="p">(</span><span class="n">progress</span><span class="p">:</span> <span class="n">BatchProgress</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Batch Progress: </span><span class="si">{</span><span class="n">progress</span><span class="o">.</span><span class="n">completed_files</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">progress</span><span class="o">.</span><span class="n">total_files</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Speed: </span><span class="si">{</span><span class="n">progress</span><span class="o">.</span><span class="n">smooth_speed</span><span class="o">/</span><span class="mi">1024</span><span class="o">/</span><span class="mi">1024</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> MB/s&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;ETA: </span><span class="si">{</span><span class="n">progress</span><span class="o">.</span><span class="n">eta</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2">s&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Speed Stability: </span><span class="si">{</span><span class="n">progress</span><span class="o">.</span><span class="n">speed_stability</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="c1"># View downloading files</span>
+    <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">progress</span><span class="o">.</span><span class="n">get_active_files</span><span class="p">():</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Downloading: </span><span class="si">{</span><span class="n">f</span><span class="o">.</span><span class="n">filename</span><span class="si">}</span><span class="s2"> - </span><span class="si">{</span><span class="n">f</span><span class="o">.</span><span class="n">progress</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2">%&quot;</span><span class="p">)</span>
+
+<span class="c1"># Style 2: Receive dict</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">on_batch_progress_dict</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Batch Progress: </span><span class="si">{</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;completed_files&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;total_files&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Speed: </span><span class="si">{</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;smooth_speed&#39;</span><span class="p">]</span><span class="o">/</span><span class="mi">1024</span><span class="o">/</span><span class="mi">1024</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> MB/s&quot;</span><span class="p">)</span>
+
+<span class="c1"># Style 3: Receive kwargs</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">on_batch_progress_kwargs</span><span class="p">(</span><span class="n">total_files</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">completed_files</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">smooth_speed</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Batch Progress: </span><span class="si">{</span><span class="n">completed_files</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">total_files</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+<span class="c1"># Style 4: Legacy format (auto-detected)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">on_batch_progress_legacy</span><span class="p">(</span><span class="n">completed</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">total</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">speed</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">eta</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">stability</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Batch Progress: </span><span class="si">{</span><span class="n">completed</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">total</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
 <span class="n">downloader</span> <span class="o">=</span> <span class="n">BatchDownloader</span><span class="p">()</span>
-<span class="n">downloader</span><span class="o">.</span><span class="n">set_progress_callback</span><span class="p">(</span><span class="n">on_batch_progress</span><span class="p">)</span>
+<span class="n">downloader</span><span class="o">.</span><span class="n">set_progress_callback</span><span class="p">(</span><span class="n">on_batch_progress</span><span class="p">)</span>  <span class="c1"># Auto-detects style</span>
 </code></pre></div>
 <h3 id="file-complete-callback">File Complete Callback<a class="headerlink" href="#file-complete-callback" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">littledl</span><span class="w"> </span><span class="kn">import</span> <span class="n">FileTask</span>
@@ -1006,15 +1027,40 @@
     <span class="n">completed_files</span><span class="p">:</span> <span class="nb">int</span>
     <span class="n">failed_files</span><span class="p">:</span> <span class="nb">int</span>
     <span class="n">active_files</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">pending_files</span><span class="p">:</span> <span class="nb">int</span>
     <span class="n">total_bytes</span><span class="p">:</span> <span class="nb">int</span>
     <span class="n">downloaded_bytes</span><span class="p">:</span> <span class="nb">int</span>
     <span class="n">overall_speed</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">smooth_speed</span><span class="p">:</span> <span class="nb">float</span>
     <span class="n">eta</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">speed_stability</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">elapsed_time</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">files</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">FileProgress</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">progress</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span> <span class="o">...</span>
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">files_completed_ratio</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span> <span class="o">...</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_active_files</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">FileProgress</span><span class="p">]:</span> <span class="o">...</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_pending_files</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">FileProgress</span><span class="p">]:</span> <span class="o">...</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_completed_files</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">FileProgress</span><span class="p">]:</span> <span class="o">...</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_failed_files</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">FileProgress</span><span class="p">]:</span> <span class="o">...</span>
+
+
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">slots</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">FileProgress</span><span class="p">:</span>
+    <span class="n">task_id</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">filename</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">url</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">status</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">file_size</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">downloaded</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">speed</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">progress</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">error</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span>
+    <span class="n">started_at</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span>
+    <span class="n">completed_at</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span>
 </code></pre></div>
 <h3 id="convenience-functions">Convenience Functions<a class="headerlink" href="#convenience-functions" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">batch_download</span><span class="p">(</span>

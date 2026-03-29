@@ -627,6 +627,17 @@
   <a href="#_5" class="md-nav__link">
     <span class="md-ellipsis">
       
+        直接下载多个文件
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
         批量下载
       
     </span>
@@ -640,7 +651,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_6" class="md-nav__link">
+  <a href="#_7" class="md-nav__link">
     <span class="md-ellipsis">
       
         常用选项
@@ -651,7 +662,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_7" class="md-nav__link">
+  <a href="#_8" class="md-nav__link">
     <span class="md-ellipsis">
       
         下载模式
@@ -663,7 +674,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#_8" class="md-nav__link">
+  <a href="#_9" class="md-nav__link">
     <span class="md-ellipsis">
       
         示例
@@ -679,7 +690,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_9" class="md-nav__link">
+  <a href="#_10" class="md-nav__link">
     <span class="md-ellipsis">
       
         进度显示
@@ -702,7 +713,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#_10" class="md-nav__link">
+  <a href="#_11" class="md-nav__link">
     <span class="md-ellipsis">
       
         非交互模式 (管道/重定向)
@@ -718,7 +729,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_11" class="md-nav__link">
+  <a href="#_12" class="md-nav__link">
     <span class="md-ellipsis">
       
         输出格式
@@ -746,7 +757,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_12" class="md-nav__link">
+  <a href="#_13" class="md-nav__link">
     <span class="md-ellipsis">
       
         退出码
@@ -757,7 +768,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_13" class="md-nav__link">
+  <a href="#_14" class="md-nav__link">
     <span class="md-ellipsis">
       
         高级示例
@@ -769,7 +780,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#_14" class="md-nav__link">
+  <a href="#_15" class="md-nav__link">
     <span class="md-ellipsis">
       
         断点续传
@@ -791,7 +802,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#_15" class="md-nav__link">
+  <a href="#_16" class="md-nav__link">
     <span class="md-ellipsis">
       
         使用代理
@@ -802,7 +813,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#_16" class="md-nav__link">
+  <a href="#_17" class="md-nav__link">
     <span class="md-ellipsis">
       
         限速下载
@@ -813,7 +824,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#_17" class="md-nav__link">
+  <a href="#_18" class="md-nav__link">
     <span class="md-ellipsis">
       
         批量下载并发控制
@@ -824,7 +835,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#_18" class="md-nav__link">
+  <a href="#_19" class="md-nav__link">
     <span class="md-ellipsis">
       
         安静模式（最小输出）
@@ -835,7 +846,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#_19" class="md-nav__link">
+  <a href="#_20" class="md-nav__link">
     <span class="md-ellipsis">
       
         仅显示文件信息
@@ -846,7 +857,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#_20" class="md-nav__link">
+  <a href="#_21" class="md-nav__link">
     <span class="md-ellipsis">
       
         自动分析并选择最佳模式
@@ -862,7 +873,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_21" class="md-nav__link">
+  <a href="#_22" class="md-nav__link">
     <span class="md-ellipsis">
       
         环境变量
@@ -873,7 +884,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_22" class="md-nav__link">
+  <a href="#_23" class="md-nav__link">
     <span class="md-ellipsis">
       
         进阶阅读
@@ -1081,13 +1092,16 @@
 </code></pre></div>
 <p>验证安装：</p>
 <div class="highlight"><pre><span></span><code>littledl<span class="w"> </span>--version
-<span class="c1"># 输出: littledl 0.3.0</span>
+<span class="c1"># 输出: littledl 0.5.0</span>
 </code></pre></div>
 <h2 id="_3">基本用法<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h2>
 <h3 id="_4">下载单个文件<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code>littledl<span class="w"> </span><span class="s2">&quot;https://example.com/large-file.zip&quot;</span><span class="w"> </span>-o<span class="w"> </span>./downloads
 </code></pre></div>
-<h3 id="_5">批量下载<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h3>
+<h3 id="_5">直接下载多个文件<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>littledl<span class="w"> </span><span class="s2">&quot;https://example.com/file1.zip&quot;</span><span class="w"> </span><span class="s2">&quot;https://example.com/file2.pdf&quot;</span><span class="w"> </span><span class="s2">&quot;https://example.com/file3.doc&quot;</span><span class="w"> </span>-o<span class="w"> </span>./downloads
+</code></pre></div>
+<h3 id="_6">批量下载<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h3>
 <p>创建文件 <code>urls.txt</code>，每行一个 URL：</p>
 <div class="highlight"><pre><span></span><code># 支持注释行
 https://example.com/file1.zip
@@ -1097,7 +1111,7 @@ https://example.com/file3.doc
 <p>然后执行下载：</p>
 <div class="highlight"><pre><span></span><code>littledl<span class="w"> </span>-F<span class="w"> </span>urls.txt<span class="w"> </span>-o<span class="w"> </span>./downloads
 </code></pre></div>
-<h2 id="_6">常用选项<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h2>
+<h2 id="_7">常用选项<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
@@ -1147,9 +1161,14 @@ https://example.com/file3.doc
 <td>详细输出</td>
 <td>False</td>
 </tr>
+<tr>
+<td><code>--temp-dir 路径</code></td>
+<td>临时文件目录</td>
+<td>输出文件同级目录</td>
+</tr>
 </tbody>
 </table>
-<h2 id="_7">下载模式<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h2>
+<h2 id="_8">下载模式<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
@@ -1186,7 +1205,7 @@ https://example.com/file3.doc
 </tr>
 </tbody>
 </table>
-<h3 id="_8">示例<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h3>
+<h3 id="_9">示例<a class="headerlink" href="#_9" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><span class="c1"># 自动选择最佳模式</span>
 littledl<span class="w"> </span><span class="s2">&quot;https://example.com/file.zip&quot;</span><span class="w"> </span>-s<span class="w"> </span>auto
 
@@ -1196,12 +1215,12 @@ littledl<span class="w"> </span><span class="s2">&quot;https://example.com/file.
 <span class="c1"># 最高性能</span>
 littledl<span class="w"> </span><span class="s2">&quot;https://example.com/file.zip&quot;</span><span class="w"> </span>-s<span class="w"> </span>hybrid_turbo<span class="w"> </span>-c<span class="w"> </span><span class="m">32</span>
 </code></pre></div>
-<h2 id="_9">进度显示<a class="headerlink" href="#_9" title="Permanent link">&para;</a></h2>
+<h2 id="_10">进度显示<a class="headerlink" href="#_10" title="Permanent link">&para;</a></h2>
 <h3 id="tty">交互模式 (TTY)<a class="headerlink" href="#tty" title="Permanent link">&para;</a></h3>
 <p>当标准输出是终端时，littledl 显示动态进度条：</p>
 <div class="highlight"><pre><span></span><code>[=============&gt;                ]  45.2% |  45.2MB / 100.0MB | 10.5MB/s | 预计剩余: 00:05
 </code></pre></div>
-<h3 id="_10">非交互模式 (管道/重定向)<a class="headerlink" href="#_10" title="Permanent link">&para;</a></h3>
+<h3 id="_11">非交互模式 (管道/重定向)<a class="headerlink" href="#_11" title="Permanent link">&para;</a></h3>
 <p>当输出被管道传输或重定向时，littledl 自动切换到最小化输出：</p>
 <div class="highlight"><pre><span></span><code><span class="c1"># 输出到文件</span>
 littledl<span class="w"> </span><span class="s2">&quot;https://example.com/file.zip&quot;</span><span class="w"> </span>&gt;<span class="w"> </span>download.log
@@ -1209,7 +1228,7 @@ littledl<span class="w"> </span><span class="s2">&quot;https://example.com/file.
 <span class="c1"># 管道到其他工具</span>
 littledl<span class="w"> </span><span class="s2">&quot;https://example.com/file.zip&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>head<span class="w"> </span>-c<span class="w"> </span><span class="m">100</span>
 </code></pre></div>
-<h2 id="_11">输出格式<a class="headerlink" href="#_11" title="Permanent link">&para;</a></h2>
+<h2 id="_12">输出格式<a class="headerlink" href="#_12" title="Permanent link">&para;</a></h2>
 <p>使用 <code>--output-format</code> 控制输出样式：</p>
 <table>
 <thead>
@@ -1267,7 +1286,7 @@ littledl<span class="w"> </span><span class="s2">&quot;https://example.com/file.
 <span class="w">  </span><span class="p">]</span>
 <span class="p">}</span>
 </code></pre></div>
-<h2 id="_12">退出码<a class="headerlink" href="#_12" title="Permanent link">&para;</a></h2>
+<h2 id="_13">退出码<a class="headerlink" href="#_13" title="Permanent link">&para;</a></h2>
 <p>littledl 使用特定的退出码，便于脚本处理：</p>
 <table>
 <thead>
@@ -1307,27 +1326,27 @@ littledl<span class="w"> </span><span class="s2">&quot;https://example.com/file.
 <span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;下载失败，退出码 </span><span class="nv">$?</span><span class="s2">&quot;</span>
 <span class="k">fi</span>
 </code></pre></div>
-<h2 id="_13">高级示例<a class="headerlink" href="#_13" title="Permanent link">&para;</a></h2>
-<h3 id="_14">断点续传<a class="headerlink" href="#_14" title="Permanent link">&para;</a></h3>
+<h2 id="_14">高级示例<a class="headerlink" href="#_14" title="Permanent link">&para;</a></h2>
+<h3 id="_15">断点续传<a class="headerlink" href="#_15" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code>littledl<span class="w"> </span><span class="s2">&quot;https://example.com/large-file.zip&quot;</span><span class="w"> </span>-o<span class="w"> </span>./downloads<span class="w"> </span>--resume
 </code></pre></div>
 <h3 id="ssl">跳过 SSL 验证（不推荐）<a class="headerlink" href="#ssl" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code>littledl<span class="w"> </span><span class="s2">&quot;https://example.com/file.zip&quot;</span><span class="w"> </span>--no-verify-ssl
 </code></pre></div>
-<h3 id="_15">使用代理<a class="headerlink" href="#_15" title="Permanent link">&para;</a></h3>
+<h3 id="_16">使用代理<a class="headerlink" href="#_16" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code>littledl<span class="w"> </span><span class="s2">&quot;https://example.com/file.zip&quot;</span><span class="w"> </span>--proxy<span class="w"> </span><span class="s2">&quot;http://proxy:8080&quot;</span>
 </code></pre></div>
-<h3 id="_16">限速下载<a class="headerlink" href="#_16" title="Permanent link">&para;</a></h3>
+<h3 id="_17">限速下载<a class="headerlink" href="#_17" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><span class="c1"># 限制为 1MB/s</span>
 littledl<span class="w"> </span><span class="s2">&quot;https://example.com/file.zip&quot;</span><span class="w"> </span>--speed-limit<span class="w"> </span><span class="m">1048576</span>
 </code></pre></div>
-<h3 id="_17">批量下载并发控制<a class="headerlink" href="#_17" title="Permanent link">&para;</a></h3>
+<h3 id="_18">批量下载并发控制<a class="headerlink" href="#_18" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code>littledl<span class="w"> </span>-F<span class="w"> </span>urls.txt<span class="w"> </span>-o<span class="w"> </span>./downloads<span class="w"> </span>--max-concurrent<span class="w"> </span><span class="m">3</span>
 </code></pre></div>
-<h3 id="_18">安静模式（最小输出）<a class="headerlink" href="#_18" title="Permanent link">&para;</a></h3>
+<h3 id="_19">安静模式（最小输出）<a class="headerlink" href="#_19" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code>littledl<span class="w"> </span>-F<span class="w"> </span>urls.txt<span class="w"> </span>--quiet
 </code></pre></div>
-<h3 id="_19">仅显示文件信息<a class="headerlink" href="#_19" title="Permanent link">&para;</a></h3>
+<h3 id="_20">仅显示文件信息<a class="headerlink" href="#_20" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code>littledl<span class="w"> </span><span class="s2">&quot;https://example.com/file.zip&quot;</span><span class="w"> </span>-i
 <span class="c1"># 输出：</span>
 <span class="c1"># 文件信息:</span>
@@ -1336,10 +1355,10 @@ littledl<span class="w"> </span><span class="s2">&quot;https://example.com/file.
 <span class="c1">#   Content-Type: application/zip</span>
 <span class="c1">#   断点续传: 支持</span>
 </code></pre></div>
-<h3 id="_20">自动分析并选择最佳模式<a class="headerlink" href="#_20" title="Permanent link">&para;</a></h3>
+<h3 id="_21">自动分析并选择最佳模式<a class="headerlink" href="#_21" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code>littledl<span class="w"> </span><span class="s2">&quot;https://example.com/file.zip&quot;</span><span class="w"> </span>-s<span class="w"> </span>auto<span class="w"> </span>-i
 </code></pre></div>
-<h2 id="_21">环境变量<a class="headerlink" href="#_21" title="Permanent link">&para;</a></h2>
+<h2 id="_22">环境变量<a class="headerlink" href="#_22" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
@@ -1354,7 +1373,7 @@ littledl<span class="w"> </span><span class="s2">&quot;https://example.com/file.
 </tr>
 </tbody>
 </table>
-<h2 id="_22">进阶阅读<a class="headerlink" href="#_22" title="Permanent link">&para;</a></h2>
+<h2 id="_23">进阶阅读<a class="headerlink" href="#_23" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="../configuration/">配置指南</a> - 所有配置选项详解</li>
 <li><a href="../batch-download/">批量下载</a> - 高级批量下载功能</li>

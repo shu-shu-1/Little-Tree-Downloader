@@ -14,7 +14,7 @@ Verify installation:
 
 ```
 littledl --version
-# Output: littledl 0.3.0
+# Output: littledl 0.5.0
 ```
 
 ## Basic Usage
@@ -23,6 +23,12 @@ littledl --version
 
 ```
 littledl "https://example.com/large-file.zip" -o ./downloads
+```
+
+### Download Multiple Files Directly
+
+```
+littledl "https://example.com/file1.zip" "https://example.com/file2.pdf" "https://example.com/file3.doc" -o ./downloads
 ```
 
 ### Batch Download
@@ -54,6 +60,7 @@ littledl -F urls.txt -o ./downloads
 | `--speed-limit BYTES/s` | Limit download speed          | Unlimited       |
 | `--retry N`             | Maximum retry attempts        | `3`             |
 | `-v, --verbose`         | Verbose output                | False           |
+| `--temp-dir PATH`       | Temporary files directory     | Same as output  |
 
 ## Download Styles
 
@@ -236,9 +243,9 @@ littledl "https://example.com/file.zip" -s auto -i
 
 ## Environment Variables
 
-| Variable | Description                                 |
-| -------- | ------------------------------------------- |
-| `LANG`   | Language selection (e.g., `zh_CN`, `en_US`) |
+| Variable | Description                                |
+| -------- | ------------------------------------------ |
+| `LANG`   | Language selection (e.g.,`zh_CN`, `en_US`) |
 
 ## Next Steps
 
