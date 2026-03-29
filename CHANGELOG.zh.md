@@ -7,6 +7,39 @@ English | 简体中文
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)，
 本项目遵循 [语义化版本](https://semver.org/spec/v2.0.0.html)。
 
+## 0.5.0 - 2026-03-29
+
+### 新增
+
+- **增强的批量进度回调系统**：高性能、标准化、可定制化的回调
+  - `BatchProgressCallbackAdapter` - 标准化不同回调风格（事件、字典、关键字参数、传统格式）
+  - `FileProgress` 数据类 - 单文件进度信息
+  - `BatchProgress` 新增 `files` 元组，包含每个文件的详细信息
+
+- **改进的速度计算**：多文件下载模式下更准确的 ETA 预测
+  - 新增 `smooth_speed` - 使用指数加权平均的平滑速度
+  - 新增 `speed_stability` - 指示 ETA 可靠性的指标（0.0-1.0）
+  - 新增 `pending_files` 和 `elapsed_time` 字段
+  - `FileScheduler` 中的速度历史跟踪，确保稳定计算
+
+- **单文件进度可见性**：查看正在下载的文件及其各自进度
+  - `BatchProgress.files` 包含所有文件的 `FileProgress` 元组
+  - 辅助方法：`get_active_files()`、`get_pending_files()`、`get_completed_files()`、`get_failed_files()`
+  - 每个 `FileProgress` 包含：task_id、filename、url、status、file_size、downloaded、speed、progress、error、started_at、completed_at
+
+- **MovingAverage 工具增强**：更好的速度平均计算
+  - `get_weighted_average()` - 指数加权平均
+  - `get_median()` - 中位数计算，减少异常值影响
+  - `get_smoothed_average()` - EMA 平滑
+  - `get_stability()` / `is_stable()` - 速度稳定性指标
+
+### 优化变更
+
+- `BatchDownloader.set_progress_callback()` 现在使用 `BatchProgressCallbackAdapter` 包装回调
+- `EnhancedBatchDownloader.set_progress_callback()` 现在使用 `BatchProgressCallbackAdapter` 包装回调
+- 进度回调现在接收 `BatchProgress` 对象（标准化格式）
+- 通过自动检测仍支持传统的 5 参数回调
+
 ## 0.4.1 - 2026-03-29
 
 ### 修复

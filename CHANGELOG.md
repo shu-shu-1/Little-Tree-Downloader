@@ -7,6 +7,39 @@ All notable changes to littledl will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.5.0 - 2026-03-29
+
+### Added
+
+- **Enhanced Batch Progress Callback System**: High-performance, standardized, and customizable callbacks
+  - `BatchProgressCallbackAdapter` - Normalizes different callback styles (event, dict, kwargs, legacy)
+  - `FileProgress` dataclass - Individual file progress information
+  - `BatchProgress` now includes `files` tuple for per-file details
+
+- **Improved Speed Calculation**: More accurate ETA prediction in multi-file download mode
+  - Added `smooth_speed` - Smoothed speed using exponential weighted average
+  - Added `speed_stability` - Metric indicating ETA reliability (0.0-1.0)
+  - Added `pending_files` and `elapsed_time` fields to `BatchProgress`
+  - Speed history tracking in `FileScheduler` for stable calculations
+
+- **Per-File Progress Visibility**: See which files are downloading and their individual progress
+  - `BatchProgress.files` contains `FileProgress` tuple for all files
+  - Helper methods: `get_active_files()`, `get_pending_files()`, `get_completed_files()`, `get_failed_files()`
+  - Each `FileProgress` includes: task_id, filename, url, status, file_size, downloaded, speed, progress, error, started_at, completed_at
+
+- **MovingAverage Utility Enhancements**: Better speed averaging
+  - `get_weighted_average()` - Exponential weighted average
+  - `get_median()` - Median calculation to reduce outlier impact
+  - `get_smoothed_average()` - EMA smoothing
+  - `get_stability()` / `is_stable()` - Speed stability metrics
+
+### Changed
+
+- `BatchDownloader.set_progress_callback()` now wraps callbacks with `BatchProgressCallbackAdapter`
+- `EnhancedBatchDownloader.set_progress_callback()` now wraps callbacks with `BatchProgressCallbackAdapter`
+- Progress callbacks now receive `BatchProgress` object (standardized format)
+- Legacy 5-argument callbacks still supported via automatic detection
+
 ## 0.4.1 - 2026-03-29
 
 ### Fixed

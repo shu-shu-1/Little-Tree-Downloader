@@ -1,6 +1,6 @@
 [project]
 name = "littledl"
-version = "0.4.1"
+version = "0.5.0"
 description = "A high-performance download library with IDM-style multi-threaded chunked downloading, smart scheduling, and resume support"
 readme = "README.md"
 license = { text = "Apache-2.0" }

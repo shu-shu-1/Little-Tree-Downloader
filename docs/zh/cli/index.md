@@ -14,7 +14,7 @@ pip install littledl
 
 ```bash
 littledl --version
-# 输出: littledl 0.4.0
+# 输出: littledl 0.5.0
 ```
 
 ## 基本用法
@@ -23,6 +23,12 @@ littledl --version
 
 ```bash
 littledl "https://example.com/large-file.zip" -o ./downloads
+```
+
+### 直接下载多个文件
+
+```bash
+littledl "https://example.com/file1.zip" "https://example.com/file2.pdf" "https://example.com/file3.doc" -o ./downloads
 ```
 
 ### 批量下载

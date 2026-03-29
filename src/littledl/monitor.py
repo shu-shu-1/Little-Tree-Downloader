@@ -20,6 +20,7 @@ class DownloadStats:
     downloaded: int = 0
     speed: float = 0.0
     average_speed: float = 0.0
+    smoothed_speed: float = 0.0
     peak_speed: float = 0.0
     eta: float = -1.0
     progress: float = 0.0
@@ -31,6 +32,7 @@ class DownloadStats:
     elapsed_time: float = 0.0
     is_active: bool = False
     unknown_size: bool = False
+    speed_stability: float = 1.0
 
     @property
     def remaining(self) -> int:
@@ -83,12 +85,24 @@ class SpeedMonitor:
         return self._moving_average.get_average()
 
     @property
+    def smoothed_speed(self) -> float:
+        return self._moving_average.get_smoothed_average(0.3)
+
+    @property
     def peak_speed(self) -> float:
         return self._peak_speed
 
     @property
     def speed_trend(self) -> float:
         return self._moving_average.get_trend()
+
+    @property
+    def speed_stability(self) -> float:
+        return self._moving_average.get_stability()
+
+    @property
+    def is_stable(self) -> bool:
+        return self._moving_average.is_stable(0.3)
 
     def add_sample(self, total_downloaded: int) -> float:
         now = time.time()
@@ -169,10 +183,12 @@ class DownloadMonitor:
     @property
     def eta(self) -> float:
         if self.total_size <= 0:
-            return -1.0
-        speed = self._speed_monitor.average_speed
+            return -1
+        speed = self._speed_monitor.smoothed_speed
         if speed <= 0:
-            return -1.0
+            speed = self._speed_monitor.average_speed
+        if speed <= 0:
+            return -1
         remaining = self.total_size - self._downloaded
         return remaining / speed
 
@@ -224,6 +240,7 @@ class DownloadMonitor:
             downloaded=self._downloaded,
             speed=self._speed_monitor.current_speed,
             average_speed=self._speed_monitor.average_speed,
+            smoothed_speed=self._speed_monitor.smoothed_speed,
             peak_speed=self._speed_monitor.peak_speed,
             eta=self.eta,
             progress=self.progress,
@@ -235,6 +252,7 @@ class DownloadMonitor:
             elapsed_time=self.elapsed_time,
             is_active=self._is_active,
             unknown_size=self.unknown_size,
+            speed_stability=self._speed_monitor.speed_stability,
         )
 
     def _maybe_notify_callback(self) -> None:

@@ -12,6 +12,7 @@ High-performance download library with IDM-style multi-threaded chunked download
 - Full proxy support (HTTP, HTTPS, SOCKS5, system proxy auto-detect)
 - Speed limiting (token bucket, leaky bucket, adaptive)
 - Cross-platform (Windows, macOS, Linux, FreeBSD)
+- Batch download with adaptive concurrency and per-file progress
 
 ## Installation
 
@@ -54,6 +55,51 @@ async def main():
 asyncio.run(main())
 ```
 
+# CLI Usage
+
+## Single File Download
+
+```bash
+littledl "https://example.com/file.zip"
+littledl "https://example.com/file.zip" -o ./downloads
+littledl "https://example.com/file.zip" -s hybrid_turbo -c 8
+```
+
+## Batch Download with Multiple URLs
+
+```bash
+littledl "https://example.com/file1.zip" "https://example.com/file2.zip" "https://example.com/file3.zip"
+littledl "https://example.com/file1.zip" "https://example.com/file2.zip" -o ./downloads --max-concurrent 3
+```
+
+## Batch Download from File
+
+```bash
+littledl -F urls.txt
+littledl --batch-file urls.txt -o ./downloads --max-concurrent 5
+```
+
+## CLI Options
+
+| Option | Description |
+|--------|-------------|
+| url(s) | URL(s) to download. Single URL for single file, multiple URLs for batch mode |
+| -F, --batch-file | File containing URLs to download (one per line) |
+| -o, --output | Output directory or file path |
+| -f, --filename | Specify output filename |
+| -s, --style | Download style: single, multi, adaptive, hybrid, hybrid_turbo, auto (default: hybrid_turbo) |
+| -i, --info | Show file info and exit |
+| --no-resume | Disable resume |
+| -c, --max-chunks | Maximum number of chunks for multi-threaded download (default: 16) |
+| -t, --timeout | Timeout in seconds (default: 300) |
+| --proxy | HTTP proxy (e.g., http://proxy:8080) |
+| --speed-limit | Speed limit in bytes per second |
+| --retry | Maximum retry attempts (default: 3) |
+| --max-concurrent | Maximum concurrent downloads for batch mode (default: 3) |
+| -q, --quiet | Quiet mode (minimal output) |
+| --output-format | Output format: auto, json, text (default: auto) |
+| --version | Show version |
+
 # Configuration
 
 ## DownloadConfig
@@ -85,33 +131,16 @@ config = DownloadConfig(
 | verify_ssl | bool | True | Verify SSL certificates |
 | fallback_to_single_on_failure | bool | True | Auto fallback to single-stream mode on chunked failure |
 | enable_adaptive | bool | True | Enable adaptive network scheduling |
-| enable_hybrid_turbo | bool | True | Enable hybrid turbo download with AIMD congestion control and smart chunk fallback |
+| enable_hybrid_turbo | bool | True | Enable hybrid turbo download with AIMD congestion control |
 | hybrid_aimd_increase_step | int | 1 | Target worker increase step size (Additive Increase) |
 | hybrid_aimd_decrease_factor | float | 0.5 | Factor used to multiply target workers on speed decline (Multiplicative Decrease) |
 | hybrid_speedup_threshold | float | 0.08 | Minimum relative speedup threshold required to trigger AIMD |
 | hybrid_slow_chunk_ratio | float | 0.45 | Threshold ratio defining extremely slow chunks |
 | verify_hash | bool | False | Verify downloaded file hash |
 
-<details>
-<summary>Methods</summary>
+### Methods
 
-- `apply_style(style: Any) -> "DownloadConfig"`: Quickly reconfigures scheduling variables, chunking thresholds, and AIMD control parameters based on a provided style. (e.g. `DownloadStyle.HYBRID_TURBO` or `"HYBRID_TURBO"`).
-
-</details>
-
-## Speed Limiting
-
-```python
-from littledl import DownloadConfig, SpeedLimitConfig, SpeedLimitMode
-
-speed_limit = SpeedLimitConfig(
-    enabled=True,
-    mode=SpeedLimitMode.GLOBAL,
-    max_speed=1024 * 1024,  # 1 MB/s
-)
-
-config = DownloadConfig(speed_limit=speed_limit)
-```
+- `apply_style(style: Any) -> "DownloadConfig"`: Quickly reconfigures scheduling variables based on a provided style (e.g., `DownloadStyle.HYBRID_TURBO` or `"HYBRID_TURBO"`).
 
 # Authentication
 
@@ -230,40 +259,13 @@ retry = RetryConfig(
 config = DownloadConfig(retry=retry)
 ```
 
-# Advanced Usage
+# Batch Download
 
-## Chunk Management
+Multi-file batch download with specialized optimizations for large numbers of small/large files.
 
-### Manual Chunk Size
+## Batch Download Usage
 
-```python
-config = DownloadConfig(
-    enable_chunking=True,
-    chunk_size=8 * 1024 * 1024,  # 8MB chunks
-    max_chunks=8,
-)
-```
-
-### Disabling Chunking
-
-```python
-config = DownloadConfig(enable_chunking=False)
-```
-
-## Concurrent Downloads
-
-```python
-import asyncio
-from littledl import download_file
-
-async def download_multiple(urls: list[str]):
-    tasks = [download_file(url) for url in urls]
-    return await asyncio.gather(*tasks)
-```
-
-## Batch Download
-
-Multi-file batch download with specialized optimizations for large numbers of small/large files:
+### Synchronous Batch Download
 
 ```python
 from littledl import batch_download_sync
@@ -280,46 +282,52 @@ results = batch_download_sync(
 
 for url, path, error in results:
     if path:
-        print(f"✓ {url} -> {path}")
+        print(f"OK: {url} -> {path}")
     else:
-        print(f"✗ {url}: {error}")
+        print(f"FAIL: {url}: {error}")
 ```
 
-Async version with more control:
+### Async Batch Download with Control
 
 ```python
+import asyncio
 from littledl import BatchDownloader
 
-downloader = BatchDownloader(
-    max_concurrent_files=5,
-    max_concurrent_chunks_per_file=4,
-    enable_adaptive_concurrency=True,
-)
-await downloader.add_urls(urls, "./downloads")
-await downloader.start()
+async def main():
+    downloader = BatchDownloader(
+        max_concurrent_files=5,
+        max_concurrent_chunks_per_file=4,
+        enable_adaptive_concurrency=True,
+    )
+    
+    await downloader.add_urls([
+        "https://example.com/file1.zip",
+        "https://example.com/file2.zip",
+    ], "./downloads")
+    
+    await downloader.start()
+
+asyncio.run(main())
 ```
 
-Batch download features:
+## Batch Download Features
+
 - Adaptive concurrency: dynamically adjusts concurrent downloads based on network speed
 - Small file priority: auto-identifies and prioritizes small files for better UX
 - Connection pooling: shared connection pool reduces overhead
 - Batch probe: parallel HEAD requests for file info
 - Smart chunking: auto-selects optimal chunk strategy based on file size
+- Per-file progress: see individual file progress during batch download
 
-## Custom Headers
+# Progress Callback System
 
-```python
-config = DownloadConfig(
-    headers={
-        "User-Agent": "MyApp/1.0",
-        "Accept": "application/octet-stream",
-    }
-)
-```
+The callback system supports multiple invocation styles (event, dict, kwargs, legacy) with detailed per-file progress information.
 
-## Progress Callback
+## Single File Progress Callback
 
 ```python
+from littledl import DownloadConfig
+
 def on_progress(downloaded: int, total: int, speed: float, eta: int):
     percent = (downloaded / total) * 100
     print(f"\r{percent:.1f}% | {speed/1024:.1f} KB/s | ETA: {eta}s", end="")
@@ -327,23 +335,47 @@ def on_progress(downloaded: int, total: int, speed: float, eta: int):
 config = DownloadConfig(progress_callback=on_progress)
 ```
 
-## Performance Tuning
-
-### Buffer Size
+## Batch Progress Callback (Recommended Style)
 
 ```python
-config = DownloadConfig(
-    buffer_size=256 * 1024,  # 256KB buffer
-)
+from littledl import BatchDownloader, BatchProgress
+
+# Style 1: Receive BatchProgress object (recommended)
+def on_batch_progress(progress: BatchProgress):
+    print(f"Batch: {progress.completed_files}/{progress.total_files}")
+    print(f"Speed: {progress.smooth_speed/1024/1024:.1f} MB/s")
+    print(f"ETA: {progress.eta:.0f}s")
+    print(f"Stability: {progress.speed_stability:.2f}")
+    # View downloading files
+    for f in progress.get_active_files():
+        print(f"  Active: {f.filename} - {f.progress:.1f}%")
+
+# Style 2: Receive dict
+def on_batch_progress_dict(data: dict):
+    print(f"Batch: {data['completed_files']}/{data['total_files']}")
+
+# Style 3: Receive kwargs
+def on_batch_progress_kwargs(total_files=0, completed_files=0, smooth_speed=0, **kwargs):
+    print(f"Batch: {completed_files}/{total_files}")
+
+# Style 4: Legacy format (auto-detected)
+def on_batch_progress_legacy(completed: int, total: int, speed: float, eta: int, stability: float):
+    print(f"Batch: {completed}/{total}")
+
+downloader = BatchDownloader()
+downloader.set_progress_callback(on_batch_progress)  # Auto-detects style
 ```
 
-### Connection Pooling
+## File Complete Callback
 
 ```python
-config = DownloadConfig(
-    max_connections=32,
-    max_keepalive_connections=16,
-)
+from littledl import FileTask
+
+def on_file_complete(task: FileTask):
+    print(f"File complete: {task.filename} ({task.file_size} bytes)")
+
+downloader = BatchDownloader()
+downloader.set_file_complete_callback(on_file_complete)
 ```
 
 # API Reference
@@ -373,6 +405,8 @@ path = await download_file(
     save_path: str = ".",
     filename: str | None = None,
     config: DownloadConfig | None = None,
+    progress_callback: Callable | None = None,
+    resume: bool = True,
 ) -> Path
 ```
 
@@ -387,11 +421,29 @@ results = batch_download_sync(
     config: DownloadConfig | None = None,
     max_concurrent_files: int = 5,
     max_concurrent_chunks_per_file: int = 4,
+    progress_callback=None,
+    file_complete_callback=None,
 ) -> list[tuple[str, Path | None, str | None]]
 # Returns [(url, path, error), ...]
 ```
 
-### BatchDownloader
+### batch_download
+
+```python
+from littledl import batch_download
+
+results = await batch_download(
+    urls: list[str],
+    save_path: str = "./downloads",
+    config: DownloadConfig | None = None,
+    max_concurrent_files: int = 5,
+    max_concurrent_chunks_per_file: int = 4,
+    progress_callback=None,
+    file_complete_callback=None,
+) -> list[tuple[str, Path | None, str | None]]
+```
+
+## BatchDownloader
 
 ```python
 from littledl import BatchDownloader
@@ -404,23 +456,54 @@ downloader = BatchDownloader(
     enable_small_file_priority: bool = True,
 )
 
+# Add URLs
 await downloader.add_url(url, save_path, filename, priority)
 await downloader.add_urls(urls, save_path)
-downloader.set_progress_callback(callback)
+
+# Set callbacks (auto-detects callback style)
+downloader.set_progress_callback(callback)  # BatchProgressCallbackAdapter
 downloader.set_file_complete_callback(callback)
+
+# Control
 await downloader.start()
 await downloader.pause()
 await downloader.resume()
 await downloader.cancel()
 await downloader.stop()
 
+# Query
 task = downloader.get_task(task_id)
 tasks = downloader.get_all_tasks()
 progress = downloader.get_progress()
 stats = downloader.get_stats()
 ```
 
-### FileTask
+## EnhancedBatchDownloader
+
+High-performance batch downloader with aria2-style optimizations.
+
+```python
+from littledl import EnhancedBatchDownloader
+
+downloader = EnhancedBatchDownloader(
+    config: DownloadConfig | None = None,
+    max_concurrent_files: int = 5,
+    max_total_threads: int = 15,
+    small_file_threshold: int = 1 * 1024 * 1024,
+    enable_existing_file_reuse: bool = True,
+    enable_multi_source: bool = True,
+    enable_adaptive_speed: bool = True,
+)
+
+# Add URL with backup sources
+await downloader.add_url(
+    "https://example.com/file.zip",
+    backup_urls=["https://backup.com/file.zip"]
+)
+await downloader.start()
+```
+
+## FileTask
 
 ```python
 from littledl import FileTask
@@ -429,17 +512,33 @@ from littledl import FileTask
 task.task_id       # Unique task ID
 task.url           # Download URL
 task.filename      # Output filename
-task.status        # FileTaskStatus enum
+task.status        # FileTaskStatus enum (PENDING, PROBING, DOWNLOADING, COMPLETED, FAILED, CANCELLED, PAUSED)
 task.file_size     # Total file size
 task.downloaded    # Downloaded bytes
 task.speed         # Current speed
-task.progress      # Progress percentage
+task.progress      # Progress percentage (0-100)
 task.error         # Error message if failed
 task.is_small_file # True if < 5MB
 task.is_large_file # True if > 100MB
+task.supports_range # True if server supports Range requests
+task.chunks        # Number of chunks for this file
 ```
 
-### BatchProgress
+## FileTaskStatus Enum
+
+```python
+from littledl.batch import FileTaskStatus
+
+FileTaskStatus.PENDING      # Waiting to start
+FileTaskStatus.PROBING      # Probing file info (HEAD request)
+FileTaskStatus.DOWNLOADING  # Currently downloading
+FileTaskStatus.COMPLETED    # Download completed
+FileTaskStatus.FAILED       # Download failed
+FileTaskStatus.CANCELLED    # Cancelled by user
+FileTaskStatus.PAUSED       # Paused
+```
+
+## BatchProgress
 
 ```python
 from littledl import BatchProgress
@@ -449,11 +548,59 @@ progress.total_files      # Total number of files
 progress.completed_files  # Completed files count
 progress.failed_files     # Failed files count
 progress.active_files     # Currently downloading count
+progress.pending_files    # Waiting to download count
 progress.total_bytes      # Total bytes to download
 progress.downloaded_bytes # Downloaded bytes
-progress.overall_speed    # Current download speed
+progress.overall_speed    # Current instant speed
+progress.smooth_speed     # Smoothed speed (exponential weighted average)
 progress.eta             # Estimated seconds remaining
-progress.progress        # Overall progress percentage
+progress.speed_stability  # Speed stability metric (0.0-1.0), higher = more stable
+progress.elapsed_time    # Elapsed time in seconds
+progress.files           # Tuple of FileProgress for all files
+
+# Helper methods:
+progress.progress              # Overall progress percentage (0-100)
+progress.files_completed_ratio # Files completed ratio (0-100)
+progress.get_active_files()    # List of currently downloading FileProgress
+progress.get_pending_files()   # List of pending FileProgress
+progress.get_completed_files() # List of completed FileProgress
+progress.get_failed_files()   # List of failed FileProgress
+```
+
+## FileProgress
+
+```python
+from littledl import FileProgress
+
+# Properties:
+file_progress.task_id      # Unique task ID
+file_progress.filename     # Output filename
+file_progress.url          # Download URL
+file_progress.status       # Status string (e.g., "downloading", "completed")
+file_progress.file_size    # Total file size
+file_progress.downloaded   # Downloaded bytes
+file_progress.speed        # Current speed
+file_progress.progress     # Progress percentage (0-100)
+file_progress.error        # Error message if failed
+file_progress.started_at   # Start timestamp
+file_progress.completed_at  # Completion timestamp
+```
+
+## BatchProgressCallbackAdapter
+
+Normalizes different callback styles into one internal path.
+
+```python
+from littledl.batch import BatchProgressCallbackAdapter
+
+# Auto-detects callback style:
+# - CALLBACK_MODE_EVENT: callback(progress: BatchProgress)
+# - CALLBACK_MODE_DICT: callback(data: dict)
+# - CALLBACK_MODE_KWARGS: callback(**kwargs)
+# - CALLBACK_MODE_LEGACY: callback(completed, total, speed, eta, stability)
+
+adapter = BatchProgressCallbackAdapter(callback)
+await adapter.emit(progress)  # Call with BatchProgress
 ```
 
 ## Enums
@@ -477,20 +624,7 @@ progress.progress        # Overall progress percentage
 - GLOBAL - Limit overall speed
 - PER_CHUNK - Limit per-chunk speed
 
-## Multi-language Support
-
-```python
-from littledl import set_language, get_available_languages
-
-set_language("zh")  # or "en"
-print(get_available_languages())  # {'en': 'English', 'zh': '中文'}
-```
-
-# High-Speed Download Mode
-
-## DownloadStyle Enum
-
-Download style options for single-file downloads.
+### DownloadStyle
 
 ```python
 from littledl import DownloadStyle
@@ -498,19 +632,28 @@ from littledl import DownloadStyle
 DownloadStyle.SINGLE    # Single-threaded download
 DownloadStyle.MULTI     # Multi-threaded segmented download (aria2-style)
 DownloadStyle.ADAPTIVE  # Automatically select best style
+DownloadStyle.HYBRID_TURBO # High-speed with AIMD congestion control
 ```
+
+# Speed Limiting
+
+```python
+from littledl import DownloadConfig, SpeedLimitConfig, SpeedLimitMode
+
+speed_limit = SpeedLimitConfig(
+    enabled=True,
+    mode=SpeedLimitMode.GLOBAL,
+    max_speed=1024 * 1024,  # 1 MB/s
+)
+
+config = DownloadConfig(speed_limit=speed_limit)
+```
+
+# High-Speed Download Mode
 
 ## StrategySelector
 
-Intelligent strategy selector that analyzes file characteristics and network conditions to automatically choose the optimal download style.
-
-### Algorithm
-
-1. File size + server Range support → base style
-2. Network stability prediction → whether to add more threads
-3. Historical performance → dynamically adjust thresholds
-
-### Usage
+Intelligent strategy selector that analyzes file characteristics and network conditions.
 
 ```python
 from littledl import StrategySelector, DownloadStyle
@@ -531,17 +674,17 @@ profile = selector.analyze_file(
 
 # Get style decision
 decision = selector.select_style(profile)
-print(f"Recommended style: {decision.style.value}")
-print(f"Recommended chunks: {decision.recommended_chunks}")
-print(f"Estimated speedup: {decision.estimated_speedup:.1f}x")
+print(f"Style: {decision.style.value}")
+print(f"Chunks: {decision.recommended_chunks}")
+print(f"Speedup: {decision.estimated_speedup:.1f}x")
 ```
 
-### Style Decision Result
+## Style Decision Result
 
 ```python
 @dataclass
 class StyleDecision:
-    style: DownloadStyle           # SINGLE, MULTI, or ADAPTIVE
+    style: DownloadStyle           # SINGLE, MULTI, ADAPTIVE, or HYBRID_TURBO
     confidence: float             # 0.0 - 1.0
     reason: str                   # Human-readable explanation
     recommended_chunks: int       # Recommended number of chunks
@@ -561,7 +704,6 @@ allocator = DynamicStyleAllocator(
     max_total_chunks=16,
 )
 
-# Add file and get allocation
 decision = await allocator.add_file(
     file_id="file1",
     url="https://example.com/file.zip",
@@ -571,28 +713,7 @@ decision = await allocator.add_file(
 )
 ```
 
-## EnhancedBatchDownloader
-
-High-performance batch downloader with intelligent scheduling and aria2-style multi-threaded segmented downloads.
-
-```python
-from littledl import EnhancedBatchDownloader
-
-downloader = EnhancedBatchDownloader(
-    max_concurrent_files=5,
-    max_total_threads=15,
-    enable_existing_file_reuse=True,
-    enable_multi_source=True,
-)
-
-await downloader.add_url(
-    "https://example.com/file.zip",
-    backup_urls=["https://backup.com/file.zip"]
-)
-await downloader.start()
-```
-
-### Statistics
+## EnhancedBatchDownloader Statistics
 
 ```python
 stats = downloader.get_stats()
@@ -605,25 +726,19 @@ stats = downloader.get_stats()
 #     "active_threads": 5,
 #     "dynamic_chunks_added": 3,
 # }
-```
 
-### File Reuse Statistics
-
-```python
 reuse_stats = downloader.get_file_reuse_stats()
 # {
 #     "checks": 100,
 #     "hits": 45,
 #     "hit_rate": "45.0%",
 #     "bytes_saved": "1.2 GB",
-#     "quick_hash_hits": 30,
-#     "content_matched": 15,
 # }
 ```
 
 ## GlobalThreadPool
 
-Global thread pool for unified thread management across multiple file downloads.
+Global thread pool for unified thread management.
 
 ```python
 from littledl import GlobalThreadPool
@@ -659,7 +774,6 @@ checker = FileReuseChecker(
     quick_hash_size=64 * 1024,
 )
 
-# Find existing file by content
 existing = checker.find_matching_file_by_content(
     target_path=Path("target.jar"),
     search_directory=Path("./minecraft/libraries"),
@@ -681,6 +795,63 @@ manager.add_source("https://backup.com/file.zip", priority=0)
 source = manager.get_next_available()
 manager.mark_source_failed(source["url"], "404")
 manager.mark_source_success(source["url"])
+```
+
+# Performance Tuning
+
+## Buffer Size
+
+```python
+config = DownloadConfig(
+    buffer_size=256 * 1024,  # 256KB buffer
+)
+```
+
+## Connection Pooling
+
+```python
+config = DownloadConfig(
+    max_connections=32,
+    max_keepalive_connections=16,
+)
+```
+
+## Chunk Management
+
+### Manual Chunk Size
+
+```python
+config = DownloadConfig(
+    enable_chunking=True,
+    chunk_size=8 * 1024 * 1024,  # 8MB chunks
+    max_chunks=8,
+)
+```
+
+### Disabling Chunking
+
+```python
+config = DownloadConfig(enable_chunking=False)
+```
+
+## Custom Headers
+
+```python
+config = DownloadConfig(
+    headers={
+        "User-Agent": "MyApp/1.0",
+        "Accept": "application/octet-stream",
+    }
+)
+```
+
+# Multi-language Support
+
+```python
+from littledl import set_language, get_available_languages
+
+set_language("zh")  # or "en"
+print(get_available_languages())  # {'en': 'English', 'zh': '中文'}
 ```
 
 # License

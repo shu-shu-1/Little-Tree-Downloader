@@ -313,6 +313,7 @@ class MovingAverage:
     def __init__(self, window_size: int = 5) -> None:
         self.window_size = window_size
         self.values: list[float] = []
+        self._weighted_multiplier: float = 0.7
 
     def add(self, value: float) -> None:
         self.values.append(value)
@@ -323,6 +324,32 @@ class MovingAverage:
         if not self.values:
             return 0.0
         return sum(self.values) / len(self.values)
+
+    def get_weighted_average(self) -> float:
+        if not self.values:
+            return 0.0
+        weights = [self._weighted_multiplier ** (len(self.values) - i - 1) for i in range(len(self.values))]
+        total_weight = sum(weights)
+        return sum(v * w for v, w in zip(self.values, weights)) / total_weight
+
+    def get_median(self) -> float:
+        if not self.values:
+            return 0.0
+        sorted_vals = sorted(self.values)
+        n = len(sorted_vals)
+        if n % 2 == 0:
+            return (sorted_vals[n // 2 - 1] + sorted_vals[n // 2]) / 2
+        return sorted_vals[n // 2]
+
+    def get_smoothed_average(self, smoothing_factor: float = 0.3) -> float:
+        if not self.values:
+            return 0.0
+        if len(self.values) == 1:
+            return self.values[0]
+        smoothed = self.values[0]
+        for val in self.values[1:]:
+            smoothed = smoothing_factor * val + (1 - smoothing_factor) * smoothed
+        return smoothed
 
     def get_trend(self) -> float:
         if len(self.values) < 2:
@@ -336,6 +363,19 @@ class MovingAverage:
         if older_avg == 0:
             return 0.0
         return (recent_avg - older_avg) / older_avg
+
+    def get_stability(self) -> float:
+        if len(self.values) < 2:
+            return 1.0
+        avg = self.get_average()
+        if avg == 0:
+            return 0.0
+        variance = sum((v - avg) ** 2 for v in self.values) / len(self.values)
+        std_dev = variance**0.5
+        return max(0.0, 1.0 - (std_dev / avg))
+
+    def is_stable(self, threshold: float = 0.3) -> bool:
+        return self.get_stability() >= threshold
 
 
 def is_path_safe(save_path: Path, final_path: Path, allowed_dir: Path) -> bool:

@@ -5,6 +5,7 @@ import time
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
+from collections.abc import Callable
 from typing import Any
 
 from .config import DownloadConfig
@@ -139,16 +140,36 @@ class FileTask:
         }
 
 
-@dataclass
+@dataclass(slots=True)
+class FileProgress:
+    task_id: str
+    filename: str
+    url: str
+    status: str
+    file_size: int
+    downloaded: int
+    speed: float
+    progress: float
+    error: str | None
+    started_at: float | None
+    completed_at: float | None
+
+
+@dataclass(slots=True)
 class BatchProgress:
     total_files: int = 0
     completed_files: int = 0
     failed_files: int = 0
     active_files: int = 0
+    pending_files: int = 0
     total_bytes: int = 0
     downloaded_bytes: int = 0
     overall_speed: float = 0.0
+    smooth_speed: float = 0.0
     eta: float = -1
+    speed_stability: float = 1.0
+    elapsed_time: float = 0.0
+    files: tuple[FileProgress, ...] = ()
 
     @property
     def progress(self) -> float:
@@ -161,6 +182,109 @@ class BatchProgress:
         if self.total_files <= 0:
             return 0.0
         return (self.completed_files / self.total_files) * 100
+
+    def get_active_files(self) -> list[FileProgress]:
+        return [f for f in self.files if f.status == FileTaskStatus.DOWNLOADING.value]
+
+    def get_pending_files(self) -> list[FileProgress]:
+        return [f for f in self.files if f.status == FileTaskStatus.PENDING.value]
+
+    def get_completed_files(self) -> list[FileProgress]:
+        return [f for f in self.files if f.status == FileTaskStatus.COMPLETED.value]
+
+    def get_failed_files(self) -> list[FileProgress]:
+        return [f for f in self.files if f.status == FileTaskStatus.FAILED.value]
+
+
+class BatchProgressCallbackAdapter:
+    """Normalize different batch callback styles into one internal path."""
+
+    CALLBACK_MODE_NONE = "none"
+    CALLBACK_MODE_LEGACY = "legacy"
+    CALLBACK_MODE_KWARGS = "kwargs"
+    CALLBACK_MODE_DICT = "dict"
+    CALLBACK_MODE_EVENT = "event"
+
+    def __init__(self, callback: Callable[..., Any] | None) -> None:
+        self._callback = callback
+        self._mode = self._detect_mode(callback)
+
+    def _detect_mode(self, callback: Callable[..., Any] | None) -> str:
+        if callback is None:
+            return self.CALLBACK_MODE_NONE
+        try:
+            import inspect
+
+            sig = inspect.signature(callback)
+        except (TypeError, ValueError):
+            return self.CALLBACK_MODE_LEGACY
+
+        params = list(sig.parameters.values())
+        if any(p.kind == inspect.Parameter.VAR_KEYWORD for p in params):
+            return self.CALLBACK_MODE_KWARGS
+        if any(p.kind == inspect.Parameter.VAR_POSITIONAL for p in params):
+            return self.CALLBACK_MODE_LEGACY
+
+        positional = [
+            p for p in params if p.kind in (inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD)
+        ]
+
+        if len(positional) >= 5:
+            return self.CALLBACK_MODE_LEGACY
+        if len(positional) == 1:
+            name = positional[0].name.lower()
+            if name in {"data", "payload", "info", "state", "stats", "progress"}:
+                return self.CALLBACK_MODE_DICT
+            return self.CALLBACK_MODE_EVENT
+        if len(positional) == 0:
+            return self.CALLBACK_MODE_KWARGS
+
+        return self.CALLBACK_MODE_LEGACY
+
+    async def emit(self, progress: BatchProgress) -> None:
+        if self._callback is None:
+            return
+
+        payload = {
+            "total_files": progress.total_files,
+            "completed_files": progress.completed_files,
+            "failed_files": progress.failed_files,
+            "active_files": progress.active_files,
+            "pending_files": progress.pending_files,
+            "total_bytes": progress.total_bytes,
+            "downloaded_bytes": progress.downloaded_bytes,
+            "overall_speed": progress.overall_speed,
+            "smooth_speed": progress.smooth_speed,
+            "eta": progress.eta,
+            "speed_stability": progress.speed_stability,
+            "progress": progress.progress,
+            "elapsed_time": progress.elapsed_time,
+            "files": progress.files,
+        }
+
+        import inspect
+
+        result: Any
+        if self._mode == self.CALLBACK_MODE_EVENT:
+            result = self._callback(progress)
+        elif self._mode == self.CALLBACK_MODE_DICT:
+            result = self._callback(payload)
+        elif self._mode == self.CALLBACK_MODE_KWARGS:
+            result = self._callback(**payload)
+        else:
+            result = self._callback(
+                progress.completed_files,
+                progress.total_files,
+                progress.smooth_speed,
+                int(progress.eta) if progress.eta > 0 else -1,
+                progress.speed_stability,
+            )
+
+        if inspect.isawaitable(result):
+            await result
+
+    def __call__(self, progress: BatchProgress) -> Any:
+        return self.emit(progress)
 
 
 class FileScheduler:
@@ -184,6 +308,11 @@ class FileScheduler:
         self._failed_tasks: list[FileTask] = []
         self._lock = asyncio.Lock()
         self._paused = False
+        self._start_time: float = 0.0
+
+        self._speed_history: list[float] = []
+        self._speed_history_max_size: int = 20
+        self._last_progress_check: float = 0.0
 
     @property
     def pending_count(self) -> int:
@@ -270,10 +399,13 @@ class FileScheduler:
         async with self._lock:
             self._paused = False
 
+    def start(self) -> None:
+        self._start_time = time.time()
+
     def get_all_tasks(self) -> list[FileTask]:
         return self._completed_tasks + list(self._active_tasks.values()) + self._pending_tasks + self._failed_tasks
 
-    def get_progress(self) -> BatchProgress:
+    def get_progress(self, include_files: bool = True) -> BatchProgress:
         completed = self._completed_tasks.copy()
         active = list(self._active_tasks.values())
         pending = self._pending_tasks.copy()
@@ -283,26 +415,83 @@ class FileScheduler:
         completed_files = len(completed)
         failed_files = len(failed)
         active_files = len(active)
+        pending_files = len(pending)
 
         total_bytes = sum(t.file_size for t in completed + active + pending if t.file_size > 0)
         downloaded_bytes = sum(t.downloaded for t in completed + active)
 
         active_speed = sum(t.speed for t in active if t.speed > 0)
+        self._speed_history.append(active_speed)
+        if len(self._speed_history) > self._speed_history_max_size:
+            self._speed_history.pop(0)
+
+        smooth_speed = self._get_smoothed_speed()
+        speed_stability = self._get_speed_stability()
+
         eta: float = -1.0
-        if active_speed > 0:
-            remaining = total_bytes - downloaded_bytes
-            eta = remaining / active_speed
+        remaining = total_bytes - downloaded_bytes
+        if remaining > 0:
+            if smooth_speed > 0:
+                eta = remaining / smooth_speed
+            elif active_speed > 0 and speed_stability > 0.5:
+                eta = remaining / active_speed
+
+        elapsed = time.time() - self._start_time if hasattr(self, "_start_time") and self._start_time > 0 else 0.0
+
+        file_progress_list: tuple[FileProgress, ...] = ()
+        if include_files:
+            file_progress_list = tuple(
+                FileProgress(
+                    task_id=t.task_id,
+                    filename=t.filename or "unknown",
+                    url=t.url,
+                    status=t.status.value,
+                    file_size=t.file_size,
+                    downloaded=t.downloaded,
+                    speed=t.speed,
+                    progress=t.progress,
+                    error=t.error,
+                    started_at=t.started_at,
+                    completed_at=t.completed_at,
+                )
+                for t in completed + active + pending + failed
+            )
 
         return BatchProgress(
             total_files=total_files,
             completed_files=completed_files,
             failed_files=failed_files,
             active_files=active_files,
+            pending_files=pending_files,
             total_bytes=total_bytes,
             downloaded_bytes=downloaded_bytes,
             overall_speed=active_speed,
+            smooth_speed=smooth_speed,
             eta=eta,
+            speed_stability=speed_stability,
+            elapsed_time=elapsed,
+            files=file_progress_list,
         )
+
+    def _get_smoothed_speed(self) -> float:
+        if not self._speed_history:
+            return 0.0
+        if len(self._speed_history) < 3:
+            return sum(self._speed_history) / len(self._speed_history)
+        recent = self._speed_history[-5:] if len(self._speed_history) >= 5 else self._speed_history
+        weights = [0.5 ** (len(recent) - i - 1) for i in range(len(recent))]
+        total_weight = sum(weights)
+        return sum(s * w for s, w in zip(recent, weights)) / total_weight
+
+    def _get_speed_stability(self) -> float:
+        if len(self._speed_history) < 3:
+            return 1.0
+        avg = sum(self._speed_history) / len(self._speed_history)
+        if avg == 0:
+            return 0.0
+        variance = sum((s - avg) ** 2 for s in self._speed_history) / len(self._speed_history)
+        std_dev = variance**0.5
+        return max(0.0, 1.0 - (std_dev / avg))
 
 
 class AdaptiveConcurrencyController:
@@ -464,7 +653,7 @@ class BatchDownloader:
         return task_ids
 
     def set_progress_callback(self, callback: Any) -> None:
-        self._progress_callback = callback
+        self._progress_callback = BatchProgressCallbackAdapter(callback)
 
     def set_file_complete_callback(self, callback: Any) -> None:
         self._file_complete_callback = callback
@@ -477,6 +666,7 @@ class BatchDownloader:
         self._connection_pool = ConnectionPool(self.config)
         await self._connection_pool.initialize()
 
+        self._scheduler.start()
         await self._batch_probe_all()
         await self._download_loop()
 
@@ -588,8 +778,9 @@ class BatchDownloader:
 
             if self.enable_adaptive_concurrency and await self._concurrency_controller.should_adjust():
                 progress = self._scheduler.get_progress()
-                self._total_speed = progress.overall_speed
-                await self._concurrency_controller.record_speed(progress.overall_speed)
+                display_speed = progress.smooth_speed if progress.smooth_speed > 0 else progress.overall_speed
+                self._total_speed = display_speed
+                await self._concurrency_controller.record_speed(display_speed)
                 await self._concurrency_controller.adjust()
 
             now = time.time()
@@ -597,14 +788,7 @@ class BatchDownloader:
                 last_progress_time = now
                 progress = self._scheduler.get_progress()
                 try:
-                    result = self._progress_callback(
-                        progress.completed_files,
-                        progress.total_files,
-                        progress.overall_speed,
-                        int(progress.eta) if progress.eta > 0 else -1,
-                    )
-                    if asyncio.iscoroutine(result):
-                        await result
+                    await self._progress_callback.emit(progress)
                 except Exception:
                     pass
 
@@ -890,7 +1074,7 @@ class EnhancedBatchDownloader:
         return task_ids
 
     def set_progress_callback(self, callback: Any) -> None:
-        self._progress_callback = callback
+        self._progress_callback = BatchProgressCallbackAdapter(callback)
 
     def set_file_complete_callback(self, callback: Any) -> None:
         self._file_complete_callback = callback
@@ -905,6 +1089,7 @@ class EnhancedBatchDownloader:
 
         await self._global_pool.start()
 
+        self._scheduler.start()
         self._thread_check_task = asyncio.create_task(self._thread_check_loop())
         self._speed_monitor_task = asyncio.create_task(self._speed_monitor_loop())
 
@@ -1049,16 +1234,9 @@ class EnhancedBatchDownloader:
             if self._progress_callback and (now - last_progress_time) >= progress_interval:
                 last_progress_time = now
                 progress = self._scheduler.get_progress()
-                self._total_speed = progress.overall_speed
+                self._total_speed = progress.smooth_speed if progress.smooth_speed > 0 else progress.overall_speed
                 try:
-                    result = self._progress_callback(
-                        progress.completed_files,
-                        progress.total_files,
-                        progress.overall_speed,
-                        int(progress.eta) if progress.eta > 0 else -1,
-                    )
-                    if asyncio.iscoroutine(result):
-                        await result
+                    await self._progress_callback.emit(progress)
                 except Exception:
                     pass
 

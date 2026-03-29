@@ -32,7 +32,11 @@ def parse_args(args: list[str] | None = None) -> argparse.Namespace:
             "  4 - Cancelled by user\n"
         ),
     )
-    parser.add_argument("url", nargs="?", help=_("URL to download (or use -F for batch download)"))
+    parser.add_argument(
+        "urls",
+        nargs="*",
+        help=_("URL(s) to download. Single URL for single file, multiple URLs or -F for batch download"),
+    )
     parser.add_argument(
         "-F", "--batch-file", dest="batch_file", help=_("File containing URLs to download (one per line)")
     )
@@ -91,7 +95,7 @@ def parse_args(args: list[str] | None = None) -> argparse.Namespace:
         default="auto",
         help=_("Output format: auto (根据环境), json (结构化), text (纯文本)"),
     )
-    parser.add_argument("--version", action="version", version="%(prog)s 0.4.0")
+    parser.add_argument("--version", action="version", version="%(prog)s 0.5.0")
     return parser.parse_args(args)
 
 
@@ -757,7 +761,7 @@ def main() -> int:
     args = parse_args()
     output = OutputMode(format_pref=args.output_format, quiet=args.quiet)
 
-    if not args.url and not args.batch_file:
+    if not args.urls and not args.batch_file:
         if output.use_json:
             output.print_json(
                 {
@@ -770,11 +774,14 @@ def main() -> int:
         else:
             print(f"{_('Error')}: {_('URL or batch file required')}")
             print(f"{_('Usage')}: littledl <URL>")
+            print(f"{_('   or')}: littledl <URL1> <URL2> <URL3> ...")
             print(f"{_('   or')}: littledl -F <batch_file>")
         return 2
 
-    if args.batch_file:
+    if args.batch_file or len(args.urls) > 1:
         return asyncio.run(run_batch_main(args, output))
+
+    single_url = args.urls[0]
 
     config = build_config_from_args(args)
     style = style_to_enum(args.style)
@@ -783,16 +790,16 @@ def main() -> int:
 
     if args.info_only:
         if args.style != "auto":
-            return asyncio.run(run_probe(args.url, config, output))
+            return asyncio.run(run_probe(single_url, config, output))
         else:
-            return asyncio.run(run_analyze(args.url, config, output))
+            return asyncio.run(run_analyze(single_url, config, output))
 
     output_path = Path(args.output or "./downloads").expanduser().resolve()
 
     final_filename = args.filename
     probe_info = None
     if output_path.is_dir() and not final_filename:
-        probe_info = asyncio.run(probe_url(args.url, config))
+        probe_info = asyncio.run(probe_url(single_url, config))
         final_filename = probe_info["filename"]
 
     save_path = output_path / final_filename if output_path.is_dir() else output_path
@@ -802,26 +809,35 @@ def main() -> int:
     if output.use_progress_bar and args.verbose and save_path.name != (final_filename or ""):
         print(f"{_('Auto-renamed to')}: {save_path.name}")
 
-    return asyncio.run(run_download(args.url, config, save_path, output, args, style))
+    return asyncio.run(run_download(single_url, config, save_path, output, args, style))
 
 
 async def run_batch_main(args: argparse.Namespace, output: OutputMode) -> int:
-    """Run batch download from file."""
-    try:
-        urls = read_urls_from_file(args.batch_file)
-    except FileNotFoundError as e:
-        if output.use_json:
-            output.print_json({"type": "batch", "success": False, "error": str(e), "exit_code": 2})
-        else:
-            print(f"{_('Error')}: {e}")
-        return 2
+    """Run batch download from file or direct URLs."""
+    if args.batch_file:
+        try:
+            urls = read_urls_from_file(args.batch_file)
+        except FileNotFoundError as e:
+            if output.use_json:
+                output.print_json({"type": "batch", "success": False, "error": str(e), "exit_code": 2})
+            else:
+                print(f"{_('Error')}: {e}")
+            return 2
 
-    if not urls:
-        if output.use_json:
-            output.print_json({"type": "batch", "success": True, "completed": 0, "failed": 0, "tasks": []})
-        else:
-            print(f"{_('No valid URLs found in file')}")
-        return 0
+        if not urls:
+            if output.use_json:
+                output.print_json({"type": "batch", "success": True, "completed": 0, "failed": 0, "tasks": []})
+            else:
+                print(f"{_('No valid URLs found in file')}")
+            return 0
+    else:
+        urls = [(i + 1, url) for i, url in enumerate(args.urls)]
+        if not urls:
+            if output.use_json:
+                output.print_json({"type": "batch", "success": True, "completed": 0, "failed": 0, "tasks": []})
+            else:
+                print(f"{_('No URLs to download')}")
+            return 0
 
     config = build_config_from_args(args)
     config.overwrite = args.force

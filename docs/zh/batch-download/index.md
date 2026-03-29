@@ -61,15 +61,37 @@ asyncio.run(main())
 
 ### 批量进度回调
 
+回调系统已全面升级，支持多种调用风格（事件、字典、关键字参数、传统格式），并提供详细的单文件进度信息。
+
 ```python
 import asyncio
-from littledl import BatchDownloader
+from littledl import BatchDownloader, BatchProgress
 
-def on_batch_progress(completed: int, total: int, speed: float, eta: int):
-    print(f"批量进度: {completed}/{total} | 速度: {speed/1024/1024:.1f} MB/s | 预计剩余: {eta}s")
+# 风格1: 接收 BatchProgress 对象（推荐）
+def on_batch_progress(progress: BatchProgress):
+    print(f"批量进度: {progress.completed_files}/{progress.total_files}")
+    print(f"速度: {progress.smooth_speed/1024/1024:.1f} MB/s")
+    print(f"预计剩余: {progress.eta:.0f}s")
+    print(f"速度稳定性: {progress.speed_stability:.2f}")
+    # 查看正在下载的文件
+    for f in progress.get_active_files():
+        print(f"  下载中: {f.filename} - {f.progress:.1f}%")
+
+# 风格2: 接收字典
+def on_batch_progress_dict(data: dict):
+    print(f"批量进度: {data['completed_files']}/{data['total_files']}")
+    print(f"速度: {data['smooth_speed']/1024/1024:.1f} MB/s")
+
+# 风格3: 接收关键字参数
+def on_batch_progress_kwargs(total_files=0, completed_files=0, smooth_speed=0, **kwargs):
+    print(f"批量进度: {completed_files}/{total_files}")
+
+# 风格4: 传统格式（自动检测）
+def on_batch_progress_legacy(completed: int, total: int, speed: float, eta: int, stability: float):
+    print(f"批量进度: {completed}/{total}")
 
 downloader = BatchDownloader()
-downloader.set_progress_callback(on_batch_progress)
+downloader.set_progress_callback(on_batch_progress)  # 自动识别风格
 ```
 
 ### 单文件完成回调
@@ -316,15 +338,40 @@ class BatchProgress:
     completed_files: int
     failed_files: int
     active_files: int
+    pending_files: int
     total_bytes: int
     downloaded_bytes: int
     overall_speed: float
+    smooth_speed: float
     eta: float
+    speed_stability: float
+    elapsed_time: float
+    files: tuple[FileProgress, ...]
 
     @property
     def progress(self) -> float: ...
     @property
     def files_completed_ratio(self) -> float: ...
+
+    def get_active_files(self) -> list[FileProgress]: ...
+    def get_pending_files(self) -> list[FileProgress]: ...
+    def get_completed_files(self) -> list[FileProgress]: ...
+    def get_failed_files(self) -> list[FileProgress]: ...
+
+
+@dataclass(slots=True)
+class FileProgress:
+    task_id: str
+    filename: str
+    url: str
+    status: str
+    file_size: int
+    downloaded: int
+    speed: float
+    progress: float
+    error: str | None
+    started_at: float | None
+    completed_at: float | None
 ```
 
 ### 便捷函数

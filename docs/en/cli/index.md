@@ -14,7 +14,7 @@ Verify installation:
 
 ```bash
 littledl --version
-# Output: littledl 0.4.0
+# Output: littledl 0.5.0
 ```
 
 ## Basic Usage
@@ -23,6 +23,12 @@ littledl --version
 
 ```bash
 littledl "https://example.com/large-file.zip" -o ./downloads
+```
+
+### Download Multiple Files Directly
+
+```bash
+littledl "https://example.com/file1.zip" "https://example.com/file2.pdf" "https://example.com/file3.doc" -o ./downloads
 ```
 
 ### Batch Download

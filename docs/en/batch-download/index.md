@@ -61,15 +61,37 @@ asyncio.run(main())
 
 ### Batch Progress Callback
 
+The callback system has been fully upgraded to support multiple invocation styles (event, dict, kwargs, legacy) with detailed per-file progress information.
+
 ```python
 import asyncio
-from littledl import BatchDownloader
+from littledl import BatchDownloader, BatchProgress
 
-def on_batch_progress(completed: int, total: int, speed: float, eta: int):
-    print(f"Batch Progress: {completed}/{total} | Speed: {speed/1024/1024:.1f} MB/s | ETA: {eta}s")
+# Style 1: Receive BatchProgress object (recommended)
+def on_batch_progress(progress: BatchProgress):
+    print(f"Batch Progress: {progress.completed_files}/{progress.total_files}")
+    print(f"Speed: {progress.smooth_speed/1024/1024:.1f} MB/s")
+    print(f"ETA: {progress.eta:.0f}s")
+    print(f"Speed Stability: {progress.speed_stability:.2f}")
+    # View downloading files
+    for f in progress.get_active_files():
+        print(f"  Downloading: {f.filename} - {f.progress:.1f}%")
+
+# Style 2: Receive dict
+def on_batch_progress_dict(data: dict):
+    print(f"Batch Progress: {data['completed_files']}/{data['total_files']}")
+    print(f"Speed: {data['smooth_speed']/1024/1024:.1f} MB/s")
+
+# Style 3: Receive kwargs
+def on_batch_progress_kwargs(total_files=0, completed_files=0, smooth_speed=0, **kwargs):
+    print(f"Batch Progress: {completed_files}/{total_files}")
+
+# Style 4: Legacy format (auto-detected)
+def on_batch_progress_legacy(completed: int, total: int, speed: float, eta: int, stability: float):
+    print(f"Batch Progress: {completed}/{total}")
 
 downloader = BatchDownloader()
-downloader.set_progress_callback(on_batch_progress)
+downloader.set_progress_callback(on_batch_progress)  # Auto-detects style
 ```
 
 ### File Complete Callback
@@ -310,15 +332,40 @@ class BatchProgress:
     completed_files: int
     failed_files: int
     active_files: int
+    pending_files: int
     total_bytes: int
     downloaded_bytes: int
     overall_speed: float
+    smooth_speed: float
     eta: float
+    speed_stability: float
+    elapsed_time: float
+    files: tuple[FileProgress, ...]
 
     @property
     def progress(self) -> float: ...
     @property
     def files_completed_ratio(self) -> float: ...
+
+    def get_active_files(self) -> list[FileProgress]: ...
+    def get_pending_files(self) -> list[FileProgress]: ...
+    def get_completed_files(self) -> list[FileProgress]: ...
+    def get_failed_files(self) -> list[FileProgress]: ...
+
+
+@dataclass(slots=True)
+class FileProgress:
+    task_id: str
+    filename: str
+    url: str
+    status: str
+    file_size: int
+    downloaded: int
+    speed: float
+    progress: float
+    error: str | None
+    started_at: float | None
+    completed_at: float | None
 ```
 
 ### Convenience Functions
