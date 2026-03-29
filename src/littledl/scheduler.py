@@ -37,6 +37,7 @@ class SmartScheduler:
         self._last_resplit_time: float = 0.0
         self._resplit_count: int = 0
         self._speed_average = MovingAverage(window_size=10)
+        self._speed_ewma = MovingAverage(window_size=20)
         self._last_adjustment_time: float = 0.0
         self._adjustment_count: int = 0
         self._lock = asyncio.Lock()
@@ -97,10 +98,16 @@ class SmartScheduler:
         if now - self._last_adjustment_time < cooldown:
             return
 
+        self._speed_ewma.add(current_speed)
+        ewma_avg = self._speed_ewma.get_average()
+        if ewma_avg <= 0:
+            ewma_avg = current_speed
         if previous_speed <= 0:
             speed_gain = 0.0
         else:
             speed_gain = (current_speed - previous_speed) / max(previous_speed, 1.0)
+            ewma_speed_diff = (current_speed - ewma_avg) / max(ewma_avg, 1.0)
+            speed_gain = speed_gain * 0.6 + ewma_speed_diff * 0.4
 
         if self._target_workers <= 0:
             self._target_workers = max(self.min_workers, self._current_workers)
@@ -118,9 +125,8 @@ class SmartScheduler:
                 )
                 changed = True
             elif (
-                (trend < -0.12 or speed_gain < -self.config.hybrid_speedup_threshold)
-                and self._target_workers > self.min_workers
-            ):
+                trend < -0.12 or speed_gain < -self.config.hybrid_speedup_threshold
+            ) and self._target_workers > self.min_workers:
                 self._target_workers = max(
                     self.min_workers,
                     int(self._target_workers * self.config.hybrid_aimd_decrease_factor),
@@ -150,28 +156,39 @@ class SmartScheduler:
         if self.config.enable_hybrid_turbo:
             threshold = self.config.hybrid_slow_chunk_ratio
         slow_chunks = self.chunk_manager.get_slow_chunks(threshold)
+        if not slow_chunks:
+            return
         now = time.time()
         if now - self._last_resplit_time < self.config.resplit_cooldown:
             return
+        active_chunks = self.chunk_manager.active_chunks
+        max_slow_to_process = max(1, int(len(active_chunks) ** 0.5))
+        global_avg_speed = self._speed_ewma.get_average() if self.monitor else 0.0
+        processed = 0
         for chunk in slow_chunks:
+            if processed >= max_slow_to_process:
+                break
             if chunk.remaining < self.config.hybrid_min_remaining_bytes:
                 continue
             resplit_times = self._chunk_resplit_count.get(chunk.index, 0)
             if resplit_times >= self.config.hybrid_max_resplit_per_chunk:
                 continue
-            if chunk.can_resplit(self.config.resplit_cooldown) and await self._resplit_chunk(chunk):
+            if chunk.can_resplit(self.config.resplit_cooldown, global_avg_speed) and await self._resplit_chunk(
+                chunk, resplit_times
+            ):
                 self._resplit_count += 1
                 self._chunk_resplit_count[chunk.index] = resplit_times + 1
                 self._last_resplit_time = now
-                break
+                processed += 1
 
-    async def _resplit_chunk(self, chunk: Chunk) -> bool:
+    async def _resplit_chunk(self, chunk: Chunk, resplit_times: int = 0) -> bool:
         async with self._lock:
             if chunk.remaining < self.config.min_chunk_size:
                 return False
-            if chunk.progress > 80:
+            if chunk.progress > 75:
                 return False
-            new_chunks = self.chunk_manager.resplit_chunk(chunk.index)
+            num_splits = 2 if resplit_times == 0 else 2
+            new_chunks = self.chunk_manager.resplit_chunk(chunk.index, num_splits)
             return new_chunks is not None and len(new_chunks) > 0
 
     def get_stats(self) -> SchedulerStats:

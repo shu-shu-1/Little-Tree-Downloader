@@ -2,12 +2,13 @@ import asyncio
 import contextlib
 import shutil
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from collections.abc import Callable
 from typing import Any
 
+from .callback import ProgressAggregator
 from .config import DownloadConfig
 from .connection import ConnectionPool
 from .downloader import Downloader
@@ -204,6 +205,7 @@ class BatchProgressCallbackAdapter:
     CALLBACK_MODE_KWARGS = "kwargs"
     CALLBACK_MODE_DICT = "dict"
     CALLBACK_MODE_EVENT = "event"
+    CALLBACK_MODE_FILE_PROGRESS = "file_progress"
 
     def __init__(self, callback: Callable[..., Any] | None) -> None:
         self._callback = callback
@@ -230,6 +232,11 @@ class BatchProgressCallbackAdapter:
         ]
 
         if len(positional) >= 5:
+            return self.CALLBACK_MODE_LEGACY
+        if len(positional) == 4:
+            names = [p.name.lower() for p in positional]
+            if set(names) == {"task_id", "downloaded", "total", "speed"}:
+                return self.CALLBACK_MODE_FILE_PROGRESS
             return self.CALLBACK_MODE_LEGACY
         if len(positional) == 1:
             name = positional[0].name.lower()
@@ -272,6 +279,13 @@ class BatchProgressCallbackAdapter:
             result = self._callback(payload)
         elif self._mode == self.CALLBACK_MODE_KWARGS:
             result = self._callback(**payload)
+        elif self._mode == self.CALLBACK_MODE_FILE_PROGRESS:
+            for fp in progress.files:
+                if fp.status == FileTaskStatus.DOWNLOADING.value:
+                    result = self._callback(fp.task_id, fp.downloaded, fp.file_size, fp.speed)
+                    if inspect.isawaitable(result):
+                        await result
+            return
         else:
             result = self._callback(
                 progress.completed_files,
@@ -312,8 +326,10 @@ class FileScheduler:
         self._start_time: float = 0.0
 
         self._speed_history: list[float] = []
-        self._speed_history_max_size: int = 20
+        self._speed_history_max_size: int = 30
         self._last_progress_check: float = 0.0
+        self._current_network_speed: float = 0.0
+        self._speed_stability: float = 1.0
 
     @property
     def pending_count(self) -> int:
@@ -388,9 +404,27 @@ class FileScheduler:
     def get_optimal_chunks_for_task(self, task: FileTask) -> int:
         if task.is_small_file:
             return 1
+
+        base_chunks = self.max_concurrent_chunks_per_file
+
         if task.is_large_file:
-            return min(self.max_concurrent_chunks_per_file, 8)
-        return min(self.max_concurrent_chunks_per_file, 4)
+            base_chunks = min(base_chunks, 8)
+        else:
+            base_chunks = min(base_chunks, 4)
+
+        if self._current_network_speed > 0 and task.file_size > 0:
+            target_chunk_time = 3.0
+            optimal_chunk_size = int(self._current_network_speed * target_chunk_time)
+            if optimal_chunk_size > self.max_concurrent_chunks_per_file * 1024 * 1024:
+                size_based_chunks = max(2, task.file_size // optimal_chunk_size)
+                base_chunks = min(base_chunks, size_based_chunks)
+
+        if self._speed_stability < 0.4:
+            base_chunks = min(base_chunks, 4)
+        elif self._speed_stability > 0.7 and self._current_network_speed > 5 * 1024 * 1024:
+            base_chunks = min(base_chunks + 2, 8)
+
+        return max(1, base_chunks)
 
     async def pause(self) -> None:
         async with self._lock:
@@ -428,6 +462,8 @@ class FileScheduler:
 
         smooth_speed = self._get_smoothed_speed()
         speed_stability = self._get_speed_stability()
+        self._current_network_speed = smooth_speed if smooth_speed > 0 else active_speed
+        self._speed_stability = speed_stability
 
         eta: float = -1.0
         remaining = total_bytes - downloaded_bytes
@@ -514,9 +550,12 @@ class AdaptiveConcurrencyController:
 
         self._current_concurrency: int = initial_concurrency
         self._speed_history: list[float] = []
+        self._ewma_speed: float = 0.0
+        self._ewma_alpha: float = 0.2
         self._error_count: int = 0
         self._last_adjustment_time: float = 0.0
         self._last_speed: float = 0.0
+        self._speed_trend: float = 0.0
         self._lock = asyncio.Lock()
 
     @property
@@ -526,8 +565,12 @@ class AdaptiveConcurrencyController:
     async def record_speed(self, speed: float) -> None:
         async with self._lock:
             self._speed_history.append(speed)
-            if len(self._speed_history) > 10:
+            if len(self._speed_history) > 20:
                 self._speed_history.pop(0)
+            if self._ewma_speed == 0:
+                self._ewma_speed = speed
+            else:
+                self._ewma_speed = self._ewma_alpha * speed + (1 - self._ewma_alpha) * self._ewma_speed
             self._last_speed = speed
 
     async def record_error(self) -> None:
@@ -545,6 +588,19 @@ class AdaptiveConcurrencyController:
             now = time.time()
             return now - self._last_adjustment_time >= self.adjustment_interval
 
+    def _calculate_trend(self) -> float:
+        if len(self._speed_history) < 5:
+            return 0.0
+        recent = self._speed_history[-5:]
+        older = self._speed_history[-10:-5] if len(self._speed_history) >= 10 else self._speed_history[:-5]
+        if not older:
+            return 0.0
+        recent_avg = sum(recent) / len(recent)
+        older_avg = sum(older) / len(older)
+        if older_avg <= 0:
+            return 0.0
+        return (recent_avg - older_avg) / older_avg
+
     async def adjust(self) -> int:
         async with self._lock:
             now = time.time()
@@ -553,21 +609,35 @@ class AdaptiveConcurrencyController:
 
             self._last_adjustment_time = now
 
-            if len(self._speed_history) < 3:
+            if len(self._speed_history) < 5:
                 return self._current_concurrency
 
-            recent_speeds = self._speed_history[-3:]
+            recent_speeds = self._speed_history[-7:] if len(self._speed_history) >= 7 else self._speed_history
             avg_speed = sum(recent_speeds) / len(recent_speeds)
+            self._speed_trend = self._calculate_trend()
 
-            if self._last_speed > 0 and avg_speed > 0:
-                speed_change = (self._last_speed - avg_speed) / avg_speed
+            speed_change = 0.0
+            if self._ewma_speed > 0 and avg_speed > 0:
+                speed_change = (self._ewma_speed - avg_speed) / avg_speed
 
-                if speed_change < -self.speed_threshold and self._current_concurrency < self.max_concurrency:
-                    self._current_concurrency = min(self.max_concurrency, self._current_concurrency + 1)
-                elif speed_change > self.speed_threshold and self._current_concurrency > self.min_concurrency:
-                    self._current_concurrency = max(self.min_concurrency, self._current_concurrency - 1)
-                elif speed_change > 0.1 and self._current_concurrency < self.max_concurrency:
-                    self._current_concurrency = min(self.max_concurrency, self._current_concurrency + 1)
+            magnitude = abs(speed_change)
+            increase_by = max(1, int(magnitude * 3))
+            decrease_by = max(1, int(magnitude * 4))
+
+            if self._speed_trend < -0.15 and self._current_concurrency < self.max_concurrency:
+                self._current_concurrency = min(self.max_concurrency, self._current_concurrency + increase_by)
+            elif self._speed_trend > 0.2 and self._current_concurrency > self.min_concurrency:
+                if self._ewma_speed > avg_speed * 0.9:
+                    self._current_concurrency = max(self.min_concurrency, self._current_concurrency - decrease_by)
+            elif speed_change < -0.3 and self._current_concurrency < self.max_concurrency:
+                self._current_concurrency = min(self.max_concurrency, self._current_concurrency + 1)
+
+            if (
+                avg_speed > 0
+                and self._ewma_speed < avg_speed * 0.5
+                and self._current_concurrency > self.min_concurrency
+            ):
+                self._current_concurrency = max(self.min_concurrency, self._current_concurrency - 1)
 
             return self._current_concurrency
 
@@ -804,6 +874,13 @@ class BatchDownloader:
     async def _download_single_file(self, task: FileTask) -> None:
         await task.mark_downloading()
 
+        aggregator = ProgressAggregator(task.task_id, task.file_size, task.chunks)
+
+        async def progress_updater(downloaded: int, total: int, speed: float, eta: int) -> None:
+            aggregator.set_downloaded(downloaded)
+            downloaded_agg, _, speed_agg, _ = aggregator.get_progress()
+            await task.update_progress(downloaded_agg, speed_agg if speed_agg > 0 else speed)
+
         file_config = DownloadConfig(
             enable_chunking=self.config.enable_chunking and task.supports_range,
             max_chunks=task.chunks,
@@ -834,6 +911,7 @@ class BatchDownloader:
                 save_path=str(task.save_path),
                 filename=task.filename,
                 resume=self.config.resume,
+                progress_callback=progress_updater,
             )
             await task.mark_completed()
             await self._scheduler.task_completed(task)
@@ -1285,6 +1363,13 @@ class EnhancedBatchDownloader:
 
         await self._global_pool.acquire_thread(task.task_id)
 
+        aggregator = ProgressAggregator(task.task_id, task.file_size, task.chunks)
+
+        async def progress_updater(downloaded: int, total: int, speed: float, eta: int) -> None:
+            aggregator.set_downloaded(downloaded)
+            downloaded_agg, _, speed_agg, _ = aggregator.get_progress()
+            await task.update_progress(downloaded_agg, speed_agg if speed_agg > 0 else speed)
+
         try:
             file_config = DownloadConfig(
                 enable_chunking=self.config.enable_chunking and task.supports_range,
@@ -1321,6 +1406,7 @@ class EnhancedBatchDownloader:
                 save_path=str(task.save_path),
                 filename=task.filename,
                 resume=self.config.resume,
+                progress_callback=progress_updater,
             )
 
             await task.mark_completed()

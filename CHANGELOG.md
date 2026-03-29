@@ -7,6 +7,33 @@ All notable changes to littledl will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.7.0 - 2026-03-29
+
+### Fixed
+
+- **Batch Progress Callback Fix**: Fixed `BatchProgressCallbackAdapter._detect_mode()` to correctly recognize 4-parameter callbacks `(task_id, downloaded, total, speed)` as FILE_PROGRESS mode instead of misclassifying as LEGACY_5_PARAM
+- **FileTask Progress Sync**: Fixed `BatchDownloader._download_single_file()` and `EnhancedBatchDownloader._download_single_file()` to properly sync progress via `ProgressAggregator`
+
+### Changed
+
+- **Speed Stability Improvements in GlobalThreadPool**: Made thread appending logic more conservative
+  - `should_append_thread()` now requires 4+ consecutive low-speed predictions (was 2+)
+  - Added variance check: won't append if variance > 0.5 (network unstable)
+  - `ewma_alpha` changed from 0.3 to 0.15 for smoother speed tracking
+  - `_predict_next_speed()` now uses dynamic stability weight based on variance
+- **SpeedMonitor EWMA Improvements**: Better speed smoothing for more stable ETA
+  - Window size increased from 10 to 20 for more history
+  - `MovingAverage` window from 5 to 10
+  - Added EWMA smoothing with `_ewma_alpha = 0.15`
+  - `smoothed_speed` now uses EWMA instead of simple average
+- **Algorithm Optimizations**: Enhanced download efficiency with smarter scheduling
+  - **GlobalThreadPool**: Increased speed history to 30 samples, dual MovingAverage tracking (10 + 20 windows), variance caching for performance, improved speed prediction with EWMA mixing
+  - **SpeedMonitor**: Hybrid speed calculation (30% instant + 70% EWMA), adaptive alpha based on network conditions
+  - **FileScheduler**: Dynamic chunk allocation based on network speed and stability, target ~3s chunk download time
+  - **AdaptiveConcurrencyController**: Increased history to 20 samples, proper EWMA smoothing, magnitude-based adjustments, trend-based concurrency control
+  - **ChunkManager**: Lowered resplit cutoff from 90% to 75%, added speed-based veto (won't resplit fast chunks), variable split count support
+  - **SmartScheduler**: EWMA-based speed gain calculation, process sqrt(total_chunks) slow chunks per cycle, cross-chunk coordination hints
+
 ## 0.6.1 - 2026-03-29
 
 ### Added

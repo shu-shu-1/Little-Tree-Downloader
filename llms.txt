@@ -318,6 +318,9 @@ asyncio.run(main())
 - Batch probe: parallel HEAD requests for file info
 - Smart chunking: auto-selects optimal chunk strategy based on file size
 - Per-file progress: see individual file progress during batch download
+- **Dynamic chunk allocation**: adjusts chunks based on network speed and stability (target ~3s chunk download time)
+- **Speed-based resplit veto**: won't resplit fast chunks, lowers resplit threshold from 90% to 75%
+- **Multi-chunk processing**: processes sqrt(n) slow chunks per scheduling cycle
 
 # Progress Callback System
 
@@ -570,6 +573,14 @@ progress.get_completed_files() # List of completed FileProgress
 progress.get_failed_files()   # List of failed FileProgress
 ```
 
+### Speed Monitoring Algorithm
+
+The speed monitoring system uses advanced smoothing:
+- **Hybrid speed**: 30% instant speed + 70% EWMA for responsive yet stable readings
+- **Adaptive alpha**: EWMA smoothing factor adjusts based on network conditions
+- **Window size**: 20 samples for stable long-term tracking
+- **Speed stability**: calculated as `max(0.0, 1.0 - std_dev/avg)`
+
 ## FileProgress
 
 ```python
@@ -741,7 +752,7 @@ reuse_stats = downloader.get_file_reuse_stats()
 
 ## GlobalThreadPool
 
-Global thread pool for unified thread management.
+Global thread pool for unified thread management with speed-adaptive thread allocation.
 
 ```python
 from littledl import GlobalThreadPool
@@ -749,7 +760,7 @@ from littledl import GlobalThreadPool
 pool = GlobalThreadPool(
     max_total_threads=15,
     min_speed_threshold=256 * 1024,
-    ewma_alpha=0.3,
+    ewma_alpha=0.15,
 )
 
 stats = pool.get_stats()
@@ -762,6 +773,15 @@ stats = pool.get_stats()
 #     "predicted_speed": 5500000.0,
 # }
 ```
+
+### Algorithm Optimizations
+
+GlobalThreadPool uses advanced speed prediction:
+- **30-sample speed history** for stable long-term tracking
+- **Dual MovingAverage** (window 10 + window 20) for dual tracking
+- **Variance caching** to avoid recalculation overhead
+- **EWMA mixing** in speed prediction for stability
+- **Score-based thread appending** combining predicted/ewma/avg speeds, variance, trend, and stability
 
 ## FileReuseChecker
 

@@ -7,6 +7,33 @@ English | 简体中文
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)，
 本项目遵循 [语义化版本](https://semver.org/spec/v2.0.0.html)。
 
+## 0.7.0 - 2026-03-29
+
+### 修复
+
+- **批量进度回调修复**: 修复 `BatchProgressCallbackAdapter._detect_mode()` 错误地将 4 参数回调 `(task_id, downloaded, total, speed)` 识别为 LEGACY_5_PARAM 模式的问题，正确识别为 FILE_PROGRESS 模式
+- **FileTask 进度同步修复**: 修复 `BatchDownloader._download_single_file()` 和 `EnhancedBatchDownloader._download_single_file()` 通过 `ProgressAggregator` 正确同步进度
+
+### 优化变更
+
+- **GlobalThreadPool 速度稳定性提升**: 线程追加逻辑更加保守
+  - `should_append_thread()` 现在要求 4+ 次连续低速预测（原来为 2+）
+  - 新增方差检查：方差 > 0.5 时不追加线程（网络不稳定）
+  - `ewma_alpha` 从 0.3 改为 0.15 以获得更平滑的速度跟踪
+  - `_predict_next_speed()` 现在使用基于方差的动态稳定性权重
+- **SpeedMonitor EWMA 优化**: 更好的速度平滑以获得更稳定的 ETA
+  - 窗口大小从 10 增加到 20 以获取更多历史数据
+  - `MovingAverage` 窗口从 5 增加到 10
+  - 新增 EWMA 平滑 `_ewma_alpha = 0.15`
+  - `smoothed_speed` 现在使用 EWMA 而不是简单平均
+- **算法优化**: 增强下载效率，更智能的调度
+  - **GlobalThreadPool**: 速度历史增加到 30 个样本，双 MovingAverage 跟踪（10 + 20 窗口），方差缓存提升性能，基于 EWMA 混合的改进速度预测
+  - **SpeedMonitor**: 混合速度计算（30% 即时 + 70% EWMA），基于网络条件的自适应 alpha
+  - **FileScheduler**: 基于网络速度和稳定性的动态分片分配，目标分片下载时间约 3 秒
+  - **AdaptiveConcurrencyController**: 历史样本增加到 20，适当的 EWMA 平滑，基于幅度的调整，基于趋势的并发控制
+  - **ChunkManager**: 将重新分割阈值从 90% 降低到 75%，添加基于速度的否决（不会重新分割快速分片），支持可变分割数量
+  - **SmartScheduler**: 基于 EWMA 的速度增益计算，每周期处理 sqrt(总分片数) 个慢分片，跨分片协调提示
+
 ## 0.6.1 - 2026-03-29
 
 ### 新增
@@ -25,10 +52,11 @@ English | 简体中文
 ### 新增
 
 - **预连接机制**：下载开始前预建立 HTTP/2 连接
+
   - `ConnectionPool.preconnect()` 方法批量预热 TLS 连接
   - 减少多文件下载的首请求延迟
-
 - **直接写入路径 (sendfile)**：大块顺序数据的高性能写入
+
   - `BufferedFileWriter.direct_write_threshold` - 256KB 阈值触发直接 os.pwrite
   - 绕过 Python I/O 层实现零拷贝写入
   - 减少大块分片下载的 CPU 开销
@@ -36,10 +64,11 @@ English | 简体中文
 ### 优化变更
 
 - **默认并发数提升**：开箱即用更好的吞吐
+
   - `max_concurrent_files` 默认值：5 → 8（4 处更新）
   - `FileScheduler`、`BatchDownloader`、`EnhancedBatchDownloader`、`AdaptiveStrategySelector`
-
 - **更大的写入缓冲区**：减少系统调用开销
+
   - `BufferedFileWriter.buffer_size`：512KB → 1MB
   - `H2MultiPlexDownloader` 默认 buffer：64KB → 1MB
 
@@ -48,22 +77,23 @@ English | 简体中文
 ### 新增
 
 - **增强的批量进度回调系统**：高性能、标准化、可定制化的回调
+
   - `BatchProgressCallbackAdapter` - 标准化不同回调风格（事件、字典、关键字参数、传统格式）
   - `FileProgress` 数据类 - 单文件进度信息
   - `BatchProgress` 新增 `files` 元组，包含每个文件的详细信息
-
 - **改进的速度计算**：多文件下载模式下更准确的 ETA 预测
+
   - 新增 `smooth_speed` - 使用指数加权平均的平滑速度
   - 新增 `speed_stability` - 指示 ETA 可靠性的指标（0.0-1.0）
   - 新增 `pending_files` 和 `elapsed_time` 字段
   - `FileScheduler` 中的速度历史跟踪，确保稳定计算
-
 - **单文件进度可见性**：查看正在下载的文件及其各自进度
+
   - `BatchProgress.files` 包含所有文件的 `FileProgress` 元组
   - 辅助方法：`get_active_files()`、`get_pending_files()`、`get_completed_files()`、`get_failed_files()`
   - 每个 `FileProgress` 包含：task_id、filename、url、status、file_size、downloaded、speed、progress、error、started_at、completed_at
-
 - **MovingAverage 工具增强**：更好的速度平均计算
+
   - `get_weighted_average()` - 指数加权平均
   - `get_median()` - 中位数计算，减少异常值影响
   - `get_smoothed_average()` - EMA 平滑
@@ -94,25 +124,25 @@ English | 简体中文
 ### 新增
 
 - **CLI 批量下载支持**：完整的批量文件下载功能
+
   - `-F, --batch-file` 选项：从文本文件读取 URL 进行批量下载
   - `--max-concurrent` 选项：控制并发下载数量
   - `read_urls_from_file()` 函数：支持验证和注释行处理
-
 - **CLI 输出格式控制**：多种输出模式适应不同使用场景
+
   - `--output-format {auto,json,text}` 选项
   - `OutputMode` 类：智能 TTY 检测
   - JSON 输出：程序化调用（第三方集成）
   - 文本输出：人类可读
-
 - **CLI 进度显示改进**：
+
   - `BatchProgressDisplay` 类：多文件进度追踪
   - TTY 检测自动切换模式
   - 安静模式 (`-q, --quiet`)：最小化输出
   - 批量下载完成时显示统计摘要
-
 - **CLI 退出码**：为脚本处理定义的退出码
-  - `0` 成功、`1` 一般错误、`2` 参数无效、`3` 重试失败、`4` 用户取消
 
+  - `0` 成功、`1` 一般错误、`2` 参数无效、`3` 重试失败、`4` 用户取消
 - **CLI 版本选项**：`--version` 显示版本信息
 
 ### 优化变更

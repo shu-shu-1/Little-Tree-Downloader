@@ -58,7 +58,7 @@ class DownloadStats:
 class SpeedMonitor:
     def __init__(
         self,
-        window_size: int = 10,
+        window_size: int = 20,
         sample_interval: float = 0.5,
         speed_callback: Callable[[float], None] | None = None,
     ) -> None:
@@ -69,12 +69,17 @@ class SpeedMonitor:
         self._last_sample_time: float = 0.0
         self._last_downloaded: int = 0
         self._current_speed: float = 0.0
+        self._instant_speed: float = 0.0
         self._speed_history: list[float] = []
-        self._moving_average = MovingAverage(window_size=5)
+        self._moving_average = MovingAverage(window_size=20)
         self._peak_speed: float = 0.0
         self._lock = asyncio.Lock()
         self._running = False
         self._task: asyncio.Task[None] | None = None
+        self._ewma_speed: float = 0.0
+        self._ewma_alpha: float = 0.15
+        self._adaptive_alpha: bool = True
+        self._speed_variance: float = 0.0
 
     @property
     def current_speed(self) -> float:
@@ -86,7 +91,7 @@ class SpeedMonitor:
 
     @property
     def smoothed_speed(self) -> float:
-        return self._moving_average.get_smoothed_average(0.3)
+        return self._ewma_speed if self._ewma_speed > 0 else self._moving_average.get_smoothed_average(0.2)
 
     @property
     def peak_speed(self) -> float:
@@ -114,7 +119,29 @@ class SpeedMonitor:
             time_diff = last.timestamp - first.timestamp
             if time_diff > 0:
                 bytes_diff = last.bytes_downloaded - first.bytes_downloaded
-                self._current_speed = bytes_diff / time_diff
+                raw_speed = bytes_diff / time_diff
+
+                if len(self._samples) >= 3:
+                    prev_sample = self._samples[-2]
+                    prev_time_diff = last.timestamp - prev_sample.timestamp
+                    if prev_time_diff > 0:
+                        self._instant_speed = (last.bytes_downloaded - prev_sample.bytes_downloaded) / prev_time_diff
+                    else:
+                        self._instant_speed = raw_speed
+                else:
+                    self._instant_speed = raw_speed
+
+                if self._ewma_speed == 0:
+                    self._ewma_speed = raw_speed
+                else:
+                    if self._adaptive_alpha:
+                        alpha = self._calculate_adaptive_alpha(raw_speed)
+                    else:
+                        alpha = self._ewma_alpha
+                    self._ewma_speed = alpha * raw_speed + (1 - alpha) * self._ewma_speed
+
+                hybrid_speed = 0.3 * self._instant_speed + 0.7 * self._ewma_speed
+                self._current_speed = hybrid_speed
                 self._moving_average.add(self._current_speed)
                 if self._current_speed > self._peak_speed:
                     self._peak_speed = self._current_speed
@@ -122,23 +149,46 @@ class SpeedMonitor:
                     self.speed_callback(self._current_speed)
         return self._current_speed
 
+    def _calculate_adaptive_alpha(self, raw_speed: float) -> float:
+        """根据速度变化率自适应调整alpha"""
+        if len(self._speed_history) < 5:
+            return self._ewma_alpha
+
+        recent = self._speed_history[-5:]
+        mean = sum(recent) / len(recent)
+        if mean > 0:
+            change_ratio = abs(raw_speed - mean) / mean
+            if change_ratio > 0.5:
+                return 0.3
+            elif change_ratio > 0.3:
+                return 0.2
+            elif change_ratio > 0.1:
+                return 0.15
+            else:
+                return 0.1
+        return self._ewma_alpha
+
     def reset(self) -> None:
         self._samples.clear()
         self._current_speed = 0.0
+        self._instant_speed = 0.0
         self._peak_speed = 0.0
         self._speed_history.clear()
-        self._moving_average = MovingAverage(window_size=5)
+        self._moving_average = MovingAverage(window_size=20)
+        self._ewma_speed = 0.0
 
     def get_instantaneous_speed(self, bytes_downloaded: int, time_interval: float = 1.0) -> float:
         if time_interval <= 0:
-            return 0.0
+            return self._current_speed
         now = time.time()
         recent_bytes = bytes_downloaded - self._last_downloaded
         if now - self._last_sample_time >= time_interval:
             speed = recent_bytes / (now - self._last_sample_time)
             self._last_sample_time = now
             self._last_downloaded = bytes_downloaded
-            return speed
+            instant = speed
+            hybrid = 0.4 * instant + 0.6 * self._current_speed if self._current_speed > 0 else instant
+            return hybrid
         return self._current_speed
 
 

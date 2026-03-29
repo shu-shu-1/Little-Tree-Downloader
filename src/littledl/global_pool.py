@@ -36,7 +36,7 @@ class GlobalThreadPool:
         max_total_threads: int = 15,
         min_speed_threshold: float = 256 * 1024,
         speed_check_interval: float = 0.1,
-        ewma_alpha: float = 0.3,
+        ewma_alpha: float = 0.15,
     ) -> None:
         self.max_total_threads = max_total_threads
         self.min_speed_threshold = min_speed_threshold
@@ -58,8 +58,11 @@ class GlobalThreadPool:
         self._last_check_time: float = time.time()
         self._last_speed: float = 0.0
         self._low_speed_count: int = 0
+        self._last_variance: float = 0.0
+        self._variance_cache_time: float = 0.0
 
-        self._speed_avg = MovingAverage(window_size=10)
+        self._speed_avg = MovingAverage(window_size=20)
+        self._ewma_avg = MovingAverage(window_size=10)
         self._callbacks: list[Callable[[], None]] = []
 
         self._append_decision_history: list[bool] = []
@@ -130,7 +133,7 @@ class GlobalThreadPool:
         if elapsed > 0:
             current_speed = bytes_per_second
             self._speed_history.append(current_speed)
-            if len(self._speed_history) > 20:
+            if len(self._speed_history) > 30:
                 self._speed_history.pop(0)
 
             if self._ewma_speed == 0:
@@ -139,6 +142,7 @@ class GlobalThreadPool:
                 self._ewma_speed = self.ewma_alpha * current_speed + (1 - self.ewma_alpha) * self._ewma_speed
 
             self._speed_avg.add(current_speed)
+            self._ewma_avg.add(self._ewma_speed)
             self._last_speed = current_speed
             self._last_check_time = now
 
@@ -147,22 +151,35 @@ class GlobalThreadPool:
             else:
                 self._low_speed_count = max(0, self._low_speed_count - 1)
 
-    def _calculate_speed_variance(self) -> float:
-        """计算速度方差，衡量网络稳定性"""
-        if len(self._speed_history) < 3:
-            return 0.0
-        mean = sum(self._speed_history) / len(self._speed_history)
-        variance = sum((s - mean) ** 2 for s in self._speed_history) / len(self._speed_history)
-        return math.sqrt(variance) / max(mean, 1)
+    def _calculate_speed_variance(self, force_recalc: bool = False) -> float:
+        """计算速度方差，衡量网络稳定性（带缓存）"""
+        now = time.time()
+        if not force_recalc and now - self._variance_cache_time < 0.2 and self._last_variance > 0:
+            return self._last_variance
+
+        if len(self._speed_history) < 5:
+            self._last_variance = 0.0
+        else:
+            recent = self._speed_history[-20:] if len(self._speed_history) >= 20 else self._speed_history
+            mean = sum(recent) / len(recent)
+            if mean > 0:
+                variance = sum((s - mean) ** 2 for s in recent) / len(recent)
+                self._last_variance = math.sqrt(variance) / mean
+            else:
+                self._last_variance = 0.5
+        self._variance_cache_time = now
+        return self._last_variance
 
     def _predict_next_speed(self) -> float:
-        """基于历史趋势预测下一个速度（线性回归）"""
-        if len(self._speed_history) < 3:
+        """基于历史趋势预测下一个速度（线性回归 + EWMA混合）"""
+        if len(self._speed_history) < 5:
             return self._ewma_speed
 
-        n = len(self._speed_history)
+        recent = self._speed_history[-20:] if len(self._speed_history) >= 20 else self._speed_history
+        n = len(recent)
+
         x = list(range(n))
-        y = self._speed_history
+        y = recent
 
         x_mean = sum(x) / n
         y_mean = sum(y) / n
@@ -176,7 +193,15 @@ class GlobalThreadPool:
         slope = numerator / denominator
         predicted = y_mean + slope * n
 
-        weighted_predicted = 0.6 * predicted + 0.4 * self._ewma_speed
+        variance = self._calculate_speed_variance()
+        stability_weight = max(0.15, 1.0 - variance * 1.5)
+
+        ewma_weight = 0.4
+        weighted_predicted = (
+            stability_weight * predicted
+            + (1 - stability_weight - ewma_weight) * self._ewma_speed
+            + ewma_weight * self._ewma_avg.get_average()
+        )
 
         return max(0, weighted_predicted)
 
@@ -185,9 +210,10 @@ class GlobalThreadPool:
         判断是否应该为指定文件追加线程
 
         改进策略：
-        1. 如果预测速度持续下降，追加线程
-        2. 如果速度方差大（网络不稳），追加线程
-        3. 如果当前速度远低于阈值，追加线程
+        1. 只有持续预测速度低时才追加线程（避免抖动）
+        2. 速度方差大时不追加（网络不稳时不应扩张）
+        3. 使用EWMA加权的趋势判断
+        4. 结合绝对速度和相对变化
         """
         if self.is_full:
             return False
@@ -195,20 +221,44 @@ class GlobalThreadPool:
         predicted = self._predict_next_speed()
         trend = self._speed_avg.get_trend()
         variance = self._calculate_speed_variance()
+        ewma = self._ewma_speed
+        avg = self._speed_avg.get_average()
+        stability = self._speed_avg.get_stability()
 
-        self._append_decision_history.append(predicted < self.min_speed_threshold * 0.8)
-        if len(self._append_decision_history) > 5:
+        should_append_score = 0
+
+        if predicted < self.min_speed_threshold * 0.5 and ewma < self.min_speed_threshold * 0.7:
+            should_append_score += 2
+        elif predicted < self.min_speed_threshold * 0.7:
+            should_append_score += 1
+
+        if variance > 0.6:
+            should_append_score -= 2
+        elif variance > 0.4:
+            should_append_score -= 1
+
+        if trend < -0.3:
+            should_append_score += 1
+        elif trend > 0.2:
+            should_append_score -= 2
+
+        if stability < 0.3:
+            should_append_score -= 1
+        elif stability > 0.6:
+            should_append_score += 1
+
+        if avg > 0 and predicted < avg * 0.5:
+            should_append_score += 1
+
+        self._append_decision_history.append(should_append_score > 0)
+        if len(self._append_decision_history) > 8:
             self._append_decision_history.pop(0)
 
-        recent_decisions = sum(1 for d in self._append_decision_history[-3:] if d)
+        recent_decisions = self._append_decision_history[-5:]
+        positive_count = sum(1 for d in recent_decisions if d)
+        negative_count = sum(1 for d in recent_decisions if not d)
 
-        if predicted < self.min_speed_threshold * 0.6:
-            return True
-
-        if trend < -0.3 and variance < 0.5:
-            return True
-
-        if recent_decisions >= 2 and variance > 0.3:
+        if positive_count >= 4 and positive_count > negative_count:
             return True
 
         return False
@@ -225,6 +275,7 @@ class GlobalThreadPool:
         1. 大文件优先获得更多线程
         2. 快要完成的任务优先
         3. 高优先级任务获得更多资源
+        4. 允许较大的分配跳跃以快速响应负载变化
         """
         if not self._file_allocations:
             return {}
@@ -235,7 +286,7 @@ class GlobalThreadPool:
             progress = self._file_progress.get(file_id, 0.0)
             threads = self._file_allocations[file_id]
 
-            urgency = (1 - progress) * priority * math.log1p(threads)
+            urgency = (1 - progress) * priority * math.log1p(threads + 1)
             priorities.append((file_id, urgency, priority, threads))
 
         priorities.sort(key=lambda x: x[1], reverse=True)
@@ -245,9 +296,14 @@ class GlobalThreadPool:
         base_threads = total_available // len(priorities)
         remainder = total_available % len(priorities)
 
+        variance = self._calculate_speed_variance()
+        stability = max(0.3, 1.0 - variance)
+
+        max_jump = 3 if stability > 0.5 else 2
+
         for i, (file_id, urgency, priority, threads) in enumerate(priorities):
             target = base_threads + (1 if i < remainder else 0)
-            target = max(1, min(target, threads + 2))
+            target = max(1, min(target, threads + max_jump))
             allocations[file_id] = target
 
         return allocations

@@ -115,10 +115,12 @@ class Chunk:
         self.status = ChunkStatus.RESPLITTING
         self.last_resplit_time = time.time()
 
-    def can_resplit(self, cooldown: float = 5.0) -> bool:
+    def can_resplit(self, cooldown: float = 5.0, global_avg_speed: float = 0.0) -> bool:
         if self.status not in (ChunkStatus.DOWNLOADING, ChunkStatus.FAILED):
             return False
-        if self.downloaded >= self.size * 0.9:
+        if self.downloaded >= self.size * 0.75:
+            return False
+        if global_avg_speed > 0 and self.average_speed > global_avg_speed * 1.5:
             return False
         return time.time() - self.last_resplit_time >= cooldown
 
@@ -255,33 +257,33 @@ class ChunkManager:
             if 0 <= chunk_index < len(self.chunks):
                 self.chunks[chunk_index].fail(error)
 
-    def resplit_chunk(self, chunk_index: int) -> list[Chunk] | None:
+    def resplit_chunk(self, chunk_index: int, num_splits: int = 2) -> list[Chunk] | None:
         if chunk_index >= len(self.chunks):
             return None
         chunk = self.chunks[chunk_index]
         if not chunk.can_resplit():
             return None
         remaining = chunk.remaining
-        if remaining < self.min_chunk_size:
-            return None
+        min_size = self.min_chunk_size // num_splits
+        if remaining < min_size:
+            num_splits = max(2, remaining // self.min_chunk_size)
+            if num_splits < 2:
+                return None
         new_chunks: list[Chunk] = []
-        split_point = chunk.start_byte + chunk.downloaded + remaining // 2
-        chunk1 = Chunk(
-            index=chunk.index,
-            start_byte=chunk.start_byte + chunk.downloaded,
-            end_byte=split_point,
-            total_size=self.file_size,
-            downloaded=0,
-        )
-        chunk2 = Chunk(
-            index=self._chunk_counter,
-            start_byte=split_point,
-            end_byte=chunk.end_byte,
-            total_size=self.file_size,
-            downloaded=0,
-        )
-        self._chunk_counter += 1
-        new_chunks.extend([chunk1, chunk2])
+        chunk_size = remaining // num_splits
+        current_start = chunk.start_byte + chunk.downloaded
+        for i in range(num_splits):
+            chunk_end = current_start + chunk_size + (1 if i < remaining % num_splits else 0)
+            new_chunk = Chunk(
+                index=self._chunk_counter if i > 0 else chunk.index,
+                start_byte=current_start,
+                end_byte=chunk_end,
+                total_size=self.file_size,
+                downloaded=0,
+            )
+            self._chunk_counter += 1
+            new_chunks.append(new_chunk)
+            current_start = chunk_end
         return new_chunks
 
     def get_slow_chunks(self, threshold_ratio: float = 0.5) -> list[Chunk]:
