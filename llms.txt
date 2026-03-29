@@ -277,7 +277,7 @@ results = batch_download_sync(
         "https://example.com/file3.zip",
     ],
     save_path="./downloads",
-    max_concurrent_files=5,
+    max_concurrent_files=8,
 )
 
 for url, path, error in results:
@@ -295,7 +295,7 @@ from littledl import BatchDownloader
 
 async def main():
     downloader = BatchDownloader(
-        max_concurrent_files=5,
+        max_concurrent_files=8,
         max_concurrent_chunks_per_file=4,
         enable_adaptive_concurrency=True,
     )
@@ -419,7 +419,7 @@ results = batch_download_sync(
     urls: list[str],
     save_path: str = "./downloads",
     config: DownloadConfig | None = None,
-    max_concurrent_files: int = 5,
+    max_concurrent_files: int = 8,
     max_concurrent_chunks_per_file: int = 4,
     progress_callback=None,
     file_complete_callback=None,
@@ -436,7 +436,7 @@ results = await batch_download(
     urls: list[str],
     save_path: str = "./downloads",
     config: DownloadConfig | None = None,
-    max_concurrent_files: int = 5,
+    max_concurrent_files: int = 8,
     max_concurrent_chunks_per_file: int = 4,
     progress_callback=None,
     file_complete_callback=None,
@@ -450,7 +450,7 @@ from littledl import BatchDownloader
 
 downloader = BatchDownloader(
     config: DownloadConfig | None = None,
-    max_concurrent_files: int = 5,
+    max_concurrent_files: int = 8,
     max_concurrent_chunks_per_file: int = 4,
     enable_adaptive_concurrency: bool = True,
     enable_small_file_priority: bool = True,
@@ -487,7 +487,7 @@ from littledl import EnhancedBatchDownloader
 
 downloader = EnhancedBatchDownloader(
     config: DownloadConfig | None = None,
-    max_concurrent_files: int = 5,
+    max_concurrent_files: int = 8,
     max_total_threads: int = 15,
     small_file_threshold: int = 1 * 1024 * 1024,
     enable_existing_file_reuse: bool = True,
@@ -700,7 +700,7 @@ from littledl import DynamicStyleAllocator, DownloadStyle
 
 allocator = DynamicStyleAllocator(
     selector=selector,
-    max_concurrent_files=5,
+    max_concurrent_files=8,
     max_total_chunks=16,
 )
 

@@ -7,6 +7,29 @@ English | 简体中文
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)，
 本项目遵循 [语义化版本](https://semver.org/spec/v2.0.0.html)。
 
+## 0.6.0 - 2026-03-29
+
+### 新增
+
+- **预连接机制**：下载开始前预建立 HTTP/2 连接
+  - `ConnectionPool.preconnect()` 方法批量预热 TLS 连接
+  - 减少多文件下载的首请求延迟
+
+- **直接写入路径 (sendfile)**：大块顺序数据的高性能写入
+  - `BufferedFileWriter.direct_write_threshold` - 256KB 阈值触发直接 os.pwrite
+  - 绕过 Python I/O 层实现零拷贝写入
+  - 减少大块分片下载的 CPU 开销
+
+### 优化变更
+
+- **默认并发数提升**：开箱即用更好的吞吐
+  - `max_concurrent_files` 默认值：5 → 8（4 处更新）
+  - `FileScheduler`、`BatchDownloader`、`EnhancedBatchDownloader`、`AdaptiveStrategySelector`
+
+- **更大的写入缓冲区**：减少系统调用开销
+  - `BufferedFileWriter.buffer_size`：512KB → 1MB
+  - `H2MultiPlexDownloader` 默认 buffer：64KB → 1MB
+
 ## 0.5.0 - 2026-03-29
 
 ### 新增

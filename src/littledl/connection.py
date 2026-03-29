@@ -1,3 +1,4 @@
+import asyncio
 import ssl
 from typing import Any
 
@@ -79,6 +80,48 @@ class ConnectionPool:
         )
 
         return self._client
+
+    async def preconnect(self, urls: list[str]) -> None:
+        """预连接到多个 URL，建立 HTTP/2 连接并预热TLS
+
+        Args:
+            urls: 需要预连接的 URL 列表
+        """
+        if not self._client:
+            return
+
+        from urllib.parse import urlparse
+
+        async def _preconnect_one(url: str) -> None:
+            try:
+                async with self._client.stream(
+                    "GET",
+                    url,
+                    headers={"Range": "bytes=0-0"},
+                    timeout=httpx.Timeout(
+                        connect=5.0,
+                        read=5.0,
+                        write=5.0,
+                        pool=5.0,
+                    ),
+                ) as _:
+                    pass
+            except Exception:
+                pass
+
+        tasks = []
+        for url in urls:
+            parsed = urlparse(url)
+            if not parsed.scheme or not parsed.netloc:
+                continue
+
+            if not parsed.hostname:
+                continue
+
+            tasks.append(asyncio.create_task(_preconnect_one(url)))
+
+        if tasks:
+            await asyncio.gather(*tasks, return_exceptions=True)
 
     async def close(self) -> None:
         if self._client:

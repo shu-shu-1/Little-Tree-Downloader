@@ -20,11 +20,14 @@ from littledl import (
     ResumeManager,
     StrategySelector,
 )
+from littledl.batch import BatchDownloader, FileScheduler, EnhancedBatchDownloader
+from littledl.connection import ConnectionPool
 from littledl.exceptions import ConfigurationError, HTTPError
 from littledl.chunk import Chunk as ChunkClass
 from littledl.monitor import DownloadStats
 from littledl.downloader import ChunkCallbackAdapter, ProgressCallbackAdapter
 from littledl.scheduler import SmartScheduler
+from littledl.writer import BufferedFileWriter
 from littledl.__main__ import style_to_enum
 
 
@@ -556,6 +559,107 @@ class TestIntegration:
             await manager.complete_chunk(chunk2.index)
 
         assert manager.is_completed
+
+
+class TestBufferedFileWriterDirectWrite:
+    @pytest.mark.asyncio
+    async def test_direct_write_threshold(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            file_path = Path(tmpdir) / "test.bin"
+            writer = BufferedFileWriter(
+                file_path,
+                "wb",
+                buffer_size=1024 * 1024,
+                direct_write_threshold=256 * 1024,
+            )
+            await writer.open()
+
+            large_data = b"x" * 300 * 1024
+            result = await writer.write_at(0, large_data)
+            assert result == len(large_data)
+
+            await writer.close()
+
+            assert file_path.read_bytes() == large_data
+
+    @pytest.mark.asyncio
+    async def test_buffered_write_below_threshold(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            file_path = Path(tmpdir) / "test.bin"
+            writer = BufferedFileWriter(
+                file_path,
+                "wb",
+                buffer_size=1024 * 1024,
+                direct_write_threshold=256 * 1024,
+            )
+            await writer.open()
+
+            small_data = b"y" * 100
+            result = await writer.write_at(0, small_data)
+            assert result == len(small_data)
+
+            await writer.close()
+
+            assert file_path.read_bytes() == small_data
+
+    @pytest.mark.asyncio
+    async def test_default_buffer_size(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            file_path = Path(tmpdir) / "test.bin"
+            writer = BufferedFileWriter(file_path, "wb")
+            assert writer.buffer_size == 1024 * 1024
+            assert writer.direct_write_threshold == 256 * 1024
+            await writer.open()
+            await writer.close()
+
+
+class TestConnectionPoolPreconnect:
+    @pytest.mark.asyncio
+    async def test_preconnect_urls(self) -> None:
+        config = DownloadConfig()
+        pool = ConnectionPool(config)
+
+        mock_response = MagicMock()
+        mock_response.__aenter__ = AsyncMock(return_value=mock_response)
+        mock_response.__aexit__ = AsyncMock(return_value=None)
+
+        mock_client = AsyncMock(spec=httpx.AsyncClient)
+        mock_client.stream.return_value = mock_response
+
+        pool._client = mock_client
+
+        await pool.preconnect(
+            [
+                "https://example.com/file1.zip",
+                "https://example.com/file2.zip",
+            ]
+        )
+
+        assert mock_client.stream.call_count == 2
+
+        await pool.close()
+
+
+class TestMaxConcurrentFilesDefault:
+    def test_file_scheduler_default(self) -> None:
+        scheduler = FileScheduler()
+        assert scheduler.max_concurrent_files == 8
+
+    def test_batch_downloader_default(self) -> None:
+        downloader = BatchDownloader()
+        assert downloader.max_concurrent_files == 8
+
+    @pytest.mark.asyncio
+    async def test_enhanced_batch_downloader_default(self) -> None:
+        downloader = EnhancedBatchDownloader()
+        assert downloader.max_concurrent_files == 8
+
+    def test_dynamic_style_allocator_default(self) -> None:
+        from littledl.strategy import DynamicStyleAllocator
+
+        selector = StrategySelector()
+        allocator = DynamicStyleAllocator(selector)
+        assert allocator.max_concurrent_files == 8
 
 
 if __name__ == "__main__":

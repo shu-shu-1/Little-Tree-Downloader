@@ -290,7 +290,7 @@ class BatchProgressCallbackAdapter:
 class FileScheduler:
     def __init__(
         self,
-        max_concurrent_files: int = 5,
+        max_concurrent_files: int = 8,
         max_concurrent_chunks_per_file: int = 4,
         small_file_threshold: int = 5 * 1024 * 1024,
         large_file_threshold: int = 100 * 1024 * 1024,
@@ -585,7 +585,7 @@ class BatchDownloader:
     def __init__(
         self,
         config: DownloadConfig | None = None,
-        max_concurrent_files: int = 5,
+        max_concurrent_files: int = 8,
         max_concurrent_chunks_per_file: int = 4,
         enable_adaptive_concurrency: bool = True,
         enable_small_file_priority: bool = True,
@@ -911,7 +911,7 @@ async def batch_download(
     urls: list[str],
     save_path: str = "./downloads",
     config: DownloadConfig | None = None,
-    max_concurrent_files: int = 5,
+    max_concurrent_files: int = 8,
     max_concurrent_chunks_per_file: int = 4,
     progress_callback: Any = None,
     file_complete_callback: Any = None,
@@ -972,7 +972,7 @@ class EnhancedBatchDownloader:
     def __init__(
         self,
         config: DownloadConfig | None = None,
-        max_concurrent_files: int = 5,
+        max_concurrent_files: int = 8,
         max_total_threads: int = 15,
         small_file_threshold: int = 1 * 1024 * 1024,
         enable_existing_file_reuse: bool = True,

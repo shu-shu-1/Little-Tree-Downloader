@@ -38,17 +38,20 @@ class BufferedFileWriter:
         self,
         file_path: Path,
         mode: str = "wb",
-        buffer_size: int = 512 * 1024,  # 512KB 缓冲
+        buffer_size: int = 1024 * 1024,  # 1MB 缓冲
         flush_interval: float = 0.5,  # 500ms 自动刷新
         max_buffers: int = 16,  # 最大并发缓冲数量
+        direct_write_threshold: int = 256 * 1024,  # 256KB 以上直接写入
     ) -> None:
         self.file_path = file_path
         self.mode = mode
         self.buffer_size = buffer_size
         self.flush_interval = flush_interval
         self.max_buffers = max_buffers
+        self.direct_write_threshold = direct_write_threshold
 
         self._file: Any = None
+        self._fd: int | None = None  # 文件描述符用于直接写入
         self._buffers: dict[int, WriteBuffer] = {}  # offset -> buffer
         self._lock = asyncio.Lock()
         self._flush_task: asyncio.Task | None = None
@@ -65,6 +68,7 @@ class BufferedFileWriter:
         else:
             self._file = await aiofiles.open(self.file_path, "r+b")
 
+        self._fd = self._file.fileno()
         self._running = True
         self._flush_task = asyncio.create_task(self._background_flush())
 
@@ -99,8 +103,10 @@ class BufferedFileWriter:
         if not data:
             return 0
 
+        if len(data) >= self.direct_write_threshold and self._fd is not None:
+            return await self._direct_write(offset, data)
+
         async with self._lock:
-            # 查找或创建缓冲区
             buffer_key = self._find_buffer_key(offset)
 
             if buffer_key not in self._buffers:
@@ -154,6 +160,24 @@ class BufferedFileWriter:
         使用对齐策略，将偏移量映射到 buffer_size 的倍数
         """
         return (offset // self.buffer_size) * self.buffer_size
+
+    async def _direct_write(self, offset: int, data: bytes) -> int:
+        """直接写入，绕过缓冲区（高性能路径）"""
+        import os
+
+        fd = self._fd
+        if fd is None:
+            raise OSError("File not opened")
+
+        def _write() -> int:
+            os.lseek(fd, offset, os.SEEK_SET)
+            os.write(fd, data)
+            return len(data)
+
+        loop = asyncio.get_running_loop()
+        result = await loop.run_in_executor(None, _write)
+        self._total_written += result
+        return result
 
     async def _flush_buffer(self, buffer_key: int) -> None:
         """刷新单个缓冲区到磁盘"""

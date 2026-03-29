@@ -211,11 +211,10 @@ class H2MultiPlexDownloader:
         self.client = client
         self.config = config
         self.output_path = output_path
-        # 使用高性能缓冲写入器替代直接写入
         self.writer = BufferedFileWriter(
             output_path,
             "r+b" if output_path.exists() else "wb",
-            buffer_size=getattr(config, "buffer_size", 64 * 1024),
+            buffer_size=getattr(config, "buffer_size", 1024 * 1024),
             flush_interval=0.5,
             max_buffers=16,
         )

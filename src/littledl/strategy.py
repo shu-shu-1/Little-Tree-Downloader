@@ -436,7 +436,7 @@ class DynamicStyleAllocator:
     def __init__(
         self,
         selector: StrategySelector,
-        max_concurrent_files: int = 5,
+        max_concurrent_files: int = 8,
         max_total_chunks: int = 16,
         enable_auto_allocation: bool = True,
     ) -> None:

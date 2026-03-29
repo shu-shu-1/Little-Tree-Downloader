@@ -7,6 +7,29 @@ All notable changes to littledl will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.6.0 - 2026-03-29
+
+### Added
+
+- **Pre-connection Mechanism**: Pre-establish HTTP/2 connections before download starts
+  - `ConnectionPool.preconnect()` method for batch pre-warming TLS connections
+  - Reduces first-request latency for multiple downloads
+
+- **Direct Write Path (sendfile)**: High-performance file writing for large sequential data
+  - `BufferedFileWriter.direct_write_threshold` - 256KB threshold for direct os.pwrite
+  - Bypasses Python I/O layer for zero-copy writes
+  - Reduces CPU overhead for large chunk downloads
+
+### Changed
+
+- **Increased Default Concurrency**: Better throughput out of the box
+  - `max_concurrent_files` default: 5 → 8 (4 locations updated)
+  - `FileScheduler`, `BatchDownloader`, `EnhancedBatchDownloader`, `AdaptiveStrategySelector`
+
+- **Larger Write Buffer**: Reduced system call overhead
+  - `BufferedFileWriter.buffer_size`: 512KB → 1MB
+  - `H2MultiPlexDownloader` default buffer: 64KB → 1MB
+
 ## 0.5.0 - 2026-03-29
 
 ### Added

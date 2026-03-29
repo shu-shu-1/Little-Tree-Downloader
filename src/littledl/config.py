@@ -204,7 +204,7 @@ class DownloadConfig:
     health_check_interval: float = 10.0
     verify_ssl: bool = True
     ssl_cert_path: str | None = None
-    user_agent: str = "Little-Tree-Downloader/0.1.0"
+    user_agent: str = "Little-Tree-Downloader/0.6.0"
     headers: dict[str, str] = field(default_factory=dict)
     auth: AuthConfig | None = None
     proxy: ProxyConfig | None = None
