@@ -81,10 +81,12 @@ def on_batch_progress(progress: BatchProgress):
 def on_batch_progress_dict(data: dict):
     print(f"Batch Progress: {data['completed_files']}/{data['total_files']}")
     print(f"Speed: {data['smooth_speed']/1024/1024:.1f} MB/s")
+    print(f"File Progress: {data['files_progress']:.1f}%")
 
 # Style 3: Receive kwargs
-def on_batch_progress_kwargs(total_files=0, completed_files=0, smooth_speed=0, **kwargs):
+def on_batch_progress_kwargs(total_files=0, completed_files=0, smooth_speed=0, files_progress=0, **kwargs):
     print(f"Batch Progress: {completed_files}/{total_files}")
+    print(f"File Progress: {files_progress:.1f}%")
 
 # Style 4: Legacy format (auto-detected)
 def on_batch_progress_legacy(completed: int, total: int, speed: float, eta: int, stability: float):
@@ -345,7 +347,7 @@ class BatchProgress:
     @property
     def progress(self) -> float: ...
     @property
-    def files_completed_ratio(self) -> float: ...
+    def files_progress(self) -> float: ...
 
     def get_active_files(self) -> list[FileProgress]: ...
     def get_pending_files(self) -> list[FileProgress]: ...

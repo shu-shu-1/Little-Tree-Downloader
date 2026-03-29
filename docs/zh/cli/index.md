@@ -14,7 +14,7 @@ pip install littledl
 
 ```bash
 littledl --version
-# 输出: littledl 0.5.0
+# 输出: littledl 0.6.1
 ```
 
 ## 基本用法
@@ -50,17 +50,17 @@ littledl -F urls.txt -o ./downloads
 
 ## 常用选项
 
-| 选项                      | 说明               | 默认值          |
-| ------------------------- | ------------------ | --------------- |
-| `-o, --output 路径`     | 输出目录或文件路径 | `./downloads` |
-| `-f, --filename 名称`   | 指定输出文件名     | 服务器提供      |
-| `-c, --max-chunks N`    | 最大并行分块数     | `16`          |
-| `-t, --timeout 秒`      | 请求超时时间       | `300`         |
-| `--proxy URL`           | HTTP 代理          | 无              |
-| `--speed-limit 字节/秒` | 限速               | 不限速          |
-| `--retry N`             | 最大重试次数       | `3`           |
-| `-v, --verbose`         | 详细输出           | False           |
-| `--temp-dir 路径`      | 临时文件目录       | 输出文件同级目录 |
+| 选项                      | 说明               | 默认值           |
+| ------------------------- | ------------------ | ---------------- |
+| `-o, --output 路径`     | 输出目录或文件路径 | `./downloads`  |
+| `-f, --filename 名称`   | 指定输出文件名     | 服务器提供       |
+| `-c, --max-chunks N`    | 最大并行分块数     | `16`           |
+| `-t, --timeout 秒`      | 请求超时时间       | `300`          |
+| `--proxy URL`           | HTTP 代理          | 无               |
+| `--speed-limit 字节/秒` | 限速               | 不限速           |
+| `--retry N`             | 最大重试次数       | `3`            |
+| `-v, --verbose`         | 详细输出           | False            |
+| `--temp-dir 路径`       | 临时文件目录       | 输出文件同级目录 |
 
 ## 下载模式
 

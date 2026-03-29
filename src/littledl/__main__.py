@@ -95,7 +95,7 @@ def parse_args(args: list[str] | None = None) -> argparse.Namespace:
         default="auto",
         help=_("Output format: auto (根据环境), json (结构化), text (纯文本)"),
     )
-    parser.add_argument("--version", action="version", version="%(prog)s 0.5.0")
+    parser.add_argument("--version", action="version", version="%(prog)s 0.6.1")
     return parser.parse_args(args)
 
 

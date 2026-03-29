@@ -7,15 +7,29 @@ All notable changes to littledl will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.6.1 - 2026-03-29
+
+### Added
+
+- **Dual Progress Mode for Batch Download**: Provides both byte-based and file-based progress
+  - `BatchProgress.progress` - byte-based progress (`downloaded_bytes / total_bytes`)
+  - `BatchProgress.files_progress` - file-based progress (`completed_files / total_files`)
+  - Callback payload now includes `files_progress` field for dict/kwargs modes
+
+### Changed
+
+- `BatchProgress.files_completed_ratio` property renamed to `files_progress` for consistency
+
 ## 0.6.0 - 2026-03-29
 
 ### Added
 
 - **Pre-connection Mechanism**: Pre-establish HTTP/2 connections before download starts
+
   - `ConnectionPool.preconnect()` method for batch pre-warming TLS connections
   - Reduces first-request latency for multiple downloads
-
 - **Direct Write Path (sendfile)**: High-performance file writing for large sequential data
+
   - `BufferedFileWriter.direct_write_threshold` - 256KB threshold for direct os.pwrite
   - Bypasses Python I/O layer for zero-copy writes
   - Reduces CPU overhead for large chunk downloads
@@ -23,10 +37,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **Increased Default Concurrency**: Better throughput out of the box
+
   - `max_concurrent_files` default: 5 → 8 (4 locations updated)
   - `FileScheduler`, `BatchDownloader`, `EnhancedBatchDownloader`, `AdaptiveStrategySelector`
-
 - **Larger Write Buffer**: Reduced system call overhead
+
   - `BufferedFileWriter.buffer_size`: 512KB → 1MB
   - `H2MultiPlexDownloader` default buffer: 64KB → 1MB
 
@@ -35,22 +50,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **Enhanced Batch Progress Callback System**: High-performance, standardized, and customizable callbacks
+
   - `BatchProgressCallbackAdapter` - Normalizes different callback styles (event, dict, kwargs, legacy)
   - `FileProgress` dataclass - Individual file progress information
   - `BatchProgress` now includes `files` tuple for per-file details
-
 - **Improved Speed Calculation**: More accurate ETA prediction in multi-file download mode
+
   - Added `smooth_speed` - Smoothed speed using exponential weighted average
   - Added `speed_stability` - Metric indicating ETA reliability (0.0-1.0)
   - Added `pending_files` and `elapsed_time` fields to `BatchProgress`
   - Speed history tracking in `FileScheduler` for stable calculations
-
 - **Per-File Progress Visibility**: See which files are downloading and their individual progress
+
   - `BatchProgress.files` contains `FileProgress` tuple for all files
   - Helper methods: `get_active_files()`, `get_pending_files()`, `get_completed_files()`, `get_failed_files()`
   - Each `FileProgress` includes: task_id, filename, url, status, file_size, downloaded, speed, progress, error, started_at, completed_at
-
 - **MovingAverage Utility Enhancements**: Better speed averaging
+
   - `get_weighted_average()` - Exponential weighted average
   - `get_median()` - Median calculation to reduce outlier impact
   - `get_smoothed_average()` - EMA smoothing
@@ -81,25 +97,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **CLI Batch Download Support**: Full-featured batch download from file
+
   - `-F, --batch-file` option to read URLs from a text file
   - `--max-concurrent` option to control parallel download count
   - `read_urls_from_file()` function with validation and comment support
-
 - **CLI Output Format Control**: Multiple output modes for different use cases
+
   - `--output-format {auto,json,text}` option
   - `OutputMode` class for intelligent TTY detection
   - JSON output for programmatic use (third-party integration)
   - Text output for human readability
-
 - **CLI Progress Improvements**:
+
   - `BatchProgressDisplay` class for multi-file progress tracking
   - TTY detection for automatic mode switching
   - Quiet mode (`-q, --quiet`) for minimal output
   - Summary statistics at batch download completion
-
 - **CLI Exit Codes**: Well-defined exit codes for scripting
-  - `0` Success, `1` General error, `2` Invalid argument, `3` Retry failed, `4` Cancelled
 
+  - `0` Success, `1` General error, `2` Invalid argument, `3` Retry failed, `4` Cancelled
 - **CLI Version Option**: `--version` flag for version information
 
 ### Changed

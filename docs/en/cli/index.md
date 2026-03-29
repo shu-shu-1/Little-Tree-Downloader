@@ -14,7 +14,7 @@ Verify installation:
 
 ```bash
 littledl --version
-# Output: littledl 0.5.0
+# Output: littledl 0.6.1
 ```
 
 ## Basic Usage
@@ -60,7 +60,7 @@ littledl -F urls.txt -o ./downloads
 | `--speed-limit BYTES/s` | Limit download speed          | Unlimited       |
 | `--retry N`             | Maximum retry attempts        | `3`           |
 | `-v, --verbose`         | Verbose output                | False           |
-| `--temp-dir PATH`      | Temporary files directory     | Same as output  |
+| `--temp-dir PATH`       | Temporary files directory     | Same as output  |
 
 ## Download Styles
 

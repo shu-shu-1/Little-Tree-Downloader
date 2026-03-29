@@ -353,10 +353,13 @@ def on_batch_progress(progress: BatchProgress):
 # Style 2: Receive dict
 def on_batch_progress_dict(data: dict):
     print(f"Batch: {data['completed_files']}/{data['total_files']}")
+    print(f"Byte Progress: {data['progress']:.1f}%")
+    print(f"File Progress: {data['files_progress']:.1f}%")
 
 # Style 3: Receive kwargs
-def on_batch_progress_kwargs(total_files=0, completed_files=0, smooth_speed=0, **kwargs):
+def on_batch_progress_kwargs(total_files=0, completed_files=0, smooth_speed=0, files_progress=0, **kwargs):
     print(f"Batch: {completed_files}/{total_files}")
+    print(f"File Progress: {files_progress:.1f}%")
 
 # Style 4: Legacy format (auto-detected)
 def on_batch_progress_legacy(completed: int, total: int, speed: float, eta: int, stability: float):
@@ -560,7 +563,7 @@ progress.files           # Tuple of FileProgress for all files
 
 # Helper methods:
 progress.progress              # Overall progress percentage (0-100)
-progress.files_completed_ratio # Files completed ratio (0-100)
+progress.files_progress        # Files progress percentage (0-100)
 progress.get_active_files()    # List of currently downloading FileProgress
 progress.get_pending_files()   # List of pending FileProgress
 progress.get_completed_files() # List of completed FileProgress

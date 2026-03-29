@@ -178,7 +178,7 @@ class BatchProgress:
         return (self.downloaded_bytes / self.total_bytes) * 100
 
     @property
-    def files_completed_ratio(self) -> float:
+    def files_progress(self) -> float:
         if self.total_files <= 0:
             return 0.0
         return (self.completed_files / self.total_files) * 100
@@ -258,6 +258,7 @@ class BatchProgressCallbackAdapter:
             "eta": progress.eta,
             "speed_stability": progress.speed_stability,
             "progress": progress.progress,
+            "files_progress": progress.files_progress,
             "elapsed_time": progress.elapsed_time,
             "files": progress.files,
         }

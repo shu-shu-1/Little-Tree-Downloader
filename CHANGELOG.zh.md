@@ -7,6 +7,19 @@ English | 简体中文
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)，
 本项目遵循 [语义化版本](https://semver.org/spec/v2.0.0.html)。
 
+## 0.6.1 - 2026-03-29
+
+### 新增
+
+- **批量下载双进度模式**：提供字节和文件数两种进度计算方式
+  - `BatchProgress.progress` - 按字节进度 (`downloaded_bytes / total_bytes`)
+  - `BatchProgress.files_progress` - 按文件数进度 (`completed_files / total_files`)
+  - 回调 payload 现在包含 `files_progress` 字段（dict/kwargs 模式）
+
+### 优化变更
+
+- `BatchProgress.files_completed_ratio` 属性改名为 `files_progress` 保持一致性
+
 ## 0.6.0 - 2026-03-29
 
 ### 新增
