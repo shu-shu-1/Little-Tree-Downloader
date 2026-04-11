@@ -504,8 +504,6 @@ class FileScheduler:
     def unregister_task_chunks(self, task_id: str) -> None:
         self._active_chunks.pop(task_id, None)
 
-        return max(1, base_chunks)
-
     async def pause(self) -> None:
         async with self._lock:
             self._paused = True
