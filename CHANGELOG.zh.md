@@ -7,6 +7,46 @@ English | 简体中文
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)，
 本项目遵循 [语义化版本](https://semver.org/spec/v2.0.0.html)。
 
+## 0.8.0 - 2026-04-11
+
+### 新增
+
+- **统一回调 API 导出**：为使用 littledl 构建下载器或上层 UI 的场景，直接从顶层包导出回调相关基础类型
+  - 新增 `EventType`、`BaseProgressEvent`、`FileProgressEvent`、`FileCompleteEvent`、`ChunkProgressEvent`、`BatchProgressEvent`
+  - 新增 `UnifiedCallbackAdapter`、`ThrottledCallback`、`CallbackChain`、`ProgressAggregator`、`detect_callback_mode`
+- **CLI 批量自适应并发**：新增基于任务规模和连接池上限的批量下载自动并发选择
+  - `--max-concurrent` 现在支持 `0 = auto`
+  - 新增 `--auto-concurrency` 与 `--no-auto-concurrency`
+- **Rich 批量进度界面**：新增可选的 Rich 实时批量进度显示，并在没有 Rich 或非 TTY 环境下自动回退到纯文本输出
+
+### 优化变更
+
+- **进度回调上下文增强**：`ProgressEvent` 现在包含 `filename` 和 `url`，上层构建下载器、进度面板或日志系统时无需再额外维护文件上下文
+- **CLI 回调集成优化**：单文件 CLI 进度改为直接消费 `ProgressEvent`；批量 CLI 进度改为直接消费 `BatchProgress`，不再依赖逐文件位置参数回调
+- **批量调度优化**：通过域名感知调度和更合理的启动阶段处理提升多文件下载吞吐
+  - 新增基于域名亲和性的待下载任务选择
+  - 新增批量下载前的热点域名预热连接
+  - 新增小文件占比高时的并发提升启发式策略
+- **依赖调整**：`rich` 进入主运行时依赖，增强型 CLI 界面开箱即用
+
+### 修复
+
+- **单文件输出路径判断**：修复单文件下载时 `./downloads` 这类无后缀输出路径被错误当成文件路径的问题
+- **分块重试 Range 处理**：修复分块失败后重试时 `Range` 请求头计算不正确的问题
+- **动态重切分块执行**：修复分块下载过程中新增的重切分块没有在同一次任务中被继续调度和下载的问题
+- **分块状态统计与完成判断**：加强 `ChunkManager` 对重切、失败、完成分块的状态维护与完成判断
+- **共享连接池清理**：修复批量场景下 `Downloader` 意外关闭外部注入/共享连接池的问题
+- **单流下载限速**：修复单连接下载路径未应用配置限速的问题
+- **最终文件移动兜底**：当临时文件重命名失败时增加安全回退移动逻辑，提升 Windows 和跨设备场景兼容性
+- **速度历史记录**：修复 `SpeedMonitor` 未正确记录速度历史导致稳定性与平滑计算依据不足的问题
+- **缓冲写入器兼容性**：修复 `BufferedFileWriter` 在 `fileno()` 不可用环境下初始化失败的问题
+
+### 文档
+
+- 更新中英文快速入门文档，补充进度回调示例
+- 扩展中英文 API 参考文档，补充统一回调系统类型和 `ProgressEvent` 文件上下文字段
+- 将 `llms.txt` 重组为更适合 LLM / agent 消费的任务导向索引
+
 ## 0.7.0 - 2026-03-29
 
 ### 修复

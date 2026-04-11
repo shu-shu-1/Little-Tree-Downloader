@@ -187,7 +187,7 @@ class SmartScheduler:
                 return False
             if chunk.progress > 75:
                 return False
-            num_splits = 2 if resplit_times == 0 else 2
+            num_splits = min(2 + resplit_times, 4)
             new_chunks = self.chunk_manager.resplit_chunk(chunk.index, num_splits)
             return new_chunks is not None and len(new_chunks) > 0
 

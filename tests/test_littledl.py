@@ -1,8 +1,7 @@
-import asyncio
 import hashlib
 import tempfile
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import httpx
 import pytest
@@ -20,15 +19,14 @@ from littledl import (
     ResumeManager,
     StrategySelector,
 )
-from littledl.batch import BatchDownloader, FileScheduler, EnhancedBatchDownloader
+from littledl.batch import BatchDownloader, EnhancedBatchDownloader, FileScheduler, FileTask
 from littledl.connection import ConnectionPool
-from littledl.exceptions import ConfigurationError, HTTPError
-from littledl.chunk import Chunk as ChunkClass
-from littledl.monitor import DownloadStats
 from littledl.downloader import ChunkCallbackAdapter, ProgressCallbackAdapter
+from littledl.exceptions import ConfigurationError, HTTPError
+from littledl.monitor import DownloadStats
 from littledl.scheduler import SmartScheduler
 from littledl.writer import BufferedFileWriter
-from littledl.__main__ import style_to_enum
+from littledl.__main__ import resolve_single_download_path, select_batch_concurrency, style_to_enum
 
 
 class TestDownloadConfig:
@@ -660,6 +658,74 @@ class TestMaxConcurrentFilesDefault:
         selector = StrategySelector()
         allocator = DynamicStyleAllocator(selector)
         assert allocator.max_concurrent_files == 8
+
+
+class TestBatchDomainAndSmallFileOptimization:
+    @pytest.mark.asyncio
+    async def test_scheduler_prefers_requested_domain(self) -> None:
+        scheduler = FileScheduler(enable_domain_affinity=True)
+
+        task_a1 = await self._create_task("https://a.example.com/f1.bin", "a.example.com")
+        task_b1 = await self._create_task("https://b.example.com/f2.bin", "b.example.com")
+        task_a2 = await self._create_task("https://a.example.com/f3.bin", "a.example.com")
+
+        await scheduler.add_task(task_b1)
+        await scheduler.add_task(task_a1)
+        await scheduler.add_task(task_a2)
+
+        picked = await scheduler.get_next_task(preferred_domain="a.example.com")
+        assert picked is not None
+        assert picked.domain == "a.example.com"
+
+    def test_small_file_same_domain_boost_concurrency(self) -> None:
+        downloader = BatchDownloader(
+            max_concurrent_files=4,
+            enable_adaptive_concurrency=False,
+            enable_small_file_concurrency_boost=True,
+            same_domain_boost_threshold=0.7,
+        )
+
+        for idx in range(20):
+            task = FileTask(
+                task_id=f"task-{idx}",
+                url=f"https://cdn.example.com/file-{idx}.bin",
+                save_path=Path("."),
+                domain="cdn.example.com",
+                file_size=64 * 1024,
+            )
+            downloader._scheduler._pending_tasks.append(task)
+
+        boosted = downloader._estimate_concurrency_limit(base_limit=4)
+        assert boosted > 4
+
+    @staticmethod
+    async def _create_task(url: str, domain: str) -> FileTask:
+        task = FileTask(
+            task_id=url,
+            url=url,
+            save_path=Path("."),
+            domain=domain,
+            file_size=128 * 1024,
+        )
+        return task
+
+
+class TestCliPathAndConcurrencyOptimization:
+    def test_resolve_single_download_path_treats_suffixless_output_as_directory(self) -> None:
+        path = resolve_single_download_path("./downloads", None, "video.mp4")
+        assert path.name == "video.mp4"
+        assert path.parent.name == "downloads"
+
+    def test_resolve_single_download_path_file_output_kept(self) -> None:
+        path = resolve_single_download_path("./downloads/fixed_name.bin", None, "remote.bin")
+        assert path.name == "fixed_name.bin"
+        assert path.parent.name == "downloads"
+
+    def test_select_batch_concurrency_for_thousand_files(self) -> None:
+        config = DownloadConfig(connection_pool_size=100)
+        chosen = select_batch_concurrency(1200, requested=0, config=config, auto_enabled=True)
+        assert chosen >= 32
+        assert chosen <= 64
 
 
 if __name__ == "__main__":

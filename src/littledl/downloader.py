@@ -12,6 +12,7 @@ import aiofiles
 import httpx
 from loguru import logger
 
+from .callback import ProgressAggregator, detect_callback_mode
 from .chunk import Chunk, ChunkManager
 from .config import DownloadConfig
 from .connection import ConnectionPool, RequestBuilder
@@ -34,6 +35,8 @@ class ProgressEvent:
     remaining: int
     timestamp: float
     unknown_size: bool = False
+    filename: str = ""
+    url: str = ""
 
 
 @dataclass(frozen=True)
@@ -56,45 +59,19 @@ CALLBACK_MODE_DICT = "dict"
 CALLBACK_MODE_EVENT = "event"
 
 
-def _detect_callback_mode(callback: Callable[..., Any] | None) -> CallbackMode:
-    """Detect the callback signature style to normalize invocation."""
-    if callback is None:
-        return CALLBACK_MODE_NONE
-
-    try:
-        sig = inspect.signature(callback)
-    except (TypeError, ValueError):
-        return CALLBACK_MODE_LEGACY
-
-    params = list(sig.parameters.values())
-    if any(p.kind == inspect.Parameter.VAR_KEYWORD for p in params):
-        return CALLBACK_MODE_KWARGS
-    if any(p.kind == inspect.Parameter.VAR_POSITIONAL for p in params):
-        return CALLBACK_MODE_LEGACY
-
-    positional = [
-        p for p in params if p.kind in (inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD)
-    ]
-
-    if len(positional) >= 4:
-        return CALLBACK_MODE_LEGACY
-    if len(positional) == 1:
-        name = positional[0].name.lower()
-        if name in {"data", "payload", "info", "state", "stats"}:
-            return CALLBACK_MODE_DICT
-        return CALLBACK_MODE_EVENT
-    if len(positional) == 0:
-        return CALLBACK_MODE_KWARGS
-
-    return CALLBACK_MODE_LEGACY
-
-
 class ProgressCallbackAdapter:
     """Normalize different callback styles into one internal path."""
 
     def __init__(self, callback: Callable[..., Any] | None) -> None:
         self._callback = callback
-        self._mode = _detect_callback_mode(callback)
+        self._mode = detect_callback_mode(callback)
+        self._filename: str = ""
+        self._url: str = ""
+
+    def set_context(self, filename: str = "", url: str = "") -> None:
+        """Set file context (filename/url) so every emitted event carries it."""
+        self._filename = filename
+        self._url = url
 
     async def emit(self, downloaded: int, total: int, speed: float, eta: int, unknown_size: bool = False) -> None:
         if self._callback is None:
@@ -111,6 +88,8 @@ class ProgressCallbackAdapter:
             remaining=max(total_for_calc - downloaded, 0),
             timestamp=time.time(),
             unknown_size=unknown_size,
+            filename=self._filename,
+            url=self._url,
         )
         payload = {
             "downloaded": event.downloaded,
@@ -121,6 +100,8 @@ class ProgressCallbackAdapter:
             "remaining": event.remaining,
             "timestamp": event.timestamp,
             "unknown_size": event.unknown_size,
+            "filename": event.filename,
+            "url": event.url,
         }
 
         result: Any
@@ -145,7 +126,7 @@ class ChunkCallbackAdapter:
 
     def __init__(self, callback: Callable[..., Any] | None) -> None:
         self._callback = callback
-        self._mode = _detect_callback_mode(callback)
+        self._mode = detect_callback_mode(callback)
 
     async def emit(self, chunk: Chunk, status: str, speed: float = 0.0, error: str | None = None) -> None:
         if self._callback is None:
@@ -239,8 +220,47 @@ class H2MultiPlexDownloader:
         url: str,
         progress_callback: Callable[[int, int, float, int], None] | None = None,
     ) -> None:
+        max_retries = self.config.retry.max_retries
+        last_error: Exception | None = None
+        for attempt in range(max(1, max_retries)):
+            try:
+                await self._download_chunk_attempt(chunk, url, progress_callback, attempt)
+                return
+            except CancelledError:
+                raise
+            except (httpx.TimeoutException, httpx.ConnectError, OSError) as e:
+                last_error = e
+                if attempt < max_retries - 1:
+                    delay = self.config.retry.calculate_delay(attempt)
+                    await asyncio.sleep(delay)
+            except httpx.HTTPError as e:
+                status = getattr(getattr(e, 'response', None), 'status_code', 0)
+                if status in (404, 403):
+                    raise
+                last_error = e
+                if attempt < max_retries - 1:
+                    delay = self.config.retry.calculate_delay(attempt)
+                    await asyncio.sleep(delay)
+            except Exception as e:
+                last_error = e
+                if attempt < max_retries - 1:
+                    delay = self.config.retry.calculate_delay(attempt)
+                    await asyncio.sleep(delay)
+        if last_error:
+            raise last_error
+
+    async def _download_chunk_attempt(
+        self,
+        chunk: Chunk,
+        url: str,
+        progress_callback: Callable[[int, int, float, int], None] | None = None,
+        attempt: int = 0,
+    ) -> None:
         headers = self.config.get_headers()
-        headers["Range"] = f"bytes={chunk.start_byte}-{chunk.end_byte - 1}"
+        start_pos = chunk.start_byte + chunk.downloaded if attempt == 0 else chunk.start_byte
+        if attempt > 0:
+            chunk.downloaded = 0
+        headers["Range"] = f"bytes={start_pos}-{chunk.end_byte - 1}"
 
         timeout = httpx.Timeout(
             connect=self.config.connect_timeout,
@@ -357,9 +377,11 @@ class Downloader:
         self._cancelled = False
         self._lock = asyncio.Lock()
         self._h2_downloader: H2MultiPlexDownloader | None = None
+        self._owns_connection_pool = True
 
     def set_connection_pool(self, pool: ConnectionPool) -> None:
         self._connection_pool = pool
+        self._owns_connection_pool = False
 
     async def download(
         self,
@@ -399,6 +421,8 @@ class Downloader:
             save_path, final_path = resolve_download_path(
                 save_path, final_filename, save_path if save_path.is_dir() else None
             )
+
+            callback_adapter.set_context(filename=final_filename, url=url)
 
             if final_path.exists() and not resume and not self.config.overwrite:
                 logger.info(f"File already exists: {final_path}")
@@ -555,6 +579,9 @@ class Downloader:
 
         downloaded = 0
         start_time = time.time()
+        speed_limiter = None
+        if self.config.speed_limit and self.config.speed_limit.enabled:
+            speed_limiter = SpeedLimiter(self.config.speed_limit)
 
         async with client.stream("GET", url, follow_redirects=True) as response:
             if response.status_code == 404:
@@ -572,6 +599,9 @@ class Downloader:
                     if self._paused:
                         await self._wait_for_resume()
 
+                    if speed_limiter:
+                        await speed_limiter.acquire(len(chunk_data))
+
                     await f.write(chunk_data)
                     downloaded += len(chunk_data)
 
@@ -584,8 +614,11 @@ class Downloader:
                         else:
                             await progress_callback.emit(downloaded, -1, speed, -1, unknown_size=True)
 
-        with contextlib.suppress(Exception):
+        try:
             temp_path.rename(output_path)
+        except OSError:
+            import shutil
+            shutil.move(str(temp_path), str(output_path))
 
         return output_path
 
@@ -678,32 +711,57 @@ class Downloader:
             if self._resume_manager:
                 checkpoint_task = asyncio.create_task(checkpoint_loop())
 
-            # 收集所有待下载的分片
-            pending_chunks = [
-                chunk
-                for chunk in self._chunk_manager.chunks
-                if not chunk.is_completed and chunk.status.name != "FAILED"
-            ]
+            # 使用动态任务调度，支持调度器产生的新分片（如重切）
+            active_tasks: dict[int, asyncio.Task[tuple[int, bool, str | None]]] = {}
 
-            # 创建所有任务并使用 gather 并发执行
-            tasks = [asyncio.create_task(download_with_limit(chunk)) for chunk in pending_chunks]
+            while True:
+                if self._cancelled:
+                    for t in active_tasks.values():
+                        t.cancel()
+                    break
 
-            # 等待所有任务完成，处理结果
-            results = await asyncio.gather(*tasks, return_exceptions=True)
+                # 收集可下载的分片（包括重切产生的新分片）
+                for chunk in self._chunk_manager.chunks:
+                    if chunk.index in active_tasks:
+                        continue
+                    if chunk.is_completed or chunk.is_failed:
+                        continue
+                    if chunk.status.name == "DOWNLOADING":
+                        continue
+                    active_tasks[chunk.index] = asyncio.create_task(download_with_limit(chunk))
 
-            # 处理结果
-            for result in results:
-                if isinstance(result, Exception):
-                    # 记录错误但继续处理其他分片
-                    continue
+                if not active_tasks:
+                    break
 
-                # 确保 result 是 tuple 类型
-                if isinstance(result, tuple) and len(result) == 3:
-                    chunk_index, success, error = result
-                    if success:
-                        await self._chunk_manager.complete_chunk(chunk_index)
-                    else:
-                        await self._chunk_manager.fail_chunk(chunk_index, error or "Unknown error")
+                # 等待至少一个任务完成
+                done, _ = await asyncio.wait(
+                    active_tasks.values(),
+                    return_when=asyncio.FIRST_COMPLETED,
+                )
+
+                for task in done:
+                    result = task.result() if not task.cancelled() else None
+                    if result is None:
+                        continue
+                    if isinstance(result, tuple) and len(result) == 3:
+                        chunk_index, success, error = result
+                        active_tasks.pop(chunk_index, None)
+                        if success:
+                            await self._chunk_manager.complete_chunk(chunk_index)
+                        else:
+                            await self._chunk_manager.fail_chunk(chunk_index, error or "Unknown error")
+
+                # 清理已完成的任务
+                done_indices = [idx for idx, t in active_tasks.items() if t.done()]
+                for idx in done_indices:
+                    active_tasks.pop(idx, None)
+
+                # 全部完成则退出
+                if not active_tasks and not any(
+                    c.status.name in ("PENDING", "RESPLITTING")
+                    for c in self._chunk_manager.chunks
+                ):
+                    break
 
             # 更新监控状态
             if self._monitor and self._chunk_manager:
@@ -830,7 +888,7 @@ class Downloader:
     async def _cleanup(self) -> None:
         if self._scheduler:
             await self._scheduler.stop()
-        if self._connection_pool:
+        if self._connection_pool and self._owns_connection_pool:
             await self._connection_pool.close()
         self._running = False
 

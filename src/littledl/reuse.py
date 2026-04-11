@@ -1,5 +1,4 @@
 import hashlib
-import os
 from pathlib import Path
 from typing import Any
 
@@ -116,7 +115,6 @@ class FileReuseChecker:
             return None
 
         filename = primary_path.name
-        parent_dirs = primary_path.parent
 
         for search_path in search_paths:
             candidate = search_path / filename
@@ -378,9 +376,8 @@ class MultiSourceManager:
         if source["fail_count"] >= 5:
             return True
 
-        if "bmclapi" in url.lower():
-            if "403" in error or "429" in error:
-                return False
+        if "bmclapi" in url.lower() and ("403" in error or "429" in error):
+            return False
 
         return False
 
@@ -394,10 +391,7 @@ class MultiSourceManager:
     @property
     def has_available_source(self) -> bool:
         """是否有可用的下载源"""
-        for source in self._sources + self._single_thread_sources:
-            if not source["is_failed"]:
-                return True
-        return False
+        return any(not source["is_failed"] for source in self._sources + self._single_thread_sources)
 
     @property
     def _single_thread_only_mode(self) -> bool:

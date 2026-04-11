@@ -360,12 +360,13 @@ wheels = [
 
 [[package]]
 name = "littledl"
-version = "0.7.0"
+version = "0.8.0"
 source = { editable = "." }
 dependencies = [
     { name = "aiofiles" },
     { name = "httpx", extra = ["http2"] },
     { name = "loguru" },
+    { name = "rich" },
 ]
 
 [package.optional-dependencies]
@@ -389,6 +390,7 @@ requires-dist = [
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0.0" },
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.24.0" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=5.0.0" },
+    { name = "rich", specifier = ">=14.3.3" },
     { name = "rich", marker = "extra == 'progress'", specifier = ">=13.0.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.6.0" },
 ]

@@ -9,8 +9,20 @@ from typing import Any, TextIO
 
 import httpx
 
-from . import DownloadConfig, download_file
-from .batch import BatchDownloader, FileTaskStatus
+try:
+    from rich.console import Group
+    from rich.live import Live
+    from rich.table import Table
+
+    RICH_AVAILABLE = True
+except Exception:
+    Group = Any  # type: ignore[assignment]
+    Live = Any  # type: ignore[assignment]
+    Table = Any  # type: ignore[assignment]
+    RICH_AVAILABLE = False
+
+from . import DownloadConfig, ProgressEvent, download_file
+from .batch import BatchDownloader, BatchProgress, FileTaskStatus
 from .i18n import gettext as _
 from .strategy import DownloadStyle, StrategySelector
 from .utils import determine_filename, validate_url
@@ -76,8 +88,21 @@ def parse_args(args: list[str] | None = None) -> argparse.Namespace:
         "--max-concurrent",
         dest="max_concurrent",
         type=int,
-        default=3,
-        help=_("Maximum concurrent downloads for batch mode"),
+        default=0,
+        help=_("Maximum concurrent downloads for batch mode (0 = auto)"),
+    )
+    parser.add_argument(
+        "--auto-concurrency",
+        dest="auto_concurrency",
+        action="store_true",
+        default=True,
+        help=_("Enable automatic concurrency tuning for batch mode"),
+    )
+    parser.add_argument(
+        "--no-auto-concurrency",
+        dest="auto_concurrency",
+        action="store_false",
+        help=_("Disable automatic concurrency tuning for batch mode"),
     )
     parser.add_argument("--quiet", "-q", dest="quiet", action="store_true", help=_("Quiet mode (minimal output)"))
     parser.add_argument("--force", dest="force", action="store_true", help=_("Force download even if file exists"))
@@ -95,7 +120,7 @@ def parse_args(args: list[str] | None = None) -> argparse.Namespace:
         default="auto",
         help=_("Output format: auto (根据环境), json (结构化), text (纯文本)"),
     )
-    parser.add_argument("--version", action="version", version="%(prog)s 0.7.0")
+    parser.add_argument("--version", action="version", version="%(prog)s 0.8.0")
     return parser.parse_args(args)
 
 
@@ -293,6 +318,8 @@ class BatchProgressDisplay:
         self._update_interval = 0.3
         self._closed = False
         self._prev_len = 0
+        self._use_rich = bool(RICH_AVAILABLE and not quiet and sys.stdout.isatty())
+        self._live: Any | None = None
 
     def add_task(self, task_id: str, filename: str, url: str, size: int = -1) -> None:
         self.tasks[task_id] = {
@@ -317,6 +344,52 @@ class BatchProgressDisplay:
         self.total_speed = sum(
             t["speed"] for t in self.tasks.values() if t["status"] == FileTaskStatus.DOWNLOADING.value
         )
+        self._maybe_display()
+
+    def update_task_progress(
+        self,
+        task_id: str,
+        downloaded: int,
+        total: int,
+        speed: float,
+        status: FileTaskStatus,
+    ) -> None:
+        if task_id not in self.tasks:
+            return
+
+        task = self.tasks[task_id]
+        previous_size = task.get("size", -1)
+        if total > 0 and previous_size <= 0:
+            task["size"] = total
+            self.total_bytes += total
+
+        task["downloaded"] = downloaded
+        task["speed"] = speed
+        task["status"] = status.value
+
+        self.downloaded_bytes = sum(t["downloaded"] for t in self.tasks.values())
+        self.total_speed = sum(
+            t["speed"] for t in self.tasks.values() if t["status"] == FileTaskStatus.DOWNLOADING.value
+        )
+        self._maybe_display()
+
+    def update_from_batch_progress(self, progress: BatchProgress) -> None:
+        """Update display state from a BatchProgress event (preferred method)."""
+        self.completed = progress.completed_files
+        self.failed = progress.failed_files
+        self.downloaded_bytes = progress.downloaded_bytes
+        self.total_bytes = progress.total_bytes
+        self.total_speed = progress.smooth_speed if progress.smooth_speed > 0 else progress.overall_speed
+
+        for fp in progress.files:
+            if fp.task_id in self.tasks:
+                task = self.tasks[fp.task_id]
+                task["downloaded"] = fp.downloaded
+                task["speed"] = fp.speed
+                task["status"] = fp.status
+                if fp.file_size > 0 and task.get("size", -1) <= 0:
+                    task["size"] = fp.file_size
+
         self._maybe_display()
 
     def complete_task(self, task_id: str, success: bool, error: str | None = None) -> None:
@@ -346,15 +419,82 @@ class BatchProgressDisplay:
         if self._closed:
             return
 
+        if self._use_rich:
+            self._display_with_rich()
+            return
+
+        self._display_plain_text()
+
+    def _display_with_rich(self) -> None:
+        renderable = self._build_rich_renderable()
+
+        if self._live is None:
+            self._live = Live(renderable, refresh_per_second=10, transient=False)
+            self._live.start()
+            return
+
+        self._live.update(renderable, refresh=True)
+
+    def _build_rich_renderable(self) -> Any:
+        elapsed = time.time() - self.start_time
+        completed = self.completed
+        total = self.total_tasks
+        pending = max(0, total - self.completed - self.failed)
+        progress_percent = (completed / total * 100) if total > 0 else 0.0
+
+        summary = Table.grid(expand=True)
+        summary.add_column()
+        summary.add_row(
+            f"{_('Batch Download')}: {completed}/{total} completed | "
+            f"{pending} pending | {self.failed} failed | {progress_percent:5.1f}%"
+        )
+
+        meta_parts: list[str] = []
+        if self.downloaded_bytes > 0:
+            meta_parts.append(f"{format_size(self.downloaded_bytes)} downloaded")
+        if self.total_speed > 0:
+            meta_parts.append(f"{format_size(self.total_speed)}/s")
+        if elapsed > 0:
+            meta_parts.append(format_time(elapsed))
+        if meta_parts:
+            summary.add_row(" | ".join(meta_parts))
+
+        table = Table(show_header=True, header_style="bold cyan")
+        table.add_column(_("Status"), width=10)
+        table.add_column(_("File"), overflow="ellipsis")
+        table.add_column(_("Progress"), width=24)
+        table.add_column(_("Speed"), width=12, justify="right")
+
+        active_tasks = [(tid, t) for tid, t in self.tasks.items() if t["status"] == FileTaskStatus.DOWNLOADING.value]
+        for _tid, task in active_tasks[:6]:
+            progress_text = format_size(task["downloaded"])
+            if task["size"] > 0:
+                progress_text = f"{progress_text}/{format_size(task['size'])}"
+            table.add_row("RUNNING", task["filename"], progress_text, format_size(task["speed"]) + "/s")
+
+        if len(active_tasks) > 6:
+            table.add_row("...", _("More tasks"), f"+{len(active_tasks) - 6}", "")
+
+        return Group(summary, table)
+
+    def _display_plain_text(self) -> None:
         elapsed = time.time() - self.start_time
         lines = []
 
-        header = f"\r[_('Batch Download')]: {self.completed}/{self.total_tasks} completed, {self.failed} failed"
-        if self.total_bytes > 0:
-            overall_progress = self.downloaded_bytes / self.total_bytes * 100
-            header += (
-                f" | {overall_progress:5.1f}% | {format_size(self.downloaded_bytes)}/{format_size(self.total_bytes)}"
-            )
+        completed = self.completed
+        total = self.total_tasks
+        pending = max(0, total - self.completed - self.failed)
+        progress_percent = (completed / total * 100) if total > 0 else 0.0
+
+        # 批量进度按文件计数，不按总字节占比计算，避免未知/不准文件大小导致的误导。
+        header = (
+            f"\r{_('Batch Download')}: {completed}/{total} completed"
+            f" | {pending} pending"
+            f" | {self.failed} failed"
+            f" | {progress_percent:5.1f}%"
+        )
+        if self.downloaded_bytes > 0:
+            header += f" | {format_size(self.downloaded_bytes)} downloaded"
         if self.total_speed > 0:
             header += f" | {format_size(self.total_speed)}/s"
         if elapsed > 0:
@@ -364,14 +504,10 @@ class BatchProgressDisplay:
         active_tasks = [(tid, t) for tid, t in self.tasks.items() if t["status"] == FileTaskStatus.DOWNLOADING.value]
         for _tid, task in active_tasks[:3]:
             filename = task["filename"][:30]
+            size_str = format_size(task["downloaded"])
             if task["size"] > 0:
-                pct = task["downloaded"] / task["size"] * 100
-                prog = f"{pct:5.1f}%"
-                size_str = f"{format_size(task['downloaded'])}/{format_size(task['size'])}"
-            else:
-                prog = "---.-%"
-                size_str = format_size(task["downloaded"])
-            lines.append(f"  [{prog}] {filename}: {size_str} ({format_size(task['speed'])}/s)")
+                size_str = f"{size_str}/{format_size(task['size'])}"
+            lines.append(f"  [RUNNING] {filename}: {size_str} ({format_size(task['speed'])}/s)")
 
         if len(active_tasks) > 3:
             lines.append(f"  ... and {len(active_tasks) - 3} more")
@@ -392,6 +528,9 @@ class BatchProgressDisplay:
 
     def finish(self) -> None:
         self._closed = True
+        if self._live is not None:
+            self._live.stop()
+            self._live = None
         if self.quiet:
             return
         elapsed = time.time() - self.start_time
@@ -483,9 +622,11 @@ async def run_download(
     output: OutputMode,
     args: argparse.Namespace,
     style: DownloadStyle,
+    probe_info: dict[str, Any] | None = None,
 ) -> int:
     """Run single file download."""
-    probe_info = await probe_url(url, config)
+    if probe_info is None:
+        probe_info = await probe_url(url, config)
 
     if output.use_progress_bar:
         print(f"{_('Starting download')}: {url}")
@@ -507,9 +648,9 @@ async def run_download(
 
     progress = ProgressDisplay() if output.use_progress_bar else None
 
-    def progress_callback(downloaded: int, total: int, speed: float, eta: int) -> None:
+    def progress_callback(event: ProgressEvent) -> None:
         if progress:
-            progress.update(downloaded, total, speed, eta)
+            progress.update(event.downloaded, event.total, event.speed, event.eta)
 
     try:
         path = await download_file(
@@ -553,6 +694,57 @@ async def run_download(
         return 1
 
 
+def _is_likely_directory_output(raw_output: str | None, output_path: Path, explicit_filename: str | None) -> bool:
+    if explicit_filename:
+        return True
+    if raw_output is None:
+        return True
+    if output_path.exists() and output_path.is_dir():
+        return True
+
+    raw = raw_output.strip()
+    if raw.endswith(("/", "\\")):
+        return True
+
+    # 对不存在路径：无后缀时优先当作目录，避免单文件下载落到名为 downloads 的文件。
+    return not output_path.exists() and output_path.suffix == ""
+
+
+def resolve_single_download_path(
+    output_arg: str | None,
+    explicit_filename: str | None,
+    inferred_filename: str | None,
+) -> Path:
+    output_path = Path(output_arg or "./downloads").expanduser().resolve()
+    use_dir = _is_likely_directory_output(output_arg, output_path, explicit_filename)
+
+    if use_dir:
+        filename = explicit_filename or inferred_filename or "download.bin"
+        return output_path / filename
+
+    return output_path
+
+
+def select_batch_concurrency(total_urls: int, requested: int, config: DownloadConfig, auto_enabled: bool = True) -> int:
+    if requested > 0:
+        return requested
+    if not auto_enabled:
+        return 3
+
+    if total_urls <= 20:
+        base = 6
+    elif total_urls <= 200:
+        base = 16
+    elif total_urls <= 1000:
+        base = 32
+    else:
+        base = 48
+
+    pool_cap = max(8, config.connection_pool_size // 2)
+    hard_cap = max(8, min(64, pool_cap))
+    return max(3, min(base, hard_cap))
+
+
 async def run_batch_download(
     urls: list[tuple[int, str]],
     config: DownloadConfig,
@@ -561,7 +753,12 @@ async def run_batch_download(
     output: OutputMode,
     args: argparse.Namespace,
 ) -> int:
-    """Run batch download using BatchDownloader."""
+    """Run batch download using BatchDownloader.
+
+    Warning:
+        Batch mode ETA is heuristic and often inaccurate because many servers do not
+        provide reliable Content-Length and per-file completion time variance is high.
+    """
     if not urls:
         if output.use_json:
             output.print_json({"type": "batch", "success": True, "completed": 0, "failed": 0, "tasks": []})
@@ -584,11 +781,12 @@ async def run_batch_download(
         enable_small_file_priority=True,
     )
 
-    def on_progress(task_id: str, downloaded: int, total: int, speed: float) -> None:
-        if task_id in display.tasks:
-            display.update_task(task_id, downloaded, speed, FileTaskStatus.DOWNLOADING)
+    def on_progress(progress: BatchProgress) -> None:
+        display.update_from_batch_progress(progress)
 
-    def on_complete(task_id: str, path: str, error: str | None = None) -> None:
+    def on_complete(task: Any) -> None:
+        task_id = getattr(task, "task_id", "")
+        error = getattr(task, "error", None)
         display.complete_task(task_id, error is None, error)
         if output.use_progress_bar and args.verbose:
             task = display.tasks.get(task_id, {})
@@ -596,7 +794,7 @@ async def run_batch_download(
             if error:
                 print(f"\n{_('Failed')}: {filename}: {error}")
             else:
-                print(f"\n{_('Completed')}: {filename} -> {path}")
+                print(f"\n{_('Completed')}: {filename}")
 
     batch.set_progress_callback(on_progress)
     batch.set_file_complete_callback(on_complete)
@@ -794,22 +992,20 @@ def main() -> int:
         else:
             return asyncio.run(run_analyze(single_url, config, output))
 
-    output_path = Path(args.output or "./downloads").expanduser().resolve()
-
     final_filename = args.filename
     probe_info = None
-    if output_path.is_dir() and not final_filename:
+    if not final_filename:
         probe_info = asyncio.run(probe_url(single_url, config))
         final_filename = probe_info["filename"]
 
-    save_path = output_path / final_filename if output_path.is_dir() else output_path
+    save_path = resolve_single_download_path(args.output, args.filename, final_filename)
     if not args.force:
         save_path = get_unique_path(save_path)
 
     if output.use_progress_bar and args.verbose and save_path.name != (final_filename or ""):
         print(f"{_('Auto-renamed to')}: {save_path.name}")
 
-    return asyncio.run(run_download(single_url, config, save_path, output, args, style))
+    return asyncio.run(run_download(single_url, config, save_path, output, args, style, probe_info=probe_info))
 
 
 async def run_batch_main(args: argparse.Namespace, output: OutputMode) -> int:
@@ -849,11 +1045,25 @@ async def run_batch_main(args: argparse.Namespace, output: OutputMode) -> int:
     output_path = Path(args.output or "./downloads").expanduser().resolve()
     output_path.mkdir(parents=True, exist_ok=True)
 
+    max_concurrent = select_batch_concurrency(
+        total_urls=len(urls),
+        requested=args.max_concurrent,
+        config=config,
+        auto_enabled=args.auto_concurrency,
+    )
+
+    if len(urls) > 1:
+        max_concurrent = max(2, max_concurrent)
+
+    if output.use_progress_bar and args.verbose:
+        auto_note = "auto" if args.max_concurrent <= 0 else "manual"
+        print(f"{_('Batch concurrency')}: {max_concurrent} ({auto_note})")
+
     return await run_batch_download(
         urls=urls,
         config=config,
         output_path=output_path,
-        max_concurrent=args.max_concurrent,
+        max_concurrent=max_concurrent,
         output=output,
         args=args,
     )

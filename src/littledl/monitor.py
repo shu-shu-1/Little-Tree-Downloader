@@ -142,6 +142,9 @@ class SpeedMonitor:
 
                 hybrid_speed = 0.3 * self._instant_speed + 0.7 * self._ewma_speed
                 self._current_speed = hybrid_speed
+                self._speed_history.append(self._current_speed)
+                if len(self._speed_history) > 50:
+                    self._speed_history = self._speed_history[-30:]
                 self._moving_average.add(self._current_speed)
                 if self._current_speed > self._peak_speed:
                     self._peak_speed = self._current_speed

@@ -68,7 +68,10 @@ class BufferedFileWriter:
         else:
             self._file = await aiofiles.open(self.file_path, "r+b")
 
-        self._fd = self._file.fileno()
+        try:
+            self._fd = self._file.fileno()
+        except (AttributeError, OSError):
+            self._fd = None
         self._running = True
         self._flush_task = asyncio.create_task(self._background_flush())
 

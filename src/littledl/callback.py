@@ -81,6 +81,50 @@ class BatchProgressEvent(BaseProgressEvent):
 CallbackFunc = Callable[..., Any]
 
 
+def detect_callback_mode(
+    callback: Callable[..., Any] | None,
+    *,
+    event_names: frozenset[str] = frozenset({"event", "progress"}),
+    dict_names: frozenset[str] = frozenset({"data", "payload", "info", "state", "stats"}),
+    legacy_min_positional: int = 4,
+) -> str:
+    """Canonical callback mode detection shared by all adapters.
+
+    Returns one of: "none", "event", "dict", "kwargs", "legacy".
+    """
+    if callback is None:
+        return "none"
+
+    try:
+        sig = inspect.signature(callback)
+    except (TypeError, ValueError):
+        return "legacy"
+
+    params = list(sig.parameters.values())
+    if any(p.kind == inspect.Parameter.VAR_KEYWORD for p in params):
+        return "kwargs"
+    if any(p.kind == inspect.Parameter.VAR_POSITIONAL for p in params):
+        return "legacy"
+
+    positional = [
+        p for p in params if p.kind in (inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD)
+    ]
+
+    if len(positional) >= legacy_min_positional:
+        return "legacy"
+    if len(positional) == 1:
+        name = positional[0].name.lower()
+        if name in dict_names:
+            return "dict"
+        if name in event_names:
+            return "event"
+        return "event"
+    if len(positional) == 0:
+        return "kwargs"
+
+    return "legacy"
+
+
 class UnifiedCallbackAdapter:
     """
     统一回调适配器 - 支持多种回调签名风格
@@ -100,39 +144,12 @@ class UnifiedCallbackAdapter:
 
     def __init__(self, callback: CallbackFunc | None = None) -> None:
         self._callback = callback
-        self._mode = self._detect_mode(callback)
-
-    def _detect_mode(self, callback: CallbackFunc | None) -> str:
-        if callback is None:
-            return self.MODE_NONE
-
-        try:
-            sig = inspect.signature(callback)
-        except (TypeError, ValueError):
-            return self.MODE_LEGACY
-
-        params = list(sig.parameters.values())
-
-        if any(p.kind == inspect.Parameter.VAR_KEYWORD for p in params):
-            return self.MODE_KWARGS
-        if any(p.kind == inspect.Parameter.VAR_POSITIONAL for p in params):
-            return self.MODE_LEGACY
-
-        positional = [
-            p for p in params if p.kind in (inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD)
-        ]
-
-        if len(positional) >= 5:
-            return self.MODE_LEGACY
-        if len(positional) == 1:
-            name = positional[0].name.lower()
-            if name in {"event", "progress", "data", "payload", "info", "state", "stats"}:
-                return self.MODE_EVENT
-            return self.MODE_DICT
-        if len(positional) == 0:
-            return self.MODE_KWARGS
-
-        return self.MODE_LEGACY
+        self._mode = detect_callback_mode(
+            callback,
+            event_names=frozenset({"event", "progress", "data", "payload", "info", "state", "stats"}),
+            dict_names=frozenset(),
+            legacy_min_positional=5,
+        )
 
     async def emit(self, event: BaseProgressEvent | dict[str, Any] | BatchProgressEvent) -> None:
         if self._callback is None:

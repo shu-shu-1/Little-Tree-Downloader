@@ -7,6 +7,46 @@ All notable changes to littledl will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.8.0 - 2026-04-11
+
+### Added
+
+- **Unified Callback API Exports**: Exported callback building blocks from the top-level package for downloader integrators
+  - Added `EventType`, `BaseProgressEvent`, `FileProgressEvent`, `FileCompleteEvent`, `ChunkProgressEvent`, and `BatchProgressEvent`
+  - Added `UnifiedCallbackAdapter`, `ThrottledCallback`, `CallbackChain`, `ProgressAggregator`, and `detect_callback_mode`
+- **CLI Adaptive Batch Concurrency**: Added automatic batch concurrency selection tuned by workload size and connection pool limits
+  - `--max-concurrent` now supports `0 = auto`
+  - Added `--auto-concurrency` and `--no-auto-concurrency`
+- **Rich Batch Progress UI**: Added optional Rich-powered live batch display with graceful fallback to plain text when Rich or TTY support is unavailable
+
+### Changed
+
+- **Progress Callback Context**: `ProgressEvent` now includes `filename` and `url`, making it easier to build custom downloaders and UI layers without external state tracking
+- **CLI Callback Integration**: Single-file CLI progress now consumes `ProgressEvent`; batch CLI progress now consumes `BatchProgress` directly instead of per-file positional callbacks
+- **Batch Scheduler Optimizations**: Improved multi-file throughput with domain-aware scheduling and better startup behavior
+  - Added domain affinity for pending task selection
+  - Added hot-domain prewarming before batch downloads
+  - Added small-file-heavy concurrency boost heuristics
+- **Dependency Layout**: `rich` is now part of the main runtime dependencies so the enhanced CLI UI is available out of the box
+
+### Fixed
+
+- **Single File Output Path Resolution**: Fixed suffixless output paths such as `./downloads` being mistaken for a file path during single-file downloads
+- **Chunk Retry Range Handling**: Fixed retry logic to rebuild `Range` headers correctly after partial chunk failures
+- **Dynamic Chunk Resplit Execution**: Fixed chunked downloads so newly resplit chunks are scheduled and downloaded during the same run instead of being skipped
+- **Chunk State Bookkeeping**: Improved `ChunkManager` completion and status tracking for resplit, failed, and completed chunks
+- **Shared Connection Pool Cleanup**: Fixed `Downloader` cleanup so externally injected/shared pools are not closed accidentally in batch scenarios
+- **Single-Stream Speed Limiting**: Fixed single-stream downloads so they also respect configured speed limits
+- **Safer Final File Move**: Added a fallback move path when temp file rename fails on Windows or cross-device situations
+- **Speed History Tracking**: Fixed `SpeedMonitor` history recording so stability and smoothing calculations have real data to work with
+- **Buffered Writer Compatibility**: Fixed `BufferedFileWriter` startup in environments where `fileno()` is unavailable or unsupported
+
+### Documentation
+
+- Updated English and Chinese getting-started docs with progress callback examples
+- Expanded English and Chinese API reference with unified callback system types and `ProgressEvent` file context fields
+- Reorganized `llms.txt` into a concise task-oriented index for LLM and agent consumption
+
 ## 0.7.0 - 2026-03-29
 
 ### Fixed

@@ -164,6 +164,12 @@ class ChunkManager:
         self._chunk_index_map: dict[int, int] = {}
         self._lock = asyncio.Lock()
         self._chunk_counter = 0
+        self._status_counts: dict[ChunkStatus, int] = {s: 0 for s in ChunkStatus}
+
+    def _update_status_count(self, old_status: ChunkStatus | None, new_status: ChunkStatus) -> None:
+        if old_status is not None:
+            self._status_counts[old_status] = max(0, self._status_counts.get(old_status, 0) - 1)
+        self._status_counts[new_status] = self._status_counts.get(new_status, 0) + 1
 
     @property
     def total_downloaded(self) -> int:
@@ -197,12 +203,13 @@ class ChunkManager:
 
     @property
     def is_completed(self) -> bool:
-        return len(self.completed_chunks) == len(self.chunks)
+        return len(self.chunks) > 0 and all(c.is_completed for c in self.chunks)
 
     def initialize_chunks(self, existing_progress: dict[int, int] | None = None) -> None:
         self.chunks.clear()
         self._chunk_index_map.clear()
         self._chunk_counter = 0
+        self._status_counts = {s: 0 for s in ChunkStatus}
         optimal_chunks = self._calculate_optimal_chunks()
         chunk_size = self.file_size // optimal_chunks
         remainder = self.file_size % optimal_chunks
@@ -219,6 +226,11 @@ class ChunkManager:
                 chunk.downloaded = existing_progress[i]
                 if chunk.downloaded >= chunk.size:
                     chunk.complete()
+                    self._update_status_count(None, ChunkStatus.COMPLETED)
+                else:
+                    self._update_status_count(None, ChunkStatus.PENDING)
+            else:
+                self._update_status_count(None, ChunkStatus.PENDING)
             self.chunks.append(chunk)
             self._chunk_index_map[chunk.index] = len(self.chunks) - 1
             current_pos = chunk_end
@@ -250,12 +262,16 @@ class ChunkManager:
     async def complete_chunk(self, chunk_index: int) -> None:
         async with self._lock:
             if 0 <= chunk_index < len(self.chunks):
+                old_status = self.chunks[chunk_index].status
                 self.chunks[chunk_index].complete()
+                self._update_status_count(old_status, ChunkStatus.COMPLETED)
 
     async def fail_chunk(self, chunk_index: int, error: str) -> None:
         async with self._lock:
             if 0 <= chunk_index < len(self.chunks):
+                old_status = self.chunks[chunk_index].status
                 self.chunks[chunk_index].fail(error)
+                self._update_status_count(old_status, ChunkStatus.FAILED)
 
     def resplit_chunk(self, chunk_index: int, num_splits: int = 2) -> list[Chunk] | None:
         if chunk_index >= len(self.chunks):
@@ -274,15 +290,24 @@ class ChunkManager:
         current_start = chunk.start_byte + chunk.downloaded
         for i in range(num_splits):
             chunk_end = current_start + chunk_size + (1 if i < remaining % num_splits else 0)
-            new_chunk = Chunk(
-                index=self._chunk_counter if i > 0 else chunk.index,
-                start_byte=current_start,
-                end_byte=chunk_end,
-                total_size=self.file_size,
-                downloaded=0,
-            )
-            self._chunk_counter += 1
-            new_chunks.append(new_chunk)
+            if i == 0:
+                chunk.end_byte = chunk_end
+                chunk.downloaded = 0
+                chunk.status = ChunkStatus.PENDING
+                chunk.speed_samples.clear()
+                new_chunks.append(chunk)
+            else:
+                new_chunk = Chunk(
+                    index=self._chunk_counter,
+                    start_byte=current_start,
+                    end_byte=chunk_end,
+                    total_size=self.file_size,
+                    downloaded=0,
+                )
+                self._chunk_counter += 1
+                self.chunks.append(new_chunk)
+                self._chunk_index_map[new_chunk.index] = len(self.chunks) - 1
+                new_chunks.append(new_chunk)
             current_start = chunk_end
         return new_chunks
 

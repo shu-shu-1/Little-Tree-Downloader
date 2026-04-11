@@ -149,6 +149,11 @@ class DownloadWorker:
         attempt: int,
     ) -> Path:
         headers = self.config.get_headers()
+
+        mode = "ab" if chunk.downloaded > 0 and attempt == 0 else "wb"
+        if mode == "wb":
+            chunk.downloaded = 0
+
         start_byte = chunk.start_byte + chunk.downloaded
         end_byte = chunk.end_byte - 1
 
@@ -171,10 +176,6 @@ class DownloadWorker:
                 follow_redirects=True,
             ) as response:
                 self._validate_response(response, url, attempt > 0)
-
-                mode = "ab" if chunk.downloaded > 0 and attempt == 0 else "wb"
-                if mode == "wb":
-                    chunk.downloaded = 0
 
                 temp_file.parent.mkdir(parents=True, exist_ok=True)
 

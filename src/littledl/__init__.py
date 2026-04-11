@@ -11,6 +11,19 @@ from .batch import (
     batch_download,
     batch_download_sync,
 )
+from .callback import (
+    BaseProgressEvent,
+    BatchProgressEvent,
+    CallbackChain,
+    ChunkProgressEvent,
+    EventType,
+    FileCompleteEvent,
+    FileProgressEvent,
+    ProgressAggregator,
+    ThrottledCallback,
+    UnifiedCallbackAdapter,
+    detect_callback_mode,
+)
 from .chunk import Chunk, ChunkManager, ChunkStatus
 from .config import (
     AuthType,
@@ -61,7 +74,14 @@ from .proxy import ProxyDetector, ProxyInfo, ProxyManager
 from .reuse import FileReuseChecker, MultiSourceManager, SharedFileRegistry
 from .resume import DownloadMetadata, ResumeManager
 from .scheduler import AdaptiveChunkSizer, ConnectionOptimizer, SmartScheduler
-from .strategy import DownloadStyle, DynamicStyleAllocator, FileProfile, NetworkProfile, StrategySelector, StyleDecision
+from .strategy import (
+    DownloadStyle,
+    DynamicStyleAllocator,
+    FileProfile,
+    NetworkProfile,
+    StrategySelector,
+    StyleDecision,
+)
 from .utils import SpeedCalculator
 from .worker import DownloadWorker, WorkerPool
 from .writer import BufferedFileWriter, DirectFileWriter
@@ -82,6 +102,17 @@ __all__ = [
     "batch_download_sync",
     "ProgressEvent",
     "ChunkEvent",
+    "EventType",
+    "BaseProgressEvent",
+    "FileProgressEvent",
+    "FileCompleteEvent",
+    "ChunkProgressEvent",
+    "BatchProgressEvent",
+    "UnifiedCallbackAdapter",
+    "ThrottledCallback",
+    "ProgressAggregator",
+    "CallbackChain",
+    "detect_callback_mode",
     "DownloadConfig",
     "DownloadResult",
     "AuthConfig",

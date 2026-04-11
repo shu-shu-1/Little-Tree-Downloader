@@ -2,13 +2,15 @@ import asyncio
 import contextlib
 import shutil
 import time
+from collections import Counter
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
-from .callback import ProgressAggregator
+from .callback import ProgressAggregator, detect_callback_mode
 from .config import DownloadConfig
 from .connection import ConnectionPool
 from .downloader import Downloader
@@ -16,6 +18,14 @@ from .exceptions import DownloadError
 from .global_pool import GlobalThreadPool
 from .reuse import FileReuseChecker, MultiSourceManager, SharedFileRegistry
 from .utils import generate_download_id, normalize_url, validate_url
+
+
+def _extract_domain(url: str) -> str:
+    try:
+        parsed = urlparse(url)
+        return (parsed.netloc or "").lower()
+    except Exception:
+        return ""
 
 
 class FileTaskStatus(Enum):
@@ -34,6 +44,7 @@ class FileTask:
     url: str
     save_path: Path
     filename: str | None = None
+    domain: str = ""
     status: FileTaskStatus = FileTaskStatus.PENDING
     file_size: int = -1
     downloaded: int = 0
@@ -198,7 +209,13 @@ class BatchProgress:
 
 
 class BatchProgressCallbackAdapter:
-    """Normalize different batch callback styles into one internal path."""
+    """Normalize different batch callback styles into one internal path.
+
+    Warning:
+        In multi-file batch downloads, ETA is a heuristic value and can be highly
+        inaccurate due to unknown Content-Length, uneven file sizes, and dynamic
+        concurrency changes.
+    """
 
     CALLBACK_MODE_NONE = "none"
     CALLBACK_MODE_LEGACY = "legacy"
@@ -214,39 +231,32 @@ class BatchProgressCallbackAdapter:
     def _detect_mode(self, callback: Callable[..., Any] | None) -> str:
         if callback is None:
             return self.CALLBACK_MODE_NONE
-        try:
-            import inspect
 
-            sig = inspect.signature(callback)
-        except (TypeError, ValueError):
-            return self.CALLBACK_MODE_LEGACY
+        # Use shared detection first
+        base_mode = detect_callback_mode(
+            callback,
+            dict_names=frozenset({"data", "payload", "info", "state", "stats", "progress"}),
+            legacy_min_positional=5,
+        )
 
-        params = list(sig.parameters.values())
-        if any(p.kind == inspect.Parameter.VAR_KEYWORD for p in params):
-            return self.CALLBACK_MODE_KWARGS
-        if any(p.kind == inspect.Parameter.VAR_POSITIONAL for p in params):
-            return self.CALLBACK_MODE_LEGACY
+        # Special handling: 4-positional with file_progress signature
+        if base_mode == "legacy":
+            try:
+                import inspect
+                sig = inspect.signature(callback)
+                params = list(sig.parameters.values())
+                positional = [
+                    p for p in params
+                    if p.kind in (inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD)
+                ]
+                if len(positional) == 4:
+                    names = {p.name.lower() for p in positional}
+                    if names == {"task_id", "downloaded", "total", "speed"}:
+                        return self.CALLBACK_MODE_FILE_PROGRESS
+            except (TypeError, ValueError):
+                pass
 
-        positional = [
-            p for p in params if p.kind in (inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD)
-        ]
-
-        if len(positional) >= 5:
-            return self.CALLBACK_MODE_LEGACY
-        if len(positional) == 4:
-            names = [p.name.lower() for p in positional]
-            if set(names) == {"task_id", "downloaded", "total", "speed"}:
-                return self.CALLBACK_MODE_FILE_PROGRESS
-            return self.CALLBACK_MODE_LEGACY
-        if len(positional) == 1:
-            name = positional[0].name.lower()
-            if name in {"data", "payload", "info", "state", "stats", "progress"}:
-                return self.CALLBACK_MODE_DICT
-            return self.CALLBACK_MODE_EVENT
-        if len(positional) == 0:
-            return self.CALLBACK_MODE_KWARGS
-
-        return self.CALLBACK_MODE_LEGACY
+        return base_mode
 
     async def emit(self, progress: BatchProgress) -> None:
         if self._callback is None:
@@ -280,11 +290,20 @@ class BatchProgressCallbackAdapter:
         elif self._mode == self.CALLBACK_MODE_KWARGS:
             result = self._callback(**payload)
         elif self._mode == self.CALLBACK_MODE_FILE_PROGRESS:
+            reported = False
             for fp in progress.files:
                 if fp.status == FileTaskStatus.DOWNLOADING.value:
                     result = self._callback(fp.task_id, fp.downloaded, fp.file_size, fp.speed)
                     if inspect.isawaitable(result):
                         await result
+                    reported = True
+            if not reported and progress.pending_files > 0:
+                for fp in progress.files:
+                    if fp.status == FileTaskStatus.PENDING.value:
+                        result = self._callback(fp.task_id, 0, fp.file_size if fp.file_size > 0 else 0, 0.0)
+                        if inspect.isawaitable(result):
+                            await result
+                        break
             return
         else:
             result = self._callback(
@@ -310,12 +329,14 @@ class FileScheduler:
         small_file_threshold: int = 5 * 1024 * 1024,
         large_file_threshold: int = 100 * 1024 * 1024,
         enable_small_file_priority: bool = True,
+        enable_domain_affinity: bool = True,
     ) -> None:
         self.max_concurrent_files = max_concurrent_files
         self.max_concurrent_chunks_per_file = max_concurrent_chunks_per_file
         self.small_file_threshold = small_file_threshold
         self.large_file_threshold = large_file_threshold
         self.enable_small_file_priority = enable_small_file_priority
+        self.enable_domain_affinity = enable_domain_affinity
 
         self._pending_tasks: list[FileTask] = []
         self._active_tasks: dict[str, FileTask] = {}
@@ -358,19 +379,27 @@ class FileScheduler:
                 self._sort_pending_by_priority()
 
     def _sort_pending_by_priority(self) -> None:
-        def get_priority(t: FileTask) -> tuple[int, float]:
-            priority = 2
+        domain_counter = Counter(t.domain for t in self._pending_tasks if t.domain)
+
+        def get_priority(t: FileTask) -> tuple[int, int, int, float]:
+            size_priority = 2
             if t.is_small_file:
-                priority = 0
+                size_priority = 0
             elif t.is_large_file:
-                priority = 3
+                size_priority = 3
             elif t.file_size > 0:
-                priority = 1
-            return (priority, t.created_at)
+                size_priority = 1
+
+            domain_priority = 0
+            if self.enable_domain_affinity and t.domain:
+                domain_priority = -domain_counter.get(t.domain, 0)
+
+            # 用户自定义 priority 越高越先下载
+            return (-t.priority, size_priority, domain_priority, t.created_at)
 
         self._pending_tasks.sort(key=get_priority)
 
-    async def get_next_task(self) -> FileTask | None:
+    async def get_next_task(self, preferred_domain: str | None = None) -> FileTask | None:
         async with self._lock:
             if self._paused:
                 return None
@@ -379,9 +408,45 @@ class FileScheduler:
             if len(self._active_tasks) >= self.max_concurrent_files:
                 return None
 
-            task = self._pending_tasks.pop(0)
+            pick_index = 0
+            if self.enable_domain_affinity and preferred_domain:
+                for idx, candidate in enumerate(self._pending_tasks):
+                    if candidate.domain == preferred_domain:
+                        pick_index = idx
+                        break
+
+            task = self._pending_tasks.pop(pick_index)
             self._active_tasks[task.task_id] = task
             return task
+
+    async def get_next_tasks(self, limit: int, preferred_domain: str | None = None) -> list[FileTask]:
+        if limit <= 0:
+            return []
+
+        async with self._lock:
+            if self._paused or not self._pending_tasks:
+                return []
+
+            available_slots = max(0, self.max_concurrent_files - len(self._active_tasks))
+            if available_slots <= 0:
+                return []
+
+            to_take = min(limit, available_slots, len(self._pending_tasks))
+            tasks: list[FileTask] = []
+
+            for _ in range(to_take):
+                pick_index = 0
+                if self.enable_domain_affinity and preferred_domain:
+                    for idx, candidate in enumerate(self._pending_tasks):
+                        if candidate.domain == preferred_domain:
+                            pick_index = idx
+                            break
+
+                task = self._pending_tasks.pop(pick_index)
+                self._active_tasks[task.task_id] = task
+                tasks.append(task)
+
+            return tasks
 
     async def task_completed(self, task: FileTask) -> None:
         async with self._lock:
@@ -407,10 +472,7 @@ class FileScheduler:
 
         base_chunks = self.max_concurrent_chunks_per_file
 
-        if task.is_large_file:
-            base_chunks = min(base_chunks, 8)
-        else:
-            base_chunks = min(base_chunks, 4)
+        base_chunks = min(base_chunks, 8) if task.is_large_file else min(base_chunks, 4)
 
         if self._current_network_speed > 0 and task.file_size > 0:
             target_chunk_time = 3.0
@@ -439,6 +501,13 @@ class FileScheduler:
 
     def get_all_tasks(self) -> list[FileTask]:
         return self._completed_tasks + list(self._active_tasks.values()) + self._pending_tasks + self._failed_tasks
+
+    def get_pending_profile(self) -> tuple[int, int, dict[str, int]]:
+        pending = self._pending_tasks
+        known_size_tasks = [t for t in pending if t.file_size > 0]
+        small_count = sum(1 for t in known_size_tasks if t.is_small_file)
+        domain_counts = Counter(t.domain for t in pending if t.domain)
+        return small_count, len(known_size_tasks), dict(domain_counts)
 
     def get_progress(self, include_files: bool = True) -> BatchProgress:
         completed = self._completed_tasks.copy()
@@ -518,7 +587,7 @@ class FileScheduler:
         recent = self._speed_history[-5:] if len(self._speed_history) >= 5 else self._speed_history
         weights = [0.5 ** (len(recent) - i - 1) for i in range(len(recent))]
         total_weight = sum(weights)
-        return sum(s * w for s, w in zip(recent, weights)) / total_weight
+        return sum(s * w for s, w in zip(recent, weights, strict=True)) / total_weight
 
     def _get_speed_stability(self) -> float:
         if len(self._speed_history) < 3:
@@ -660,16 +729,23 @@ class BatchDownloader:
         max_concurrent_chunks_per_file: int = 4,
         enable_adaptive_concurrency: bool = True,
         enable_small_file_priority: bool = True,
+        enable_domain_affinity: bool = True,
+        enable_small_file_concurrency_boost: bool = True,
+        same_domain_boost_threshold: float = 0.7,
     ) -> None:
         self.config = config or DownloadConfig()
         self.max_concurrent_files = max_concurrent_files
         self.max_concurrent_chunks_per_file = max_concurrent_chunks_per_file
         self.enable_adaptive_concurrency = enable_adaptive_concurrency
+        self.enable_domain_affinity = enable_domain_affinity
+        self.enable_small_file_concurrency_boost = enable_small_file_concurrency_boost
+        self.same_domain_boost_threshold = max(0.5, min(0.95, same_domain_boost_threshold))
 
         self._scheduler = FileScheduler(
             max_concurrent_files=max_concurrent_files,
             max_concurrent_chunks_per_file=max_concurrent_chunks_per_file,
             enable_small_file_priority=enable_small_file_priority,
+            enable_domain_affinity=enable_domain_affinity,
         )
         self._concurrency_controller = AdaptiveConcurrencyController(
             initial_concurrency=max(1, max_concurrent_files // 2),
@@ -686,6 +762,7 @@ class BatchDownloader:
         self._file_complete_callback: Any = None
         self._completed_count: int = 0
         self._total_speed: float = 0.0
+        self._active_domain_counts: dict[str, int] = {}
 
     async def add_url(
         self,
@@ -707,6 +784,7 @@ class BatchDownloader:
             save_path=save_path,
             filename=filename,
             priority=priority,
+            domain=_extract_domain(url),
         )
         self._tasks[task_id] = task
         await self._scheduler.add_task(task)
@@ -746,7 +824,10 @@ class BatchDownloader:
         if not pending_tasks:
             return
 
-        probe_semaphore = asyncio.Semaphore(min(20, len(pending_tasks)))
+        await self._prewarm_hot_domains(pending_tasks)
+
+        probe_limit = min(100, max(20, self.max_concurrent_files * 2), len(pending_tasks))
+        probe_semaphore = asyncio.Semaphore(probe_limit)
 
         async def probe_single(task: FileTask) -> None:
             async with probe_semaphore:
@@ -759,6 +840,88 @@ class BatchDownloader:
                     await self._scheduler.task_failed(task)
 
         await asyncio.gather(*[probe_single(t) for t in pending_tasks], return_exceptions=True)
+
+    async def _prewarm_hot_domains(self, pending_tasks: list[FileTask]) -> None:
+        if not self._connection_pool:
+            return
+
+        urls_by_domain: dict[str, list[str]] = {}
+        for task in pending_tasks:
+            if not task.domain:
+                continue
+            urls_by_domain.setdefault(task.domain, []).append(task.url)
+
+        if not urls_by_domain:
+            return
+
+        hot_domains = sorted(urls_by_domain.items(), key=lambda kv: len(kv[1]), reverse=True)[:8]
+        warmup_urls: list[str] = []
+        warm_count_per_domain = 1 if self.config.enable_h2 else 2
+        for _, urls in hot_domains:
+            warmup_urls.extend(urls[:warm_count_per_domain])
+
+        if warmup_urls:
+            with contextlib.suppress(Exception):
+                await self._connection_pool.preconnect(warmup_urls)
+
+    def _track_active_domain(self, task: FileTask, add: bool) -> None:
+        if not task.domain:
+            return
+
+        current = self._active_domain_counts.get(task.domain, 0)
+        if add:
+            self._active_domain_counts[task.domain] = current + 1
+            return
+
+        next_count = max(0, current - 1)
+        if next_count == 0:
+            self._active_domain_counts.pop(task.domain, None)
+        else:
+            self._active_domain_counts[task.domain] = next_count
+
+    def _get_preferred_domain(self) -> str | None:
+        if not self.enable_domain_affinity:
+            return None
+
+        if self._active_domain_counts:
+            domain, count = max(self._active_domain_counts.items(), key=lambda kv: kv[1])
+            if count >= 2:
+                return domain
+
+        _, _, pending_domains = self._scheduler.get_pending_profile()
+        if not pending_domains:
+            return None
+        domain, count = max(pending_domains.items(), key=lambda kv: kv[1])
+        return domain if count >= 3 else None
+
+    def _max_safe_concurrency(self) -> int:
+        pool_ceiling = max(self.max_concurrent_files * 2, self.config.connection_pool_size // 2)
+        return max(self.max_concurrent_files, min(pool_ceiling, self.max_concurrent_files * 3))
+
+    def _estimate_concurrency_limit(self, base_limit: int) -> int:
+        if not self.enable_small_file_concurrency_boost:
+            return base_limit
+
+        small_count, known_size_count, domain_counts = self._scheduler.get_pending_profile()
+        if known_size_count <= 0 or small_count <= 0:
+            return base_limit
+
+        small_ratio = small_count / known_size_count
+        if small_ratio < 0.65:
+            return base_limit
+
+        pending_total = self._scheduler.pending_count
+        if pending_total < max(8, base_limit * 2):
+            return base_limit
+
+        dominant_count = max(domain_counts.values(), default=0)
+        domain_ratio = dominant_count / max(1, sum(domain_counts.values()))
+        if domain_ratio >= self.same_domain_boost_threshold:
+            boosted = base_limit + max(2, base_limit // 2)
+        else:
+            boosted = base_limit + 1
+
+        return min(self._max_safe_concurrency(), max(base_limit, boosted))
 
     async def _probe_single(self, task: FileTask) -> None:
         await task.mark_probing()
@@ -834,18 +997,26 @@ class BatchDownloader:
                 if self.enable_adaptive_concurrency
                 else self.max_concurrent_files
             )
+            concurrency_limit = self._estimate_concurrency_limit(concurrency_limit)
 
             while len(download_tasks) < concurrency_limit:
-                task = await self._scheduler.get_next_task()
-                if task is None:
+                preferred_domain = self._get_preferred_domain()
+                capacity = concurrency_limit - len(download_tasks)
+                next_tasks = await self._scheduler.get_next_tasks(capacity, preferred_domain=preferred_domain)
+                if not next_tasks:
                     break
-                download_tasks[task.task_id] = asyncio.create_task(download_file(task))
+                for task in next_tasks:
+                    download_tasks[task.task_id] = asyncio.create_task(download_file(task))
+                    self._track_active_domain(task, add=True)
 
             done_tasks = [tid for tid, t in download_tasks.items() if t.done()]
             for tid in done_tasks:
-                task = download_tasks.pop(tid)
+                task_coro = download_tasks.pop(tid)
+                file_task = self._tasks.get(tid)
+                if file_task:
+                    self._track_active_domain(file_task, add=False)
                 with contextlib.suppress(asyncio.CancelledError):
-                    await task
+                    await task_coro
 
             if self.enable_adaptive_concurrency and await self._concurrency_controller.should_adjust():
                 progress = self._scheduler.get_progress()
@@ -858,10 +1029,8 @@ class BatchDownloader:
             if self._progress_callback and (now - last_progress_time) >= progress_interval:
                 last_progress_time = now
                 progress = self._scheduler.get_progress()
-                try:
+                with contextlib.suppress(Exception):
                     await self._progress_callback.emit(progress)
-                except Exception:
-                    pass
 
             if not download_tasks and self._scheduler.pending_count == 0 and self._scheduler.active_count == 0:
                 break
@@ -1129,6 +1298,7 @@ class EnhancedBatchDownloader:
             filename=filename,
             priority=priority,
             sources=sources,
+            domain=_extract_domain(url),
         )
 
         if self.enable_multi_source and len(sources) > 1:
@@ -1180,7 +1350,10 @@ class EnhancedBatchDownloader:
         if not pending_tasks:
             return
 
-        probe_semaphore = asyncio.Semaphore(min(20, len(pending_tasks)))
+        await self._prewarm_hot_domains(pending_tasks)
+
+        probe_limit = min(100, max(20, self.max_concurrent_files * 2), len(pending_tasks))
+        probe_semaphore = asyncio.Semaphore(probe_limit)
 
         async def probe_single(task: FileTask) -> None:
             async with probe_semaphore:
@@ -1193,6 +1366,29 @@ class EnhancedBatchDownloader:
                     await self._scheduler.task_failed(task)
 
         await asyncio.gather(*[probe_single(t) for t in pending_tasks], return_exceptions=True)
+
+    async def _prewarm_hot_domains(self, pending_tasks: list[FileTask]) -> None:
+        if not self._connection_pool:
+            return
+
+        urls_by_domain: dict[str, list[str]] = {}
+        for task in pending_tasks:
+            if not task.domain:
+                continue
+            urls_by_domain.setdefault(task.domain, []).append(task.url)
+
+        if not urls_by_domain:
+            return
+
+        hot_domains = sorted(urls_by_domain.items(), key=lambda kv: len(kv[1]), reverse=True)[:8]
+        warmup_urls: list[str] = []
+        warm_count_per_domain = 1 if self.config.enable_h2 else 2
+        for _, urls in hot_domains:
+            warmup_urls.extend(urls[:warm_count_per_domain])
+
+        if warmup_urls:
+            with contextlib.suppress(Exception):
+                await self._connection_pool.preconnect(warmup_urls)
 
     async def _probe_single(self, task: FileTask) -> None:
         await task.mark_probing()
@@ -1314,10 +1510,8 @@ class EnhancedBatchDownloader:
                 last_progress_time = now
                 progress = self._scheduler.get_progress()
                 self._total_speed = progress.smooth_speed if progress.smooth_speed > 0 else progress.overall_speed
-                try:
+                with contextlib.suppress(Exception):
                     await self._progress_callback.emit(progress)
-                except Exception:
-                    pass
 
             if not download_tasks and self._scheduler.pending_count == 0 and self._scheduler.active_count == 0:
                 break
@@ -1345,16 +1539,13 @@ class EnhancedBatchDownloader:
             if task.file_size > 0:
                 self._download_stats["bytes_saved"] += task.file_size
 
-            if self._file_reuse_checker:
-                stats = self._file_reuse_checker.get_stats()
-
             if self._file_complete_callback:
                 with contextlib.suppress(Exception):
                     result = self._file_complete_callback(task)
                     if asyncio.iscoroutine(result):
                         await result
 
-        except Exception as e:
+        except Exception:
             task.is_existing_reused = False
             task.existing_file_path = None
 

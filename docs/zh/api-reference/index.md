@@ -71,6 +71,8 @@ config = DownloadConfig(
 
 ### ProgressEvent
 
+单文件下载进度事件。由 `Downloader` 发出时携带文件上下文。
+
 ```python
 ProgressEvent(
     downloaded: int,
@@ -80,6 +82,9 @@ ProgressEvent(
     progress: float,
     remaining: int,
     timestamp: float,
+    unknown_size: bool = False,
+    filename: str = "",   # 正在下载的文件名
+    url: str = "",        # 正在下载的 URL
 )
 ```
 
@@ -96,6 +101,90 @@ ChunkEvent(
     error: str | None,
     timestamp: float,
 )
+```
+
+## 统一回调系统
+
+`littledl.callback` 模块提供统一的事件系统，便于构建自定义下载管理器。
+
+### EventType
+
+```python
+from littledl import EventType
+
+EventType.FILE_PROGRESS    # 单文件进度更新
+EventType.FILE_COMPLETE    # 单文件下载完成
+EventType.FILE_ERROR       # 单文件下载错误
+EventType.FILE_RETRY       # 单文件重试
+EventType.BATCH_PROGRESS   # 批量下载进度
+EventType.BATCH_COMPLETE   # 批量下载完成
+EventType.CHUNK_PROGRESS   # 分块级进度
+EventType.CHUNK_COMPLETE   # 分块级完成
+EventType.CHUNK_ERROR      # 分块级错误
+```
+
+### FileProgressEvent
+
+用于文件级进度监控的丰富事件对象。
+
+```python
+from littledl import FileProgressEvent
+
+FileProgressEvent(
+    event_type: EventType = EventType.FILE_PROGRESS,
+    task_id: str = "",
+    filename: str = "",
+    url: str = "",
+    file_size: int = 0,
+    downloaded: int = 0,
+    speed: float = 0.0,
+    progress: float = 0.0,
+    eta: float = -1.0,
+    chunks_total: int = 0,
+    chunks_completed: int = 0,
+)
+```
+
+### FileCompleteEvent
+
+```python
+from littledl import FileCompleteEvent
+
+FileCompleteEvent(
+    event_type: EventType = EventType.FILE_COMPLETE,
+    task_id: str = "",
+    filename: str = "",
+    url: str = "",
+    file_size: int = 0,
+    saved_path: str = "",
+    error: str | None = None,
+)
+```
+
+### ThrottledCallback
+
+包装回调适配器以限制发送频率，防止 UI 卡顿。
+
+```python
+from littledl import UnifiedCallbackAdapter, ThrottledCallback
+
+adapter = UnifiedCallbackAdapter(my_callback)
+throttled = ThrottledCallback(adapter, min_interval=0.1)  # 每秒最多 10 次
+await throttled.emit(event)
+await throttled.flush()  # 发送待处理事件
+```
+
+### CallbackChain
+
+链式调用多个回调。
+
+```python
+from littledl import CallbackChain
+
+chain = CallbackChain()
+chain.add(logging_callback)
+chain.add(ui_callback)
+await chain.emit(event)
 ```
 ```
 
