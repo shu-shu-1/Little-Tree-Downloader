@@ -330,7 +330,7 @@ class MovingAverage:
             return 0.0
         weights = [self._weighted_multiplier ** (len(self.values) - i - 1) for i in range(len(self.values))]
         total_weight = sum(weights)
-        return sum(v * w for v, w in zip(self.values, weights)) / total_weight
+        return sum(v * w for v, w in zip(self.values, weights, strict=True)) / total_weight
 
     def get_median(self) -> float:
         if not self.values:

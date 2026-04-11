@@ -4,6 +4,7 @@
 """
 
 import asyncio
+import contextlib
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -81,10 +82,8 @@ class BufferedFileWriter:
 
         if self._flush_task:
             self._flush_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._flush_task
-            except asyncio.CancelledError:
-                pass
 
         # 强制刷新所有剩余缓冲
         await self._flush_all_buffers()

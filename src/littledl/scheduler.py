@@ -1,10 +1,10 @@
 import asyncio
 import contextlib
-import math
 import statistics
 import time
 from dataclasses import dataclass, field
 from enum import Enum
+from typing import Any
 
 from .chunk import Chunk, ChunkManager
 from .config import DownloadConfig
@@ -639,14 +639,16 @@ class FusionScheduler:
             if elapsed >= self.config.fusion_probe_duration and bw_est.samples >= 2:
                 self._transition_to(FusionPhase.RAMP)
 
-        elif self._phase == FusionPhase.RAMP:
-            # 爬升期结束条件：达到平台 / 达到最大并发 / 超过最大轮数
-            if (
+        elif (
+            self._phase == FusionPhase.RAMP
+            and (
                 self._plateau_reached
                 or self._target_workers >= self.config.max_chunks
                 or self._ramp_rounds >= self.config.fusion_ramp_max_rounds
-            ):
-                self._transition_to(FusionPhase.CRUISE)
+            )
+        ):
+            # 爬升期结束条件：达到平台 / 达到最大并发 / 超过最大轮数
+            self._transition_to(FusionPhase.CRUISE)
 
         # 任何阶段都可以进入 TAIL（除了已经在 TAIL）
         if self._phase != FusionPhase.TAIL:
@@ -697,10 +699,7 @@ class FusionScheduler:
             return
 
         avg_speed = self._speed_avg.get_average()
-        if self._ramp_prev_speed > 0:
-            gain = (avg_speed - self._ramp_prev_speed) / self._ramp_prev_speed
-        else:
-            gain = 1.0
+        gain = (avg_speed - self._ramp_prev_speed) / self._ramp_prev_speed if self._ramp_prev_speed > 0 else 1.0
 
         if gain < self.config.fusion_plateau_threshold and self._ramp_rounds > 0:
             # 边际收益不足，达到平台
@@ -737,13 +736,9 @@ class FusionScheduler:
 
         avg_speed = self._speed_avg.get_average()
         trend = self._speed_avg.get_trend()
-        p50 = self._bw.p50_speed
 
         # 计算速度变化信号（结合瞬时和趋势）
-        if self._last_speed > 0:
-            speed_change = (current_speed - self._last_speed) / max(self._last_speed, 1.0)
-        else:
-            speed_change = 0.0
+        speed_change = (current_speed - self._last_speed) / max(self._last_speed, 1.0) if self._last_speed > 0 else 0.0
 
         changed = False
 

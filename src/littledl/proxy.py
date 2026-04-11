@@ -21,13 +21,12 @@ class ProxyInfo:
 
     def get_proxy_for_scheme(self, scheme: str) -> str | None:
         scheme = scheme.lower()
-        if scheme == "http":
-            return self.http_proxy
-        elif scheme == "https":
-            return self.https_proxy or self.http_proxy
-        elif scheme == "ftp":
-            return self.ftp_proxy or self.http_proxy
-        return self.http_proxy or self.https_proxy
+        proxy_map = {
+            "http": self.http_proxy,
+            "https": self.https_proxy or self.http_proxy,
+            "ftp": self.ftp_proxy or self.http_proxy,
+        }
+        return proxy_map.get(scheme, self.http_proxy or self.https_proxy)
 
 
 class ProxyDetector:

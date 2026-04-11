@@ -1,7 +1,6 @@
 import hashlib
 from pathlib import Path
 from typing import Any
-
 from .utils import calculate_file_hash, format_size
 
 

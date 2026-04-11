@@ -12,7 +12,7 @@ import aiofiles
 import httpx
 from loguru import logger
 
-from .callback import ProgressAggregator, detect_callback_mode
+from .callback import detect_callback_mode
 from .chunk import Chunk, ChunkManager
 from .config import DownloadConfig
 from .connection import ConnectionPool, RequestBuilder

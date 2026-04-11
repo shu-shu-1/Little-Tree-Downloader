@@ -1,8 +1,7 @@
 import math
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
-from typing import Callable
 
 from .utils import MovingAverage
 
@@ -311,7 +310,7 @@ class StrategySelector:
 
         if file_profile.is_medium:
             chunks = min(self._calculate_fusion_chunks(file_profile, network), 8)
-            if network.is_stable and network.avg_speed > self.SPEED_THRESHOLD_MID:
+            if network.is_stable and network.avg_speed > self.speed_threshold_mid:
                 return StyleDecision(
                     style=DownloadStyle.FUSION,
                     confidence=0.82,
@@ -329,7 +328,7 @@ class StrategySelector:
         )
 
     @property
-    def SPEED_THRESHOLD_MID(self) -> float:
+    def speed_threshold_mid(self) -> float:
         return (self.SPEED_THRESHOLD_LOW + self.SPEED_THRESHOLD_HIGH) / 2
 
     def _calculate_chunks(self, file_profile: FileProfile, network: NetworkProfile | None = None) -> int:
@@ -548,7 +547,7 @@ class DynamicStyleAllocator:
             scale_factor = available / total_chunks
             allocations: dict[str, tuple[DownloadStyle, int]] = {}
 
-            for fid, profile, current_chunks in files_with_priority:
+            for fid, _profile, current_chunks in files_with_priority:
                 style = self._file_assignments[fid]
                 new_chunks = max(1, int(current_chunks * scale_factor))
 

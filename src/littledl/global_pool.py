@@ -1,8 +1,9 @@
 import asyncio
+import contextlib
 import math
 import time
-from dataclasses import dataclass, field
-from typing import Callable
+from collections.abc import Callable
+from dataclasses import dataclass
 
 from .utils import MovingAverage
 
@@ -258,10 +259,7 @@ class GlobalThreadPool:
         positive_count = sum(1 for d in recent_decisions if d)
         negative_count = sum(1 for d in recent_decisions if not d)
 
-        if positive_count >= 4 and positive_count > negative_count:
-            return True
-
-        return False
+        return positive_count >= 4 and positive_count > negative_count
 
     def get_thread_allocation(self, file_id: str) -> int:
         """获取指定文件的线程分配数"""
@@ -301,7 +299,7 @@ class GlobalThreadPool:
 
         max_jump = 3 if stability > 0.5 else 2
 
-        for i, (file_id, urgency, priority, threads) in enumerate(priorities):
+        for i, (file_id, _urgency, _priority, threads) in enumerate(priorities):
             target = base_threads + (1 if i < remainder else 0)
             target = max(1, min(target, threads + max_jump))
             allocations[file_id] = target
@@ -357,10 +355,8 @@ class GlobalThreadPool:
         self._running = False
         if self._task:
             self._task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._task
-            except asyncio.CancelledError:
-                pass
             self._task = None
 
     async def _manager_loop(self) -> None:
@@ -371,10 +367,8 @@ class GlobalThreadPool:
 
                 if self._callbacks:
                     for callback in self._callbacks:
-                        try:
+                        with contextlib.suppress(Exception):
                             callback()
-                        except Exception:
-                            pass
 
             except asyncio.CancelledError:
                 break
@@ -510,13 +504,7 @@ class SpeedAdaptiveController:
         predicted = self._predict_next_speed()
         stability = self._calculate_stability()
 
-        if predicted < self._low_threshold * 0.7:
-            return True
-
-        if stability < 0.3 and predicted < self._low_threshold:
-            return True
-
-        return False
+        return predicted < self._low_threshold * 0.7 or (stability < 0.3 and predicted < self._low_threshold)
 
     async def start(self) -> None:
         """启动自适应控制器"""
@@ -530,10 +518,8 @@ class SpeedAdaptiveController:
         self._running = False
         if self._task:
             self._task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._task
-            except asyncio.CancelledError:
-                pass
             self._task = None
 
     async def _control_loop(self) -> None:

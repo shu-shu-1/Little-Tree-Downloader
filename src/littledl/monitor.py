@@ -134,10 +134,7 @@ class SpeedMonitor:
                 if self._ewma_speed == 0:
                     self._ewma_speed = raw_speed
                 else:
-                    if self._adaptive_alpha:
-                        alpha = self._calculate_adaptive_alpha(raw_speed)
-                    else:
-                        alpha = self._ewma_alpha
+                    alpha = self._calculate_adaptive_alpha(raw_speed) if self._adaptive_alpha else self._ewma_alpha
                     self._ewma_speed = alpha * raw_speed + (1 - alpha) * self._ewma_speed
 
                 hybrid_speed = 0.3 * self._instant_speed + 0.7 * self._ewma_speed

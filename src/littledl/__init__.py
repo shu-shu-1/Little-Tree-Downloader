@@ -1,6 +1,8 @@
 from .auth import AuthConfig, AuthManager, TokenInfo
 from .batch import (
     AdaptiveConcurrencyController,
+    batch_download,
+    batch_download_sync,
     BatchDownloader,
     BatchProgress,
     EnhancedBatchDownloader,
@@ -8,21 +10,19 @@ from .batch import (
     FileTask,
     FileTaskStatus,
     SharedConnectionBatchDownloader,
-    batch_download,
-    batch_download_sync,
 )
 from .callback import (
     BaseProgressEvent,
     BatchProgressEvent,
     CallbackChain,
     ChunkProgressEvent,
+    detect_callback_mode,
     EventType,
     FileCompleteEvent,
     FileProgressEvent,
     ProgressAggregator,
     ThrottledCallback,
     UnifiedCallbackAdapter,
-    detect_callback_mode,
 )
 from .chunk import Chunk, ChunkManager, ChunkStatus
 from .config import (
@@ -37,7 +37,7 @@ from .config import (
     SpeedLimitMode,
 )
 from .detector import ServerCapabilities, ServerDetector
-from .downloader import ChunkEvent, Downloader, ProgressEvent, download_file, download_file_sync
+from .downloader import ChunkEvent, download_file, download_file_sync, Downloader, ProgressEvent
 from .exceptions import (
     CancelledError,
     ChunkDownloadError,
@@ -60,10 +60,10 @@ from .exceptions import (
 )
 from .global_pool import GlobalThreadPool, SpeedAdaptiveController
 from .i18n import (
-    LANGUAGE_ENV_VAR,
     get_available_languages,
     gettext,
     init_language,
+    LANGUAGE_ENV_VAR,
     ngettext,
     pgettext,
     set_language,
