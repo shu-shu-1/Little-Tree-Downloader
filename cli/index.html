@@ -1092,7 +1092,7 @@
 </code></pre></div>
 <p>Verify installation:</p>
 <div class="highlight"><pre><span></span><code>littledl<span class="w"> </span>--version
-<span class="c1"># Output: littledl 0.8.0</span>
+<span class="c1"># Output: littledl 0.9.0</span>
 </code></pre></div>
 <h2 id="basic-usage">Basic Usage<a class="headerlink" href="#basic-usage" title="Permanent link">&para;</a></h2>
 <h3 id="download-a-single-file">Download a Single File<a class="headerlink" href="#download-a-single-file" title="Permanent link">&para;</a></h3>
@@ -1190,29 +1190,37 @@ https://example.com/file3.doc
 </tr>
 <tr>
 <td><code>adaptive</code></td>
-<td>Auto-select based on conditions</td>
-<td>Most use cases</td>
+<td>Traditional adaptive scheduler</td>
+<td>Older tuning workflows</td>
+</tr>
+<tr>
+<td><code>fusion</code></td>
+<td>Four-phase adaptive scheduler; CLI default</td>
+<td>Recommended for most users</td>
 </tr>
 <tr>
 <td><code>hybrid_turbo</code></td>
-<td>Adaptive with AIMD control</td>
-<td>Maximum speed, unstable networks</td>
+<td>Aggressive AIMD adaptive mode</td>
+<td>Maximum burst speed on unstable networks</td>
 </tr>
 <tr>
 <td><code>auto</code></td>
-<td>Let littledl analyze and decide</td>
-<td>Recommended for beginners</td>
+<td>Alias of <code>fusion</code></td>
+<td>Compatibility with older scripts</td>
 </tr>
 </tbody>
 </table>
 <h3 id="examples">Examples<a class="headerlink" href="#examples" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><span class="c1"># Auto-select best style</span>
-littledl<span class="w"> </span><span class="s2">&quot;https://example.com/file.zip&quot;</span><span class="w"> </span>-s<span class="w"> </span>auto
+<div class="highlight"><pre><span></span><code><span class="c1"># Default style (FUSION)</span>
+littledl<span class="w"> </span><span class="s2">&quot;https://example.com/file.zip&quot;</span>
 
 <span class="c1"># Force single-threaded</span>
 littledl<span class="w"> </span><span class="s2">&quot;https://example.com/file.zip&quot;</span><span class="w"> </span>-s<span class="w"> </span>single
 
-<span class="c1"># Maximum performance</span>
+<span class="c1"># Explicit FUSION mode</span>
+littledl<span class="w"> </span><span class="s2">&quot;https://example.com/file.zip&quot;</span><span class="w"> </span>-s<span class="w"> </span>fusion<span class="w"> </span>-c<span class="w"> </span><span class="m">16</span>
+
+<span class="c1"># Aggressive legacy mode</span>
 littledl<span class="w"> </span><span class="s2">&quot;https://example.com/file.zip&quot;</span><span class="w"> </span>-s<span class="w"> </span>hybrid_turbo<span class="w"> </span>-c<span class="w"> </span><span class="m">32</span>
 </code></pre></div>
 <h2 id="progress-display">Progress Display<a class="headerlink" href="#progress-display" title="Permanent link">&para;</a></h2>

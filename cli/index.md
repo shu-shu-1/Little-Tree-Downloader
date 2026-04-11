@@ -14,7 +14,7 @@ Verify installation:
 
 ```
 littledl --version
-# Output: littledl 0.8.0
+# Output: littledl 0.9.0
 ```
 
 ## Basic Usage
@@ -64,24 +64,28 @@ littledl -F urls.txt -o ./downloads
 
 ## Download Styles
 
-| Style          | Description                     | Best For                                   |
-| -------------- | ------------------------------- | ------------------------------------------ |
-| `single`       | Single-threaded download        | Small files, servers without Range support |
-| `multi`        | Multi-threaded segmented        | Large files, stable connections            |
-| `adaptive`     | Auto-select based on conditions | Most use cases                             |
-| `hybrid_turbo` | Adaptive with AIMD control      | Maximum speed, unstable networks           |
-| `auto`         | Let littledl analyze and decide | Recommended for beginners                  |
+| Style          | Description                                | Best For                                   |
+| -------------- | ------------------------------------------ | ------------------------------------------ |
+| `single`       | Single-threaded download                   | Small files, servers without Range support |
+| `multi`        | Multi-threaded segmented                   | Large files, stable connections            |
+| `adaptive`     | Traditional adaptive scheduler             | Older tuning workflows                     |
+| `fusion`       | Four-phase adaptive scheduler; CLI default | Recommended for most users                 |
+| `hybrid_turbo` | Aggressive AIMD adaptive mode              | Maximum burst speed on unstable networks   |
+| `auto`         | Alias of `fusion`                          | Compatibility with older scripts           |
 
 ### Examples
 
 ```
-# Auto-select best style
-littledl "https://example.com/file.zip" -s auto
+# Default style (FUSION)
+littledl "https://example.com/file.zip"
 
 # Force single-threaded
 littledl "https://example.com/file.zip" -s single
 
-# Maximum performance
+# Explicit FUSION mode
+littledl "https://example.com/file.zip" -s fusion -c 16
+
+# Aggressive legacy mode
 littledl "https://example.com/file.zip" -s hybrid_turbo -c 32
 ```
 

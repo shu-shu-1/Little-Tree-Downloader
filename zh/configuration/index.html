@@ -642,7 +642,7 @@
   <a href="#_3" class="md-nav__link">
     <span class="md-ellipsis">
       
-        代理配置
+        批量下载中的单文件配置继承
       
     </span>
   </a>
@@ -653,7 +653,7 @@
   <a href="#_4" class="md-nav__link">
     <span class="md-ellipsis">
       
-        速度限制
+        代理配置
       
     </span>
   </a>
@@ -664,7 +664,7 @@
   <a href="#_5" class="md-nav__link">
     <span class="md-ellipsis">
       
-        进度回调
+        速度限制
       
     </span>
   </a>
@@ -673,6 +673,17 @@
       
         <li class="md-nav__item">
   <a href="#_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        进度回调
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_7" class="md-nav__link">
     <span class="md-ellipsis">
       
         分块状态回调
@@ -933,6 +944,36 @@
 <td>启用具有 AIMD 拥塞控制和智能重切策略的混合涡轮加速</td>
 </tr>
 <tr>
+<td><code>enable_fusion</code></td>
+<td>bool</td>
+<td>True</td>
+<td>启用 FUSION 四阶段自适应调度器</td>
+</tr>
+<tr>
+<td><code>fusion_probe_chunks</code></td>
+<td>int</td>
+<td>2</td>
+<td>PROBE 阶段的初始工作线程数</td>
+</tr>
+<tr>
+<td><code>fusion_probe_duration</code></td>
+<td>float</td>
+<td>2.0</td>
+<td>进入 RAMP 阶段前的探测时长</td>
+</tr>
+<tr>
+<td><code>fusion_tail_ratio</code></td>
+<td>float</td>
+<td>0.20</td>
+<td>剩余字节比例低于该值时进入 TAIL 阶段</td>
+</tr>
+<tr>
+<td><code>fusion_tail_boost</code></td>
+<td>int</td>
+<td>2</td>
+<td>TAIL 阶段允许追加的额外并发数</td>
+</tr>
+<tr>
 <td><code>hybrid_aimd_increase_step</code></td>
 <td>int</td>
 <td>1</td>
@@ -1000,7 +1041,15 @@
 </tr>
 </tbody>
 </table>
-<h2 id="_3">代理配置<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h2>
+<h2 id="_3">批量下载中的单文件配置继承<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h2>
+<p>批量下载器会从父级 <code>DownloadConfig</code> 派生每个文件的配置，因此认证、代理、FUSION、自适应调优、重切控制和限速等高级设置都会自动保留。</p>
+<div class="highlight"><pre><span></span><code><span class="n">file_config</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">create_file_config</span><span class="p">(</span>
+    <span class="n">max_chunks</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span>
+    <span class="n">min_chunks</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">enable_chunking</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+</code></pre></div>
+<h2 id="_4">代理配置<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">littledl</span><span class="w"> </span><span class="kn">import</span> <span class="n">DownloadConfig</span><span class="p">,</span> <span class="n">ProxyConfig</span><span class="p">,</span> <span class="n">ProxyMode</span>
 
 <span class="n">proxy</span> <span class="o">=</span> <span class="n">ProxyConfig</span><span class="p">(</span>
@@ -1011,7 +1060,7 @@
 
 <span class="n">config</span> <span class="o">=</span> <span class="n">DownloadConfig</span><span class="p">(</span><span class="n">proxy</span><span class="o">=</span><span class="n">proxy</span><span class="p">)</span>
 </code></pre></div>
-<h2 id="_4">速度限制<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h2>
+<h2 id="_5">速度限制<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">littledl</span><span class="w"> </span><span class="kn">import</span> <span class="n">DownloadConfig</span><span class="p">,</span> <span class="n">SpeedLimitConfig</span><span class="p">,</span> <span class="n">SpeedLimitMode</span>
 
 <span class="n">speed_limit</span> <span class="o">=</span> <span class="n">SpeedLimitConfig</span><span class="p">(</span>
@@ -1022,7 +1071,7 @@
 
 <span class="n">config</span> <span class="o">=</span> <span class="n">DownloadConfig</span><span class="p">(</span><span class="n">speed_limit</span><span class="o">=</span><span class="n">speed_limit</span><span class="p">)</span>
 </code></pre></div>
-<h2 id="_5">进度回调<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h2>
+<h2 id="_6">进度回调<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h2>
 <p><code>progress_callback</code> 支持四种格式：</p>
 <ul>
 <li>传统位置参数：<code>(downloaded, total, speed, eta)</code></li>
@@ -1047,7 +1096,7 @@
 
 <span class="n">config</span> <span class="o">=</span> <span class="n">DownloadConfig</span><span class="p">(</span><span class="n">progress_callback</span><span class="o">=</span><span class="n">on_progress</span><span class="p">)</span>
 </code></pre></div>
-<h2 id="_6">分块状态回调<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h2>
+<h2 id="_7">分块状态回调<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h2>
 <p><code>chunk_callback</code> 仅在分块下载模式下触发，支持与 <code>progress_callback</code> 相同的四种格式。</p>
 <div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">littledl</span><span class="w"> </span><span class="kn">import</span> <span class="n">ChunkEvent</span>
 

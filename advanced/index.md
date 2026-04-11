@@ -6,12 +6,13 @@ Advanced features and optimizations for littledl.
 
 littledl supports multiple download styles:
 
-| Style          | Description                                        | Best For                           |
-| -------------- | -------------------------------------------------- | ---------------------------------- |
-| `single`       | Single-threaded download                           | Small files, servers without Range |
-| `multi`        | Multi-threaded segmented download                  | Large files, stable connections    |
-| `adaptive`     | Automatically select best style                    | Most use cases                     |
-| `hybrid_turbo` | Adaptive chunk sizing with AIMD congestion control | Maximum speed on unstable networks |
+| Style          | Description                                                     | Best For                                    |
+| -------------- | --------------------------------------------------------------- | ------------------------------------------- |
+| `single`       | Single-threaded download                                        | Small files, servers without Range          |
+| `multi`        | Multi-threaded segmented download                               | Large files, stable connections             |
+| `adaptive`     | Traditional adaptive scheduler                                  | Legacy tuning workflows                     |
+| `fusion`       | Four-phase adaptive scheduler (PROBE -> RAMP -> CRUISE -> TAIL) | Default choice for speed and stability      |
+| `hybrid_turbo` | AIMD-driven aggressive adaptive mode                            | Unstable networks and burst-heavy transfers |
 
 ### Applying Download Style
 
@@ -19,6 +20,9 @@ littledl supports multiple download styles:
 from littledl import DownloadConfig, DownloadStyle
 
 config = DownloadConfig()
+config.apply_style(DownloadStyle.FUSION)
+
+# hybrid_turbo remains available for legacy/aggressive tuning
 config.apply_style(DownloadStyle.HYBRID_TURBO)
 ```
 

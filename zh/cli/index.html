@@ -1092,7 +1092,7 @@
 </code></pre></div>
 <p>验证安装：</p>
 <div class="highlight"><pre><span></span><code>littledl<span class="w"> </span>--version
-<span class="c1"># 输出: littledl 0.8.0</span>
+<span class="c1"># 输出: littledl 0.9.0</span>
 </code></pre></div>
 <h2 id="_3">基本用法<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h2>
 <h3 id="_4">下载单个文件<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h3>
@@ -1190,29 +1190,37 @@ https://example.com/file3.doc
 </tr>
 <tr>
 <td><code>adaptive</code></td>
-<td>根据条件自动选择</td>
-<td>大多数场景</td>
+<td>传统自适应调度器</td>
+<td>兼容旧版调参方式</td>
+</tr>
+<tr>
+<td><code>fusion</code></td>
+<td>四阶段自适应调度器，CLI 默认值</td>
+<td>推荐给绝大多数用户</td>
 </tr>
 <tr>
 <td><code>hybrid_turbo</code></td>
-<td>自适应 + AIMD 拥塞控制</td>
-<td>追求极致速度、不稳定网络</td>
+<td>激进型 AIMD 自适应模式</td>
+<td>追求极致突发速度、不稳定网络</td>
 </tr>
 <tr>
 <td><code>auto</code></td>
-<td>由 littledl 分析后决定</td>
-<td>推荐给新手用户</td>
+<td><code>fusion</code> 的兼容别名</td>
+<td>兼容旧脚本</td>
 </tr>
 </tbody>
 </table>
 <h3 id="_9">示例<a class="headerlink" href="#_9" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><span class="c1"># 自动选择最佳模式</span>
-littledl<span class="w"> </span><span class="s2">&quot;https://example.com/file.zip&quot;</span><span class="w"> </span>-s<span class="w"> </span>auto
+<div class="highlight"><pre><span></span><code><span class="c1"># 默认模式（FUSION）</span>
+littledl<span class="w"> </span><span class="s2">&quot;https://example.com/file.zip&quot;</span>
 
 <span class="c1"># 强制单线程</span>
 littledl<span class="w"> </span><span class="s2">&quot;https://example.com/file.zip&quot;</span><span class="w"> </span>-s<span class="w"> </span>single
 
-<span class="c1"># 最高性能</span>
+<span class="c1"># 显式启用 FUSION</span>
+littledl<span class="w"> </span><span class="s2">&quot;https://example.com/file.zip&quot;</span><span class="w"> </span>-s<span class="w"> </span>fusion<span class="w"> </span>-c<span class="w"> </span><span class="m">16</span>
+
+<span class="c1"># 激进旧版模式</span>
 littledl<span class="w"> </span><span class="s2">&quot;https://example.com/file.zip&quot;</span><span class="w"> </span>-s<span class="w"> </span>hybrid_turbo<span class="w"> </span>-c<span class="w"> </span><span class="m">32</span>
 </code></pre></div>
 <h2 id="_10">进度显示<a class="headerlink" href="#_10" title="Permanent link">&para;</a></h2>

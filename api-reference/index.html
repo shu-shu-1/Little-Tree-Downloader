@@ -1144,7 +1144,9 @@
 </code></pre></div>
 <h4 id="methods">Methods<a class="headerlink" href="#methods" title="Permanent link">&para;</a></h4>
 <p><strong><code>apply_style(style: Any) -&gt; "DownloadConfig"</code></strong></p>
-<p>Quickly reconfigures all internal scheduling variables, chunking thresholds, and AIMD congestion control parameters based on a provided style. Supports either a <code>DownloadStyle</code> enum or a standard string style name (e.g., <code>"SINGLE"</code>, <code>"MULTI"</code>, <code>"ADAPTIVE"</code>, or <code>"HYBRID_TURBO"</code>). Returns the modified <code>DownloadConfig</code> instance.</p>
+<p>Quickly reconfigures all internal scheduling variables, chunking thresholds, and adaptive scheduling parameters based on a provided style. Supports either a <code>DownloadStyle</code> enum or a standard string style name (e.g., <code>"SINGLE"</code>, <code>"MULTI"</code>, <code>"ADAPTIVE"</code>, <code>"FUSION"</code>, or <code>"HYBRID_TURBO"</code>). Returns the modified <code>DownloadConfig</code> instance.</p>
+<p><strong><code>create_file_config(*, max_chunks: int | None = None, min_chunks: int | None = None, enable_chunking: bool | None = None) -&gt; "DownloadConfig"</code></strong></p>
+<p>Creates a per-file <code>DownloadConfig</code> derived from the current one. Used internally by batch downloaders so FUSION, proxy, auth, retry, speed-limit, and other settings remain consistent while applying per-file chunk overrides.</p>
 <h2 id="callback-events">Callback Events<a class="headerlink" href="#callback-events" title="Permanent link">&para;</a></h2>
 <h3 id="progressevent">ProgressEvent<a class="headerlink" href="#progressevent" title="Permanent link">&para;</a></h3>
 <p>Single-file download progress event. Includes file context when emitted by the <code>Downloader</code>.</p>

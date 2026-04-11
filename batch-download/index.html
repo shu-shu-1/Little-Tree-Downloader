@@ -733,8 +733,10 @@
 <li><strong>Adaptive Concurrency</strong>: Dynamically adjusts concurrent downloads based on network conditions</li>
 <li><strong>Small File Priority</strong>: Automatically identifies and prioritizes small files for better UX</li>
 <li><strong>Connection Pooling</strong>: All files share a connection pool to reduce connection overhead</li>
+<li><strong>Domain Affinity</strong>: Prefer scheduling files from hot domains together to reuse live connections</li>
 <li><strong>Batch Probe</strong>: Parallel HEAD requests to fetch file information</li>
 <li><strong>Smart Chunking</strong>: Automatically selects optimal chunk strategy based on file size</li>
+<li><strong>Global Chunk Budget</strong>: Caps aggregate active chunks across files so batch mode does not over-expand</li>
 </ul>
 <h2 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h2>
 <h3 id="synchronous-batch-download">Synchronous Batch Download<a class="headerlink" href="#synchronous-batch-download" title="Permanent link">&para;</a></h3>
@@ -823,9 +825,10 @@
 <h3 id="adaptive-concurrency-control">Adaptive Concurrency Control<a class="headerlink" href="#adaptive-concurrency-control" title="Permanent link">&para;</a></h3>
 <p>Adaptive concurrency is enabled by default. The system automatically adjusts concurrency based on download speed:</p>
 <ul>
-<li>Speed continuously decreasing → Increase concurrency to utilize more bandwidth</li>
-<li>Speed stable or increasing → Maintain or increase concurrency</li>
+<li>Speed trend improving → Gradually increase file concurrency</li>
+<li>Speed trend degrading → Reduce file concurrency to stabilize throughput</li>
 <li>Error rate rising → Automatically reduce concurrency</li>
+<li>Per-file chunks are still bounded by the batch-wide chunk budget</li>
 </ul>
 <div class="highlight"><pre><span></span><code><span class="n">downloader</span> <span class="o">=</span> <span class="n">BatchDownloader</span><span class="p">(</span>
     <span class="n">enable_adaptive_concurrency</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
@@ -1106,6 +1109,14 @@
 <td>Global thread pool unified scheduling to avoid resource waste</td>
 </tr>
 <tr>
+<td>Domain-aware Scheduling</td>
+<td>Prefer same-domain tasks together to reuse warm connections</td>
+</tr>
+<tr>
+<td>Global Chunk Budget</td>
+<td>Prevent all active files from claiming max chunks simultaneously</td>
+</tr>
+<tr>
 <td>Multi-source Backup</td>
 <td>Support for multiple backup URLs with automatic failover</td>
 </tr>
@@ -1120,7 +1131,7 @@
 <div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">littledl</span><span class="w"> </span><span class="kn">import</span> <span class="n">DownloadStyle</span><span class="p">,</span> <span class="n">StrategySelector</span>
 
 <span class="n">selector</span> <span class="o">=</span> <span class="n">StrategySelector</span><span class="p">(</span>
-    <span class="n">default_style</span><span class="o">=</span><span class="n">DownloadStyle</span><span class="o">.</span><span class="n">ADAPTIVE</span><span class="p">,</span>
+    <span class="n">default_style</span><span class="o">=</span><span class="n">DownloadStyle</span><span class="o">.</span><span class="n">FUSION</span><span class="p">,</span>
     <span class="n">enable_single</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
     <span class="n">enable_multi</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
 <span class="p">)</span>
@@ -1191,7 +1202,7 @@
 <span class="p">)</span>
 
 <span class="n">selector</span> <span class="o">=</span> <span class="n">StrategySelector</span><span class="p">(</span>
-    <span class="n">default_style</span><span class="o">=</span><span class="n">DownloadStyle</span><span class="o">.</span><span class="n">ADAPTIVE</span><span class="p">,</span>
+    <span class="n">default_style</span><span class="o">=</span><span class="n">DownloadStyle</span><span class="o">.</span><span class="n">FUSION</span><span class="p">,</span>
     <span class="n">enable_single</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
     <span class="n">enable_multi</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
     <span class="n">max_chunks</span><span class="o">=</span><span class="mi">16</span><span class="p">,</span>

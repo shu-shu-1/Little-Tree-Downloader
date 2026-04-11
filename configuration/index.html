@@ -639,6 +639,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#per-file-batch-config-inheritance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Per-file Batch Config Inheritance
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#proxy-configuration" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -933,6 +944,36 @@
 <td>Enable hybrid turbo download with AIMD congestion control and smart chunk fallback</td>
 </tr>
 <tr>
+<td><code>enable_fusion</code></td>
+<td>bool</td>
+<td>True</td>
+<td>Enable the FUSION four-phase adaptive scheduler</td>
+</tr>
+<tr>
+<td><code>fusion_probe_chunks</code></td>
+<td>int</td>
+<td>2</td>
+<td>Initial worker count during the PROBE phase</td>
+</tr>
+<tr>
+<td><code>fusion_probe_duration</code></td>
+<td>float</td>
+<td>2.0</td>
+<td>Probe duration before entering the RAMP phase</td>
+</tr>
+<tr>
+<td><code>fusion_tail_ratio</code></td>
+<td>float</td>
+<td>0.20</td>
+<td>Enter TAIL when remaining bytes ratio falls below this threshold</td>
+</tr>
+<tr>
+<td><code>fusion_tail_boost</code></td>
+<td>int</td>
+<td>2</td>
+<td>Extra concurrent workers allowed in the TAIL phase</td>
+</tr>
+<tr>
 <td><code>hybrid_aimd_increase_step</code></td>
 <td>int</td>
 <td>1</td>
@@ -1000,6 +1041,14 @@
 </tr>
 </tbody>
 </table>
+<h2 id="per-file-batch-config-inheritance">Per-file Batch Config Inheritance<a class="headerlink" href="#per-file-batch-config-inheritance" title="Permanent link">&para;</a></h2>
+<p>Batch downloaders derive per-file configs from the parent <code>DownloadConfig</code>, so advanced settings such as auth, proxy, FUSION, adaptive tuning, resplit controls, and speed limits are preserved automatically.</p>
+<div class="highlight"><pre><span></span><code><span class="n">file_config</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">create_file_config</span><span class="p">(</span>
+    <span class="n">max_chunks</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span>
+    <span class="n">min_chunks</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">enable_chunking</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+</code></pre></div>
 <h2 id="proxy-configuration">Proxy Configuration<a class="headerlink" href="#proxy-configuration" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">littledl</span><span class="w"> </span><span class="kn">import</span> <span class="n">DownloadConfig</span><span class="p">,</span> <span class="n">ProxyConfig</span><span class="p">,</span> <span class="n">ProxyMode</span>
 

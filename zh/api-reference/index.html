@@ -1144,7 +1144,9 @@
 </code></pre></div>
 <h4 id="_3">方法<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h4>
 <p><strong><code>apply_style(style: Any) -&gt; "DownloadConfig"</code></strong></p>
-<p>根据相应的下载风格（支持 <code>DownloadStyle</code> 枚举对象，或对应名称的字符串如 <code>"SINGLE"</code>, <code>"MULTI"</code>, <code>"ADAPTIVE"</code>, <code>"HYBRID_TURBO"</code>）一次性更改当前所有相关的调度算法配置、分块开关与 AIMD 网络拥塞控制参数，返回修改后的配置对象自身。</p>
+<p>根据相应的下载风格（支持 <code>DownloadStyle</code> 枚举对象，或对应名称的字符串如 <code>"SINGLE"</code>, <code>"MULTI"</code>, <code>"ADAPTIVE"</code>, <code>"FUSION"</code>, <code>"HYBRID_TURBO"</code>）一次性更改当前所有相关的调度算法配置、分块开关与自适应控制参数，返回修改后的配置对象自身。</p>
+<p><strong><code>create_file_config(*, max_chunks: int | None = None, min_chunks: int | None = None, enable_chunking: bool | None = None) -&gt; "DownloadConfig"</code></strong></p>
+<p>基于当前配置创建单文件专用 <code>DownloadConfig</code>。批量下载器内部会使用它，因此 FUSION、代理、认证、重试、限速等设置会在每个文件上保持一致，同时允许覆盖单文件的分块参数。</p>
 <h2 id="_4">回调事件<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h2>
 <h3 id="progressevent">ProgressEvent<a class="headerlink" href="#progressevent" title="Permanent link">&para;</a></h3>
 <p>单文件下载进度事件。由 <code>Downloader</code> 发出时携带文件上下文。</p>

@@ -733,8 +733,10 @@
 <li><strong>自适应并发</strong>：根据网络状况动态调整同时下载的文件数</li>
 <li><strong>小文件优先</strong>：自动识别小文件并优先处理，提升用户体验</li>
 <li><strong>连接复用</strong>：所有文件共享连接池，减少连接建立开销</li>
+<li><strong>域名亲和调度</strong>：优先调度相同域名的任务，复用已建立连接</li>
 <li><strong>批量Probe</strong>：并行发送 HEAD 请求获取文件信息</li>
 <li><strong>智能分块</strong>：根据文件大小自动选择最优分块策略</li>
+<li><strong>全局分块预算</strong>：限制整个批量任务的总分块数，避免多个文件同时无限扩张</li>
 </ul>
 <h2 id="_3">快速开始<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h2>
 <h3 id="_4">同步批量下载<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h3>
@@ -823,9 +825,10 @@
 <h3 id="_10">自适应并发控制<a class="headerlink" href="#_10" title="Permanent link">&para;</a></h3>
 <p>默认启用自适应并发控制，系统会根据下载速度自动调整并发数：</p>
 <ul>
-<li>速度持续下降 → 增加并发利用更多带宽</li>
-<li>速度稳定上升 → 维持或增加并发</li>
+<li>速度趋势变好 → 逐步提高文件并发</li>
+<li>速度趋势变差 → 降低文件并发以稳定吞吐</li>
 <li>错误率上升 → 自动降低并发</li>
+<li>单文件分块仍会受到整个批量任务的全局预算约束</li>
 </ul>
 <div class="highlight"><pre><span></span><code><span class="n">downloader</span> <span class="o">=</span> <span class="n">BatchDownloader</span><span class="p">(</span>
     <span class="n">enable_adaptive_concurrency</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
@@ -1112,6 +1115,14 @@
 <td>全局线程池统一调度，避免资源浪费</td>
 </tr>
 <tr>
+<td>域名感知调度</td>
+<td>优先把同域名任务排在一起，复用热连接</td>
+</tr>
+<tr>
+<td>全局分块预算</td>
+<td>防止多个活跃文件同时把分块数拉满</td>
+</tr>
+<tr>
 <td>多源备份</td>
 <td>支持多个备用URL，故障自动切换</td>
 </tr>
@@ -1126,7 +1137,7 @@
 <div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">littledl</span><span class="w"> </span><span class="kn">import</span> <span class="n">DownloadStyle</span><span class="p">,</span> <span class="n">StrategySelector</span>
 
 <span class="n">selector</span> <span class="o">=</span> <span class="n">StrategySelector</span><span class="p">(</span>
-    <span class="n">default_style</span><span class="o">=</span><span class="n">DownloadStyle</span><span class="o">.</span><span class="n">ADAPTIVE</span><span class="p">,</span>
+    <span class="n">default_style</span><span class="o">=</span><span class="n">DownloadStyle</span><span class="o">.</span><span class="n">FUSION</span><span class="p">,</span>
     <span class="n">enable_single</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
     <span class="n">enable_multi</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
 <span class="p">)</span>
@@ -1202,7 +1213,7 @@
 
 <span class="c1"># 策略选择器</span>
 <span class="n">selector</span> <span class="o">=</span> <span class="n">StrategySelector</span><span class="p">(</span>
-    <span class="n">default_style</span><span class="o">=</span><span class="n">DownloadStyle</span><span class="o">.</span><span class="n">ADAPTIVE</span><span class="p">,</span>
+    <span class="n">default_style</span><span class="o">=</span><span class="n">DownloadStyle</span><span class="o">.</span><span class="n">FUSION</span><span class="p">,</span>
     <span class="n">enable_single</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
     <span class="n">enable_multi</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
     <span class="n">max_chunks</span><span class="o">=</span><span class="mi">16</span><span class="p">,</span>
