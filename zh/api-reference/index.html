@@ -867,6 +867,78 @@
   
 </li>
         
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        统一回调系统
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="统一回调系统">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#eventtype" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        EventType
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fileprogressevent" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        FileProgressEvent
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#filecompleteevent" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        FileCompleteEvent
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#throttledcallback" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ThrottledCallback
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#callbackchain" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CallbackChain
+      
+    </span>
+  </a>
+  
+</li>
+        
           <li class="md-nav__item">
   <a href="#proxyconfig" class="md-nav__link">
     <span class="md-ellipsis">
@@ -895,7 +967,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_5" class="md-nav__link">
+  <a href="#_6" class="md-nav__link">
     <span class="md-ellipsis">
       
         枚举类型
@@ -945,7 +1017,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_6" class="md-nav__link">
+  <a href="#_7" class="md-nav__link">
     <span class="md-ellipsis">
       
         多语言支持
@@ -956,7 +1028,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_7" class="md-nav__link">
+  <a href="#_8" class="md-nav__link">
     <span class="md-ellipsis">
       
         文件写入器
@@ -1075,6 +1147,7 @@
 <p>根据相应的下载风格（支持 <code>DownloadStyle</code> 枚举对象，或对应名称的字符串如 <code>"SINGLE"</code>, <code>"MULTI"</code>, <code>"ADAPTIVE"</code>, <code>"HYBRID_TURBO"</code>）一次性更改当前所有相关的调度算法配置、分块开关与 AIMD 网络拥塞控制参数，返回修改后的配置对象自身。</p>
 <h2 id="_4">回调事件<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h2>
 <h3 id="progressevent">ProgressEvent<a class="headerlink" href="#progressevent" title="Permanent link">&para;</a></h3>
+<p>单文件下载进度事件。由 <code>Downloader</code> 发出时携带文件上下文。</p>
 <div class="highlight"><pre><span></span><code><span class="n">ProgressEvent</span><span class="p">(</span>
     <span class="n">downloaded</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
     <span class="n">total</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
@@ -1083,10 +1156,13 @@
     <span class="n">progress</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
     <span class="n">remaining</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
     <span class="n">timestamp</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">unknown_size</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">filename</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>   <span class="c1"># 正在下载的文件名</span>
+    <span class="n">url</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>        <span class="c1"># 正在下载的 URL</span>
 <span class="p">)</span>
 </code></pre></div>
 <h3 id="chunkevent">ChunkEvent<a class="headerlink" href="#chunkevent" title="Permanent link">&para;</a></h3>
-<p><div class="highlight"><pre><span></span><code><span class="n">ChunkEvent</span><span class="p">(</span>
+<div class="highlight"><pre><span></span><code><span class="n">ChunkEvent</span><span class="p">(</span>
     <span class="n">chunk_index</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
     <span class="n">status</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>  <span class="c1"># started/downloading/completed/failed</span>
     <span class="n">downloaded</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
@@ -1096,6 +1172,70 @@
     <span class="n">error</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">timestamp</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
 <span class="p">)</span>
+</code></pre></div>
+<h2 id="_5">统一回调系统<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h2>
+<p><code>littledl.callback</code> 模块提供统一的事件系统，便于构建自定义下载管理器。</p>
+<h3 id="eventtype">EventType<a class="headerlink" href="#eventtype" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">littledl</span><span class="w"> </span><span class="kn">import</span> <span class="n">EventType</span>
+
+<span class="n">EventType</span><span class="o">.</span><span class="n">FILE_PROGRESS</span>    <span class="c1"># 单文件进度更新</span>
+<span class="n">EventType</span><span class="o">.</span><span class="n">FILE_COMPLETE</span>    <span class="c1"># 单文件下载完成</span>
+<span class="n">EventType</span><span class="o">.</span><span class="n">FILE_ERROR</span>       <span class="c1"># 单文件下载错误</span>
+<span class="n">EventType</span><span class="o">.</span><span class="n">FILE_RETRY</span>       <span class="c1"># 单文件重试</span>
+<span class="n">EventType</span><span class="o">.</span><span class="n">BATCH_PROGRESS</span>   <span class="c1"># 批量下载进度</span>
+<span class="n">EventType</span><span class="o">.</span><span class="n">BATCH_COMPLETE</span>   <span class="c1"># 批量下载完成</span>
+<span class="n">EventType</span><span class="o">.</span><span class="n">CHUNK_PROGRESS</span>   <span class="c1"># 分块级进度</span>
+<span class="n">EventType</span><span class="o">.</span><span class="n">CHUNK_COMPLETE</span>   <span class="c1"># 分块级完成</span>
+<span class="n">EventType</span><span class="o">.</span><span class="n">CHUNK_ERROR</span>      <span class="c1"># 分块级错误</span>
+</code></pre></div>
+<h3 id="fileprogressevent">FileProgressEvent<a class="headerlink" href="#fileprogressevent" title="Permanent link">&para;</a></h3>
+<p>用于文件级进度监控的丰富事件对象。</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">littledl</span><span class="w"> </span><span class="kn">import</span> <span class="n">FileProgressEvent</span>
+
+<span class="n">FileProgressEvent</span><span class="p">(</span>
+    <span class="n">event_type</span><span class="p">:</span> <span class="n">EventType</span> <span class="o">=</span> <span class="n">EventType</span><span class="o">.</span><span class="n">FILE_PROGRESS</span><span class="p">,</span>
+    <span class="n">task_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+    <span class="n">filename</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+    <span class="n">url</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+    <span class="n">file_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="n">downloaded</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="n">speed</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+    <span class="n">progress</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+    <span class="n">eta</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">chunks_total</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="n">chunks_completed</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+<span class="p">)</span>
+</code></pre></div>
+<h3 id="filecompleteevent">FileCompleteEvent<a class="headerlink" href="#filecompleteevent" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">littledl</span><span class="w"> </span><span class="kn">import</span> <span class="n">FileCompleteEvent</span>
+
+<span class="n">FileCompleteEvent</span><span class="p">(</span>
+    <span class="n">event_type</span><span class="p">:</span> <span class="n">EventType</span> <span class="o">=</span> <span class="n">EventType</span><span class="o">.</span><span class="n">FILE_COMPLETE</span><span class="p">,</span>
+    <span class="n">task_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+    <span class="n">filename</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+    <span class="n">url</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+    <span class="n">file_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="n">saved_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+    <span class="n">error</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span>
+</code></pre></div>
+<h3 id="throttledcallback">ThrottledCallback<a class="headerlink" href="#throttledcallback" title="Permanent link">&para;</a></h3>
+<p>包装回调适配器以限制发送频率，防止 UI 卡顿。</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">littledl</span><span class="w"> </span><span class="kn">import</span> <span class="n">UnifiedCallbackAdapter</span><span class="p">,</span> <span class="n">ThrottledCallback</span>
+
+<span class="n">adapter</span> <span class="o">=</span> <span class="n">UnifiedCallbackAdapter</span><span class="p">(</span><span class="n">my_callback</span><span class="p">)</span>
+<span class="n">throttled</span> <span class="o">=</span> <span class="n">ThrottledCallback</span><span class="p">(</span><span class="n">adapter</span><span class="p">,</span> <span class="n">min_interval</span><span class="o">=</span><span class="mf">0.1</span><span class="p">)</span>  <span class="c1"># 每秒最多 10 次</span>
+<span class="k">await</span> <span class="n">throttled</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
+<span class="k">await</span> <span class="n">throttled</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>  <span class="c1"># 发送待处理事件</span>
+</code></pre></div>
+<h3 id="callbackchain">CallbackChain<a class="headerlink" href="#callbackchain" title="Permanent link">&para;</a></h3>
+<p>链式调用多个回调。</p>
+<p><div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">littledl</span><span class="w"> </span><span class="kn">import</span> <span class="n">CallbackChain</span>
+
+<span class="n">chain</span> <span class="o">=</span> <span class="n">CallbackChain</span><span class="p">()</span>
+<span class="n">chain</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">logging_callback</span><span class="p">)</span>
+<span class="n">chain</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">ui_callback</span><span class="p">)</span>
+<span class="k">await</span> <span class="n">chain</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
 </code></pre></div>
 <div class="highlight"><pre><span></span><code>### AuthConfig
 
@@ -1130,7 +1270,7 @@ auth = AuthConfig(
     <span class="n">max_speed</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
 <span class="p">)</span>
 </code></pre></div>
-<h2 id="_5">枚举类型<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h2>
+<h2 id="_6">枚举类型<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h2>
 <h3 id="authtype">AuthType<a class="headerlink" href="#authtype" title="Permanent link">&para;</a></h3>
 <ul>
 <li><code>BASIC</code></li>
@@ -1150,13 +1290,13 @@ auth = AuthConfig(
 <li><code>GLOBAL</code> - 限制整体速度</li>
 <li><code>PER_CHUNK</code> - 限制每个分块的速度</li>
 </ul>
-<h2 id="_6">多语言支持<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h2>
+<h2 id="_7">多语言支持<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">littledl</span><span class="w"> </span><span class="kn">import</span> <span class="n">set_language</span><span class="p">,</span> <span class="n">get_available_languages</span>
 
 <span class="n">set_language</span><span class="p">(</span><span class="s2">&quot;zh&quot;</span><span class="p">)</span>  <span class="c1"># 或 &quot;en&quot;</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">get_available_languages</span><span class="p">())</span>  <span class="c1"># {&#39;en&#39;: &#39;English&#39;, &#39;zh&#39;: &#39;中文&#39;}</span>
 </code></pre></div>
-<h2 id="_7">文件写入器<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h2>
+<h2 id="_8">文件写入器<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h2>
 <h3 id="bufferedfilewriter">BufferedFileWriter<a class="headerlink" href="#bufferedfilewriter" title="Permanent link">&para;</a></h3>
 <p>高性能缓冲文件写入器，用于优化并发下载性能。</p>
 <div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">littledl</span><span class="w"> </span><span class="kn">import</span> <span class="n">BufferedFileWriter</span>

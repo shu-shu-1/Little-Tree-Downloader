@@ -646,13 +646,24 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        进度跟踪
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#_7" class="md-nav__link">
+  <a href="#_8" class="md-nav__link">
     <span class="md-ellipsis">
       
         下一步
@@ -914,7 +925,28 @@
 
 <span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">main</span><span class="p">())</span>
 </code></pre></div>
-<h2 id="_7">下一步<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h2>
+<h3 id="_7">进度跟踪<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h3>
+<p>使用 <code>progress_callback</code> 参数接收下载进度事件。littledl 自动检测回调签名风格：</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">littledl</span><span class="w"> </span><span class="kn">import</span> <span class="n">download_file_sync</span><span class="p">,</span> <span class="n">ProgressEvent</span>
+
+<span class="c1"># 风格 1（推荐）：接收 ProgressEvent 对象</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">on_progress</span><span class="p">(</span><span class="n">event</span><span class="p">:</span> <span class="n">ProgressEvent</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[</span><span class="si">{</span><span class="n">event</span><span class="o">.</span><span class="n">filename</span><span class="si">}</span><span class="s2">] </span><span class="si">{</span><span class="n">event</span><span class="o">.</span><span class="n">progress</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2">% - </span><span class="si">{</span><span class="n">event</span><span class="o">.</span><span class="n">speed</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">1024</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">1024</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> MB/s&quot;</span><span class="p">)</span>
+
+<span class="n">path</span> <span class="o">=</span> <span class="n">download_file_sync</span><span class="p">(</span>
+    <span class="s2">&quot;https://example.com/file.zip&quot;</span><span class="p">,</span>
+    <span class="n">progress_callback</span><span class="o">=</span><span class="n">on_progress</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># 风格 2：接收关键字参数</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">on_progress_kwargs</span><span class="p">(</span><span class="o">*</span><span class="p">,</span> <span class="n">downloaded</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">total</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">speed</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">filename</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[</span><span class="si">{</span><span class="n">filename</span><span class="si">}</span><span class="s2">] </span><span class="si">{</span><span class="n">downloaded</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">total</span><span class="si">}</span><span class="s2"> bytes&quot;</span><span class="p">)</span>
+
+<span class="c1"># 风格 3：传统位置参数</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">on_progress_legacy</span><span class="p">(</span><span class="n">downloaded</span><span class="p">,</span> <span class="n">total</span><span class="p">,</span> <span class="n">speed</span><span class="p">,</span> <span class="n">eta</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">downloaded</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">total</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+<h2 id="_8">下一步<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="../configuration/">配置指南</a> - 了解所有配置选项</li>
 <li><a href="../authentication/">认证设置</a> - 为受保护资源设置认证</li>

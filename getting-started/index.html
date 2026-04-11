@@ -646,6 +646,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#progress-tracking" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Progress Tracking
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -913,6 +924,27 @@
     <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Downloaded to: </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
 <span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">main</span><span class="p">())</span>
+</code></pre></div>
+<h3 id="progress-tracking">Progress Tracking<a class="headerlink" href="#progress-tracking" title="Permanent link">&para;</a></h3>
+<p>Use the <code>progress_callback</code> parameter to receive download progress events. littledl auto-detects your callback signature style:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">littledl</span><span class="w"> </span><span class="kn">import</span> <span class="n">download_file_sync</span><span class="p">,</span> <span class="n">ProgressEvent</span>
+
+<span class="c1"># Style 1 (Recommended): Receive ProgressEvent object</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">on_progress</span><span class="p">(</span><span class="n">event</span><span class="p">:</span> <span class="n">ProgressEvent</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[</span><span class="si">{</span><span class="n">event</span><span class="o">.</span><span class="n">filename</span><span class="si">}</span><span class="s2">] </span><span class="si">{</span><span class="n">event</span><span class="o">.</span><span class="n">progress</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2">% - </span><span class="si">{</span><span class="n">event</span><span class="o">.</span><span class="n">speed</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">1024</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">1024</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> MB/s&quot;</span><span class="p">)</span>
+
+<span class="n">path</span> <span class="o">=</span> <span class="n">download_file_sync</span><span class="p">(</span>
+    <span class="s2">&quot;https://example.com/file.zip&quot;</span><span class="p">,</span>
+    <span class="n">progress_callback</span><span class="o">=</span><span class="n">on_progress</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># Style 2: Receive keyword arguments</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">on_progress_kwargs</span><span class="p">(</span><span class="o">*</span><span class="p">,</span> <span class="n">downloaded</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">total</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">speed</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">filename</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[</span><span class="si">{</span><span class="n">filename</span><span class="si">}</span><span class="s2">] </span><span class="si">{</span><span class="n">downloaded</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">total</span><span class="si">}</span><span class="s2"> bytes&quot;</span><span class="p">)</span>
+
+<span class="c1"># Style 3: Legacy positional arguments</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">on_progress_legacy</span><span class="p">(</span><span class="n">downloaded</span><span class="p">,</span> <span class="n">total</span><span class="p">,</span> <span class="n">speed</span><span class="p">,</span> <span class="n">eta</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">downloaded</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">total</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 </code></pre></div>
 <h2 id="next-steps">Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
 <ul>

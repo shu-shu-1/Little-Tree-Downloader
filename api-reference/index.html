@@ -867,6 +867,78 @@
   
 </li>
         
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#unified-callback-system" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Unified Callback System
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Unified Callback System">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#eventtype" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        EventType
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fileprogressevent" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        FileProgressEvent
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#filecompleteevent" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        FileCompleteEvent
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#throttledcallback" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ThrottledCallback
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#callbackchain" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CallbackChain
+      
+    </span>
+  </a>
+  
+</li>
+        
           <li class="md-nav__item">
   <a href="#proxyconfig" class="md-nav__link">
     <span class="md-ellipsis">
@@ -1075,6 +1147,7 @@
 <p>Quickly reconfigures all internal scheduling variables, chunking thresholds, and AIMD congestion control parameters based on a provided style. Supports either a <code>DownloadStyle</code> enum or a standard string style name (e.g., <code>"SINGLE"</code>, <code>"MULTI"</code>, <code>"ADAPTIVE"</code>, or <code>"HYBRID_TURBO"</code>). Returns the modified <code>DownloadConfig</code> instance.</p>
 <h2 id="callback-events">Callback Events<a class="headerlink" href="#callback-events" title="Permanent link">&para;</a></h2>
 <h3 id="progressevent">ProgressEvent<a class="headerlink" href="#progressevent" title="Permanent link">&para;</a></h3>
+<p>Single-file download progress event. Includes file context when emitted by the <code>Downloader</code>.</p>
 <div class="highlight"><pre><span></span><code><span class="n">ProgressEvent</span><span class="p">(</span>
     <span class="n">downloaded</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
     <span class="n">total</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
@@ -1083,10 +1156,13 @@
     <span class="n">progress</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
     <span class="n">remaining</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
     <span class="n">timestamp</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">unknown_size</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">filename</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>   <span class="c1"># filename being downloaded</span>
+    <span class="n">url</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>        <span class="c1"># URL being downloaded</span>
 <span class="p">)</span>
 </code></pre></div>
 <h3 id="chunkevent">ChunkEvent<a class="headerlink" href="#chunkevent" title="Permanent link">&para;</a></h3>
-<p><div class="highlight"><pre><span></span><code><span class="n">ChunkEvent</span><span class="p">(</span>
+<div class="highlight"><pre><span></span><code><span class="n">ChunkEvent</span><span class="p">(</span>
     <span class="n">chunk_index</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
     <span class="n">status</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>  <span class="c1"># started/downloading/completed/failed</span>
     <span class="n">downloaded</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
@@ -1096,6 +1172,70 @@
     <span class="n">error</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">timestamp</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
 <span class="p">)</span>
+</code></pre></div>
+<h2 id="unified-callback-system">Unified Callback System<a class="headerlink" href="#unified-callback-system" title="Permanent link">&para;</a></h2>
+<p>The <code>littledl.callback</code> module provides a unified event system for building custom download managers.</p>
+<h3 id="eventtype">EventType<a class="headerlink" href="#eventtype" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">littledl</span><span class="w"> </span><span class="kn">import</span> <span class="n">EventType</span>
+
+<span class="n">EventType</span><span class="o">.</span><span class="n">FILE_PROGRESS</span>    <span class="c1"># Single file progress update</span>
+<span class="n">EventType</span><span class="o">.</span><span class="n">FILE_COMPLETE</span>    <span class="c1"># Single file download complete</span>
+<span class="n">EventType</span><span class="o">.</span><span class="n">FILE_ERROR</span>       <span class="c1"># Single file download error</span>
+<span class="n">EventType</span><span class="o">.</span><span class="n">FILE_RETRY</span>       <span class="c1"># Single file retry</span>
+<span class="n">EventType</span><span class="o">.</span><span class="n">BATCH_PROGRESS</span>   <span class="c1"># Batch download progress</span>
+<span class="n">EventType</span><span class="o">.</span><span class="n">BATCH_COMPLETE</span>   <span class="c1"># Batch download complete</span>
+<span class="n">EventType</span><span class="o">.</span><span class="n">CHUNK_PROGRESS</span>   <span class="c1"># Chunk-level progress</span>
+<span class="n">EventType</span><span class="o">.</span><span class="n">CHUNK_COMPLETE</span>   <span class="c1"># Chunk-level complete</span>
+<span class="n">EventType</span><span class="o">.</span><span class="n">CHUNK_ERROR</span>      <span class="c1"># Chunk-level error</span>
+</code></pre></div>
+<h3 id="fileprogressevent">FileProgressEvent<a class="headerlink" href="#fileprogressevent" title="Permanent link">&para;</a></h3>
+<p>Rich event object for file-level progress monitoring.</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">littledl</span><span class="w"> </span><span class="kn">import</span> <span class="n">FileProgressEvent</span>
+
+<span class="n">FileProgressEvent</span><span class="p">(</span>
+    <span class="n">event_type</span><span class="p">:</span> <span class="n">EventType</span> <span class="o">=</span> <span class="n">EventType</span><span class="o">.</span><span class="n">FILE_PROGRESS</span><span class="p">,</span>
+    <span class="n">task_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+    <span class="n">filename</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+    <span class="n">url</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+    <span class="n">file_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="n">downloaded</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="n">speed</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+    <span class="n">progress</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+    <span class="n">eta</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">chunks_total</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="n">chunks_completed</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+<span class="p">)</span>
+</code></pre></div>
+<h3 id="filecompleteevent">FileCompleteEvent<a class="headerlink" href="#filecompleteevent" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">littledl</span><span class="w"> </span><span class="kn">import</span> <span class="n">FileCompleteEvent</span>
+
+<span class="n">FileCompleteEvent</span><span class="p">(</span>
+    <span class="n">event_type</span><span class="p">:</span> <span class="n">EventType</span> <span class="o">=</span> <span class="n">EventType</span><span class="o">.</span><span class="n">FILE_COMPLETE</span><span class="p">,</span>
+    <span class="n">task_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+    <span class="n">filename</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+    <span class="n">url</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+    <span class="n">file_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="n">saved_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+    <span class="n">error</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span>
+</code></pre></div>
+<h3 id="throttledcallback">ThrottledCallback<a class="headerlink" href="#throttledcallback" title="Permanent link">&para;</a></h3>
+<p>Wraps a callback adapter to throttle emission frequency, preventing UI jank.</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">littledl</span><span class="w"> </span><span class="kn">import</span> <span class="n">UnifiedCallbackAdapter</span><span class="p">,</span> <span class="n">ThrottledCallback</span>
+
+<span class="n">adapter</span> <span class="o">=</span> <span class="n">UnifiedCallbackAdapter</span><span class="p">(</span><span class="n">my_callback</span><span class="p">)</span>
+<span class="n">throttled</span> <span class="o">=</span> <span class="n">ThrottledCallback</span><span class="p">(</span><span class="n">adapter</span><span class="p">,</span> <span class="n">min_interval</span><span class="o">=</span><span class="mf">0.1</span><span class="p">)</span>  <span class="c1"># max 10 calls/sec</span>
+<span class="k">await</span> <span class="n">throttled</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
+<span class="k">await</span> <span class="n">throttled</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>  <span class="c1"># emit any pending event</span>
+</code></pre></div>
+<h3 id="callbackchain">CallbackChain<a class="headerlink" href="#callbackchain" title="Permanent link">&para;</a></h3>
+<p>Chain multiple callbacks together.</p>
+<p><div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">littledl</span><span class="w"> </span><span class="kn">import</span> <span class="n">CallbackChain</span>
+
+<span class="n">chain</span> <span class="o">=</span> <span class="n">CallbackChain</span><span class="p">()</span>
+<span class="n">chain</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">logging_callback</span><span class="p">)</span>
+<span class="n">chain</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">ui_callback</span><span class="p">)</span>
+<span class="k">await</span> <span class="n">chain</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
 </code></pre></div>
 <div class="highlight"><pre><span></span><code>### AuthConfig
 

@@ -49,6 +49,31 @@ async def main():
 asyncio.run(main())
 ```
 
+### Progress Tracking
+
+Use the `progress_callback` parameter to receive download progress events. littledl auto-detects your callback signature style:
+
+```
+from littledl import download_file_sync, ProgressEvent
+
+# Style 1 (Recommended): Receive ProgressEvent object
+def on_progress(event: ProgressEvent):
+    print(f"[{event.filename}] {event.progress:.1f}% - {event.speed / 1024 / 1024:.1f} MB/s")
+
+path = download_file_sync(
+    "https://example.com/file.zip",
+    progress_callback=on_progress,
+)
+
+# Style 2: Receive keyword arguments
+def on_progress_kwargs(*, downloaded=0, total=0, speed=0, filename="", **kw):
+    print(f"[{filename}] {downloaded}/{total} bytes")
+
+# Style 3: Legacy positional arguments
+def on_progress_legacy(downloaded, total, speed, eta):
+    print(f"{downloaded}/{total}")
+```
+
 ## Next Steps
 
 - [Configuration Guide](https://shu-shu-1.github.io/Little-Tree-Downloader/configuration/index.md) - Learn about all configuration options

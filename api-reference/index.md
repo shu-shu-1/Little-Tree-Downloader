@@ -71,6 +71,8 @@ Quickly reconfigures all internal scheduling variables, chunking thresholds, and
 
 ### ProgressEvent
 
+Single-file download progress event. Includes file context when emitted by the `Downloader`.
+
 ```
 ProgressEvent(
     downloaded: int,
@@ -80,6 +82,9 @@ ProgressEvent(
     progress: float,
     remaining: int,
     timestamp: float,
+    unknown_size: bool = False,
+    filename: str = "",   # filename being downloaded
+    url: str = "",        # URL being downloaded
 )
 ```
 
@@ -96,6 +101,90 @@ ChunkEvent(
     error: str | None,
     timestamp: float,
 )
+```
+
+## Unified Callback System
+
+The `littledl.callback` module provides a unified event system for building custom download managers.
+
+### EventType
+
+```
+from littledl import EventType
+
+EventType.FILE_PROGRESS    # Single file progress update
+EventType.FILE_COMPLETE    # Single file download complete
+EventType.FILE_ERROR       # Single file download error
+EventType.FILE_RETRY       # Single file retry
+EventType.BATCH_PROGRESS   # Batch download progress
+EventType.BATCH_COMPLETE   # Batch download complete
+EventType.CHUNK_PROGRESS   # Chunk-level progress
+EventType.CHUNK_COMPLETE   # Chunk-level complete
+EventType.CHUNK_ERROR      # Chunk-level error
+```
+
+### FileProgressEvent
+
+Rich event object for file-level progress monitoring.
+
+```
+from littledl import FileProgressEvent
+
+FileProgressEvent(
+    event_type: EventType = EventType.FILE_PROGRESS,
+    task_id: str = "",
+    filename: str = "",
+    url: str = "",
+    file_size: int = 0,
+    downloaded: int = 0,
+    speed: float = 0.0,
+    progress: float = 0.0,
+    eta: float = -1.0,
+    chunks_total: int = 0,
+    chunks_completed: int = 0,
+)
+```
+
+### FileCompleteEvent
+
+```
+from littledl import FileCompleteEvent
+
+FileCompleteEvent(
+    event_type: EventType = EventType.FILE_COMPLETE,
+    task_id: str = "",
+    filename: str = "",
+    url: str = "",
+    file_size: int = 0,
+    saved_path: str = "",
+    error: str | None = None,
+)
+```
+
+### ThrottledCallback
+
+Wraps a callback adapter to throttle emission frequency, preventing UI jank.
+
+```
+from littledl import UnifiedCallbackAdapter, ThrottledCallback
+
+adapter = UnifiedCallbackAdapter(my_callback)
+throttled = ThrottledCallback(adapter, min_interval=0.1)  # max 10 calls/sec
+await throttled.emit(event)
+await throttled.flush()  # emit any pending event
+```
+
+### CallbackChain
+
+Chain multiple callbacks together.
+
+```
+from littledl import CallbackChain
+
+chain = CallbackChain()
+chain.add(logging_callback)
+chain.add(ui_callback)
+await chain.emit(event)
 ```
 
 ````
