@@ -6,12 +6,13 @@ littledl 的高级功能和优化。
 
 littledl 支持多种下载风格：
 
-| 风格           | 说明                                     | 适用场景                            |
-| -------------- | ---------------------------------------- | ----------------------------------- |
-| `single`       | 单线程下载                               | 小文件、不支持 Range 的服务器       |
-| `multi`        | 多线程分段下载                           | 大文件、稳定网络                    |
-| `adaptive`     | 自动选择最优风格                         | 大多数场景                          |
-| `hybrid_turbo` | 自适应分块 + AIMD 拥塞控制              | 不稳定网络下追求极限速度            |
+| 风格 | 说明 | 适用场景 |
+| -------------- | ------------------------------------------------ | ----------------------------------- |
+| `single` | 单线程下载 | 小文件、不支持 Range 的服务器 |
+| `multi` | 多线程分段下载 | 大文件、稳定网络 |
+| `adaptive` | 传统自适应调度器 | 兼容旧版调参流程 |
+| `fusion` | 四阶段自适应调度器（PROBE -> RAMP -> CRUISE -> TAIL） | 默认推荐，兼顾速度与稳定性 |
+| `hybrid_turbo` | 基于 AIMD 的激进自适应模式 | 不稳定网络和强突发吞吐场景 |
 
 ### 应用下载风格
 
@@ -19,6 +20,9 @@ littledl 支持多种下载风格：
 from littledl import DownloadConfig, DownloadStyle
 
 config = DownloadConfig()
+config.apply_style(DownloadStyle.FUSION)
+
+# hybrid_turbo 仍可用于更激进的旧版调优
 config.apply_style(DownloadStyle.HYBRID_TURBO)
 ```
 

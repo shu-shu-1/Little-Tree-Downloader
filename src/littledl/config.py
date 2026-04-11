@@ -1,5 +1,5 @@
 from collections.abc import Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from enum import Enum
 from typing import Any
 
@@ -26,6 +26,22 @@ DEFAULT_HYBRID_TARGET_CHUNK_TIME = 1.5
 DEFAULT_HYBRID_SPEEDUP_THRESHOLD = 0.08
 DEFAULT_HYBRID_SLOW_CHUNK_RATIO = 0.45
 DEFAULT_HYBRID_MIN_REMAINING_BYTES = 512 * 1024
+
+# FUSION algorithm defaults
+DEFAULT_FUSION_PROBE_CHUNKS = 2
+DEFAULT_FUSION_PROBE_DURATION = 2.0
+DEFAULT_FUSION_RAMP_MULTIPLIER = 2.0
+DEFAULT_FUSION_RAMP_MAX_ROUNDS = 4
+DEFAULT_FUSION_PLATEAU_THRESHOLD = 0.03
+DEFAULT_FUSION_CEILING_EWMA_ALPHA = 0.2
+DEFAULT_FUSION_TAIL_RATIO = 0.20
+DEFAULT_FUSION_TAIL_BOOST = 2
+DEFAULT_FUSION_CRUISE_INCREASE_STEP = 1
+DEFAULT_FUSION_CRUISE_DECREASE_FACTOR = 0.7
+DEFAULT_FUSION_CONGESTION_DROP = 0.15
+DEFAULT_FUSION_STABILITY_FLOOR = 0.35
+DEFAULT_FUSION_TAIL_MICRO_SPLIT_MIN = 256 * 1024
+DEFAULT_FUSION_TAIL_STEAL_RATIO = 0.50
 
 
 class ProxyMode(Enum):
@@ -199,6 +215,22 @@ class DownloadConfig:
     hybrid_slow_chunk_ratio: float = DEFAULT_HYBRID_SLOW_CHUNK_RATIO
     hybrid_min_remaining_bytes: int = DEFAULT_HYBRID_MIN_REMAINING_BYTES
     hybrid_max_resplit_per_chunk: int = 2
+    # FUSION algorithm parameters
+    enable_fusion: bool = True
+    fusion_probe_chunks: int = DEFAULT_FUSION_PROBE_CHUNKS
+    fusion_probe_duration: float = DEFAULT_FUSION_PROBE_DURATION
+    fusion_ramp_multiplier: float = DEFAULT_FUSION_RAMP_MULTIPLIER
+    fusion_ramp_max_rounds: int = DEFAULT_FUSION_RAMP_MAX_ROUNDS
+    fusion_plateau_threshold: float = DEFAULT_FUSION_PLATEAU_THRESHOLD
+    fusion_ceiling_ewma_alpha: float = DEFAULT_FUSION_CEILING_EWMA_ALPHA
+    fusion_tail_ratio: float = DEFAULT_FUSION_TAIL_RATIO
+    fusion_tail_boost: int = DEFAULT_FUSION_TAIL_BOOST
+    fusion_cruise_increase_step: int = DEFAULT_FUSION_CRUISE_INCREASE_STEP
+    fusion_cruise_decrease_factor: float = DEFAULT_FUSION_CRUISE_DECREASE_FACTOR
+    fusion_congestion_drop: float = DEFAULT_FUSION_CONGESTION_DROP
+    fusion_stability_floor: float = DEFAULT_FUSION_STABILITY_FLOOR
+    fusion_tail_micro_split_min: int = DEFAULT_FUSION_TAIL_MICRO_SPLIT_MIN
+    fusion_tail_steal_ratio: float = DEFAULT_FUSION_TAIL_STEAL_RATIO
     enable_predictive_scheduling: bool = True
     enable_connection_health_check: bool = True
     health_check_interval: float = 10.0
@@ -298,10 +330,19 @@ class DownloadConfig:
             self.enable_adaptive = True
             self.enable_smart_resplit = True
             self.enable_hybrid_turbo = True
+            self.enable_fusion = False
             self.hybrid_slow_chunk_ratio = min(self.hybrid_slow_chunk_ratio, 0.45)
             self.hybrid_aimd_increase_step = max(1, self.hybrid_aimd_increase_step)
             self.hybrid_aimd_decrease_factor = max(0.1, min(0.9, self.hybrid_aimd_decrease_factor))
             self.adaptive_interval = min(self.adaptive_interval, 2.0)
+        elif style_name == "FUSION":
+            self.enable_chunking = True
+            self.enable_adaptive = True
+            self.enable_smart_resplit = True
+            self.enable_hybrid_turbo = False
+            self.enable_fusion = True
+            self.adaptive_interval = min(self.adaptive_interval, 1.5)
+            self.resplit_cooldown = min(self.resplit_cooldown, 3.0)
 
         return self
 
@@ -380,6 +421,38 @@ class DownloadConfig:
         if not self.proxy:
             return None
         return self.proxy.get_proxy_for_url(url)
+
+    def create_file_config(
+        self,
+        *,
+        max_chunks: int | None = None,
+        min_chunks: int | None = None,
+        enable_chunking: bool | None = None,
+    ) -> "DownloadConfig":
+        """Create a per-file config inheriting all parent settings.
+
+        Uses dataclasses.replace() so every field (including FUSION, adaptive,
+        hybrid, resplit, speed-limit, auth, proxy, etc.) is automatically
+        propagated.  Only per-file overrides need to be specified.
+
+        Callbacks are cleared since each file has its own progress adapter.
+        """
+        overrides: dict[str, Any] = {
+            "progress_callback": None,
+            "chunk_callback": None,
+            "status_callback": None,
+        }
+        if max_chunks is not None:
+            overrides["max_chunks"] = max_chunks
+        if min_chunks is not None:
+            overrides["min_chunks"] = min_chunks
+        if enable_chunking is not None:
+            overrides["enable_chunking"] = enable_chunking
+        # Deep-copy mutable containers to avoid cross-file contamination
+        overrides["headers"] = self.headers.copy()
+        if self.cookies:
+            overrides["cookies"] = self.cookies.copy()
+        return replace(self, **overrides)
 
     def to_dict(self) -> dict[str, Any]:
         return {

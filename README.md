@@ -9,8 +9,8 @@ High-performance download library with multi-threaded segmented downloading, int
 ### Core Features
 
 - 🚀 **Multi-threaded Segmented Download**: Split files into chunks and download in parallel using HTTP Range requests for maximum speed (inspired by aria2, IDM and other tools)
-- 🧠 **Intelligent Strategy Selection**: Automatically choose optimal download style (single/multi/adaptive/hybrid_turbo) based on file size, server capabilities, and network conditions
-- 🎨 **Multiple Download Styles**: Support for single-threaded, multi-threaded, adaptive, and hybrid_turbo download styles to suit different scenarios and preferences
+- 🧠 **Intelligent Strategy Selection**: Automatically choose optimal download style (single/multi/adaptive/fusion/hybrid_turbo) based on file size, server capabilities, and network conditions
+- 🎨 **Multiple Download Styles**: Support for single-threaded, multi-threaded, adaptive, FUSION, and hybrid_turbo download styles to suit different scenarios and preferences
 - 🎯 **Direct File Writing**: Write directly to final file, no temporary file merging
 - ⏯️ **Resume Support**: Continue interrupted downloads from where they left off
 - 📊 **Real-time Speed Monitoring**: Live speed calculation, ETA estimation, and trend analysis
@@ -82,27 +82,28 @@ asyncio.run(main())
 
 ## Download Styles
 
-littledl supports three download styles that you can choose based on your needs:
+littledl supports five download styles that you can choose based on your needs:
 
-| Style        | Description                                      | Best For                                           |
-| ------------ | ------------------------------------------------ | -------------------------------------------------- |
-| `single`       | Single-threaded download                         | Small files, servers without Range support        |
-| `multi`        | Multi-threaded segmented download                | Large files, stable connections                 |
-| `adaptive`     | Automatically select best style                 | Most use cases                                  |
-| `hybrid_turbo` | Adaptive chunk sizing with AIMD congestion control | Maximum speed on unstable networks              |
+| Style | Description | Best For |
+| ------------ | ------------------------------------------------------------ | -------------------------------------------------- |
+| `single` | Single-threaded download | Small files, servers without Range support |
+| `multi` | Multi-threaded segmented download | Large files, stable connections |
+| `adaptive` | Traditional adaptive chunk scheduler | Compatibility with older tuning preferences |
+| `fusion` | Four-phase adaptive scheduler (PROBE -> RAMP -> CRUISE -> TAIL) | Default choice for speed and stability |
+| `hybrid_turbo` | Aggressive AIMD-based adaptive mode | Unstable networks where maximum burst speed matters |
 
 ### Automatic Style Selection (Recommended)
 
 ```bash
-littledl "https://example.com/file.zip" --style adaptive
+# FUSION is the default, so --style can be omitted
+littledl "https://example.com/file.zip"
 ```
 
 ```python
-from littledl import DownloadStyle
+from littledl import DownloadConfig, DownloadStyle
 
-# Automatic selection based on file and network
-config = DownloadConfig()
-# System automatically chooses optimal style
+# Use the default FUSION strategy
+config = DownloadConfig().apply_style(DownloadStyle.FUSION)
 ```
 
 ### Manual Style Selection
@@ -111,7 +112,10 @@ config = DownloadConfig()
 # Force multi-threaded
 littledl "https://example.com/file.zip" --style multi --max-chunks 8
 
-# Force hybrid_turbo mode (recommended for unstable networks)
+# Force the four-phase FUSION scheduler
+littledl "https://example.com/file.zip" --style fusion
+
+# Force hybrid_turbo mode for aggressive AIMD behavior
 littledl "https://example.com/file.zip" --style hybrid_turbo
 ```
 
@@ -119,10 +123,10 @@ littledl "https://example.com/file.zip" --style hybrid_turbo
 from littledl import StrategySelector, DownloadStyle
 
 selector = StrategySelector(
-    default_style=DownloadStyle.HYBRID_TURBO,
+    default_style=DownloadStyle.FUSION,
     enable_single=True,
     enable_multi=True,
-    enable_hybrid_turbo=True,
+    max_chunks=16,
 )
 ```
 
@@ -156,10 +160,10 @@ File Info:
 Strategy Analysis:
   File: large_file.zip
   Size: 1.5 GB
-  Recommended Style: MULTI
-  Recommended Chunks: 8
-  Estimated Speedup: 3.5x
-  Reason: Large file + stable fast network
+    Recommended Style: FUSION
+    Recommended Chunks: 12
+    Estimated Speedup: 4.0x
+    Reason: Large file + stable fast network, FUSION full-speed mode
   Size Category: large (> 100MB)
   Range Support: Yes
 ```
@@ -207,6 +211,9 @@ downloader = EnhancedBatchDownloader(
     enable_existing_file_reuse=True,
     enable_multi_source=True,
 )
+
+# Global threads are reused across files, and per-file chunk counts
+# are kept within the batch-wide budget automatically.
 
 # Add files with backup URLs
 await downloader.add_url(
@@ -262,6 +269,9 @@ for url, path, error in results:
 ```bash
 # Download with automatic style selection
 littledl "https://example.com/file.zip" -o ./downloads
+
+# Explicit FUSION mode
+littledl "https://example.com/file.zip" --style fusion
 
 # Analyze and recommend strategy
 littledl "https://example.com/file.zip" --info

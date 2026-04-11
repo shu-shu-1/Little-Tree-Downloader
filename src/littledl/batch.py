@@ -326,6 +326,7 @@ class FileScheduler:
         self,
         max_concurrent_files: int = 8,
         max_concurrent_chunks_per_file: int = 4,
+        max_total_chunks: int = 0,
         small_file_threshold: int = 5 * 1024 * 1024,
         large_file_threshold: int = 100 * 1024 * 1024,
         enable_small_file_priority: bool = True,
@@ -333,6 +334,7 @@ class FileScheduler:
     ) -> None:
         self.max_concurrent_files = max_concurrent_files
         self.max_concurrent_chunks_per_file = max_concurrent_chunks_per_file
+        self.max_total_chunks = max_total_chunks or max_concurrent_files * max_concurrent_chunks_per_file
         self.small_file_threshold = small_file_threshold
         self.large_file_threshold = large_file_threshold
         self.enable_small_file_priority = enable_small_file_priority
@@ -342,6 +344,7 @@ class FileScheduler:
         self._active_tasks: dict[str, FileTask] = {}
         self._completed_tasks: list[FileTask] = []
         self._failed_tasks: list[FileTask] = []
+        self._active_chunks: dict[str, int] = {}
         self._lock = asyncio.Lock()
         self._paused = False
         self._start_time: float = 0.0
@@ -452,18 +455,21 @@ class FileScheduler:
         async with self._lock:
             if task.task_id in self._active_tasks:
                 del self._active_tasks[task.task_id]
+            self._active_chunks.pop(task.task_id, None)
             self._completed_tasks.append(task)
 
     async def task_failed(self, task: FileTask) -> None:
         async with self._lock:
             if task.task_id in self._active_tasks:
                 del self._active_tasks[task.task_id]
+            self._active_chunks.pop(task.task_id, None)
             self._failed_tasks.append(task)
 
     async def task_cancelled(self, task: FileTask) -> None:
         async with self._lock:
             if task.task_id in self._active_tasks:
                 del self._active_tasks[task.task_id]
+            self._active_chunks.pop(task.task_id, None)
             self._failed_tasks.append(task)
 
     def get_optimal_chunks_for_task(self, task: FileTask) -> int:
@@ -485,6 +491,18 @@ class FileScheduler:
             base_chunks = min(base_chunks, 4)
         elif self._speed_stability > 0.7 and self._current_network_speed > 5 * 1024 * 1024:
             base_chunks = min(base_chunks + 2, 8)
+
+        used_chunks = sum(self._active_chunks.values())
+        remaining_budget = max(1, self.max_total_chunks - used_chunks)
+        base_chunks = min(base_chunks, remaining_budget)
+
+        return max(1, base_chunks)
+
+    def register_task_chunks(self, task_id: str, chunks: int) -> None:
+        self._active_chunks[task_id] = chunks
+
+    def unregister_task_chunks(self, task_id: str) -> None:
+        self._active_chunks.pop(task_id, None)
 
         return max(1, base_chunks)
 
@@ -693,17 +711,16 @@ class AdaptiveConcurrencyController:
             increase_by = max(1, int(magnitude * 3))
             decrease_by = max(1, int(magnitude * 4))
 
-            if self._speed_trend < -0.15 and self._current_concurrency < self.max_concurrency:
+            if self._speed_trend > 0.15 and self._current_concurrency < self.max_concurrency:
                 self._current_concurrency = min(self.max_concurrency, self._current_concurrency + increase_by)
-            elif self._speed_trend > 0.2 and self._current_concurrency > self.min_concurrency:
-                if self._ewma_speed > avg_speed * 0.9:
-                    self._current_concurrency = max(self.min_concurrency, self._current_concurrency - decrease_by)
+            elif self._speed_trend < -0.15 and self._current_concurrency > self.min_concurrency:
+                self._current_concurrency = max(self.min_concurrency, self._current_concurrency - decrease_by)
             elif speed_change < -0.3 and self._current_concurrency < self.max_concurrency:
                 self._current_concurrency = min(self.max_concurrency, self._current_concurrency + 1)
 
             if (
                 avg_speed > 0
-                and self._ewma_speed < avg_speed * 0.5
+                and self._ewma_speed > avg_speed * 2.0
                 and self._current_concurrency > self.min_concurrency
             ):
                 self._current_concurrency = max(self.min_concurrency, self._current_concurrency - 1)
@@ -965,6 +982,7 @@ class BatchDownloader:
 
         if task.supports_range and task.file_size > 0:
             task.chunks = self._scheduler.get_optimal_chunks_for_task(task)
+            self._scheduler.register_task_chunks(task.task_id, task.chunks)
 
         task.status = FileTaskStatus.PENDING
 
@@ -1050,24 +1068,10 @@ class BatchDownloader:
             downloaded_agg, _, speed_agg, _ = aggregator.get_progress()
             await task.update_progress(downloaded_agg, speed_agg if speed_agg > 0 else speed)
 
-        file_config = DownloadConfig(
+        file_config = self.config.create_file_config(
             enable_chunking=self.config.enable_chunking and task.supports_range,
             max_chunks=task.chunks,
             min_chunks=1,
-            buffer_size=self.config.buffer_size,
-            timeout=self.config.timeout,
-            connect_timeout=self.config.connect_timeout,
-            read_timeout=self.config.read_timeout,
-            write_timeout=self.config.write_timeout,
-            resume=self.config.resume,
-            verify_ssl=self.config.verify_ssl,
-            user_agent=self.config.user_agent,
-            headers=self.config.headers.copy(),
-            proxy=self.config.proxy,
-            speed_limit=self.config.speed_limit,
-            retry=self.config.retry,
-            follow_redirects=self.config.follow_redirects,
-            max_redirects=self.config.max_redirects,
         )
 
         downloader = Downloader(config=file_config)
@@ -1271,6 +1275,7 @@ class EnhancedBatchDownloader:
             "total_chunks": 0,
             "dynamic_chunks_added": 0,
         }
+        self._active_domain_counts: dict[str, int] = {}
 
     async def add_url(
         self,
@@ -1432,6 +1437,7 @@ class EnhancedBatchDownloader:
 
         if task.supports_range and task.file_size > 0:
             task.chunks = self._scheduler.get_optimal_chunks_for_task(task)
+            self._scheduler.register_task_chunks(task.task_id, task.chunks)
 
         if self.enable_existing_file_reuse and self._file_reuse_checker and task.file_size > 0:
             target_path = task.save_path / (task.filename or "unknown")
@@ -1476,6 +1482,13 @@ class EnhancedBatchDownloader:
                 if not task.is_failed:
                     await task.mark_failed(str(e))
                     await self._scheduler.task_failed(task)
+            finally:
+                if task.domain:
+                    cnt = self._active_domain_counts.get(task.domain, 0)
+                    if cnt <= 1:
+                        self._active_domain_counts.pop(task.domain, None)
+                    else:
+                        self._active_domain_counts[task.domain] = cnt - 1
 
         while self._running:
             if self._cancelled:
@@ -1489,7 +1502,10 @@ class EnhancedBatchDownloader:
                     break
 
             while len(download_tasks) < self.max_concurrent_files:
-                task = await self._scheduler.get_next_task()
+                preferred_domain = None
+                if self._active_domain_counts:
+                    preferred_domain = max(self._active_domain_counts, key=self._active_domain_counts.get)  # type: ignore[arg-type]
+                task = await self._scheduler.get_next_task(preferred_domain=preferred_domain)
                 if task is None:
                     break
 
@@ -1497,6 +1513,8 @@ class EnhancedBatchDownloader:
                     await self._reuse_existing_file(task)
                     continue
 
+                if task.domain:
+                    self._active_domain_counts[task.domain] = self._active_domain_counts.get(task.domain, 0) + 1
                 download_tasks[task.task_id] = asyncio.create_task(download_file(task))
 
             done_tasks = [tid for tid, t in download_tasks.items() if t.done()]
@@ -1562,24 +1580,10 @@ class EnhancedBatchDownloader:
             await task.update_progress(downloaded_agg, speed_agg if speed_agg > 0 else speed)
 
         try:
-            file_config = DownloadConfig(
+            file_config = self.config.create_file_config(
                 enable_chunking=self.config.enable_chunking and task.supports_range,
                 max_chunks=task.chunks,
                 min_chunks=1,
-                buffer_size=self.config.buffer_size,
-                timeout=self.config.timeout,
-                connect_timeout=self.config.connect_timeout,
-                read_timeout=self.config.read_timeout,
-                write_timeout=self.config.write_timeout,
-                resume=self.config.resume,
-                verify_ssl=self.config.verify_ssl,
-                user_agent=self.config.user_agent,
-                headers=self.config.headers.copy(),
-                proxy=self.config.proxy,
-                speed_limit=self.config.speed_limit,
-                retry=self.config.retry,
-                follow_redirects=self.config.follow_redirects,
-                max_redirects=self.config.max_redirects,
             )
 
             downloader = Downloader(config=file_config)

@@ -1,57 +1,1133 @@
-# littledl
+# littledl unified documentation bundle
 
-> littledl is a Python 3.10+ download library and CLI for single-file and batch downloads. It focuses on chunked HTTP Range downloading, resume support, adaptive scheduling, progress callbacks, proxy/auth support, speed limiting, and downloader-building use cases.
+This file merges the repository documentation into a single agent-friendly reference.
+It is intended for tooling and LLM ingestion, so duplicated English/Chinese pages are consolidated into canonical topic sections instead of repeating the same guidance twice.
 
-Important notes:
+Scope included in this bundle:
 
-- Package version is 0.8.0; the import package is `littledl` under `src/littledl`.
-- For library usage questions, start with the English docs and API reference below.
-- For implementation questions, read the source map section instead of relying on README alone.
-- English and Chinese docs are both available; Chinese links are listed in the `Optional` section.
+- Project overviews: README.md, README.zh.md
+- User docs: docs/en/** and docs/zh/**
+- Project policy docs: CONTRIBUTING.md, CONTRIBUTING.zh.md, SECURITY.md, SECURITY.zh.md
+- Release notes: CHANGELOG.md, CHANGELOG.zh.md
+- Implementation map for source-oriented questions
 
-## Start Here
+Scope intentionally excluded:
 
-- [README](README.md): project overview, quick start, download styles, callback examples, and CLI summary.
-- [Documentation Index](docs/en/index.md): top-level English documentation map.
-- [Getting Started](docs/en/getting-started/index.md): installation, sync/async usage, and progress callback basics.
-- [API Reference](docs/en/api-reference/index.md): public functions, configuration types, callback events, and unified callback helpers.
+- LICENSE
+- GitHub issue/PR templates
+- Generated cache/report markdown outside the maintained documentation set
 
-## Usage Guides
+## Project metadata
 
-- [CLI Guide](docs/en/cli/index.md): command-line usage, output modes, JSON output, and batch examples.
-- [Configuration](docs/en/configuration/index.md): DownloadConfig, retry behavior, chunking, limits, and verification settings.
-- [Batch Download](docs/en/batch-download/index.md): BatchDownloader, BatchProgress, adaptive concurrency, and batch callbacks.
-- [Authentication](docs/en/authentication/index.md): Basic, Bearer, Digest, API key, and OAuth2 setup.
-- [Proxy](docs/en/proxy/index.md): system proxy, custom proxy, and SOCKS5 configuration.
-- [Error Handling](docs/en/error-handling/index.md): exceptions, retry expectations, and failure handling patterns.
-- [Advanced Usage](docs/en/advanced/index.md): style selection, tuning, and advanced downloader features.
+- Project: littledl
+- Package import: littledl
+- Package location: src/littledl
+- Current version: 0.9.0
+- Python requirement: 3.10+
+- Primary interfaces: Python library and `littledl` CLI
+- Supported platforms: Windows, macOS, Linux, FreeBSD
+- Documentation languages: English and Simplified Chinese
 
-## Source Map
+## What littledl is
 
-- [Public API Exports](src/littledl/__init__.py): package-level exports and the supported public surface.
-- [Single File Downloader](src/littledl/downloader.py): Downloader, ProgressEvent, ChunkEvent, callback adapters, and chunked download flow.
-- [Batch Downloader](src/littledl/batch.py): BatchDownloader, EnhancedBatchDownloader, FileTask, BatchProgress, and batch callback handling.
-- [Callback System](src/littledl/callback.py): EventType, FileProgressEvent, FileCompleteEvent, UnifiedCallbackAdapter, ThrottledCallback, and CallbackChain.
-- [CLI Entrypoint](src/littledl/__main__.py): argparse interface, output modes, progress display, and batch CLI behavior.
-- [Configuration Models](src/littledl/config.py): DownloadConfig and related config classes/enums.
-- [Connection and Transport](src/littledl/connection.py): connection pool and request construction.
-- [Scheduling](src/littledl/scheduler.py): chunk scheduling and adaptive worker behavior.
-- [Workers](src/littledl/worker.py): worker execution model for downloads.
-- [Tests](tests/test_littledl.py): usage examples and regression coverage for callbacks, CLI, scheduler behavior, and batch download logic.
+littledl is a high-performance file download library and CLI focused on single-file and batch downloads. It supports HTTP Range based chunked downloading, resume, adaptive scheduling, progress callbacks, authentication, proxy support, speed limiting, file reuse, and multi-source failover.
 
-## Project Metadata
+Core capabilities consolidated from the README and user guides:
 
-- [pyproject.toml](pyproject.toml): package metadata, dependencies, entry points, linting, and pytest configuration.
-- [CHANGELOG](CHANGELOG.md): release history.
-- [CONTRIBUTING](CONTRIBUTING.md): contribution workflow and repo guidance.
-- [SECURITY](SECURITY.md): security reporting and policy.
+- Multi-threaded segmented download using HTTP Range requests
+- Automatic strategy selection based on file size, server capability, and network conditions
+- Multiple download styles: single, multi, adaptive, fusion, hybrid_turbo
+- Direct write to the final file without temporary merge steps in the normal flow
+- Resume support for interrupted downloads
+- Real-time speed, ETA, and progress reporting
+- Automatic fallback to single-stream mode when chunked transfer is not viable
+- Authentication support: Basic, Bearer, Digest, API key, OAuth2
+- Proxy support: system proxy, custom HTTP/HTTPS proxy, SOCKS5
+- Speed limiting with configurable modes
+- Optional post-download hash verification
+- Content-aware file reuse and batch multi-source backup URLs
 
-## Optional
+## Documentation consolidation policy
 
-- [Chinese README](README.zh.md): Chinese overview and quick start.
-- [Chinese Documentation Index](docs/zh/index.md): top-level Chinese documentation map.
-- [Chinese Getting Started](docs/zh/getting-started/index.md): Chinese installation and basic usage.
-- [Chinese API Reference](docs/zh/api-reference/index.md): Chinese API and callback reference.
-- [Chinese CLI Guide](docs/zh/cli/index.md): Chinese CLI documentation.
-- [Chinese Batch Download Guide](docs/zh/batch-download/index.md): Chinese batch download documentation.
-- [Live Documentation Site](https://shu-shu-1.github.io/Little-Tree-Downloader/): published project documentation.
+The repository ships parallel English and Simplified Chinese docs for the same major topics:
+
+- getting started
+- configuration
+- authentication
+- proxy
+- error handling
+- advanced usage
+- batch download
+- CLI
+- API reference
+- README, CONTRIBUTING, SECURITY, CHANGELOG
+
+For this single-file bundle, those parallel pages are de-duplicated into one canonical section per topic. If a translated page adds no extra technical detail beyond the English page, the content is merged once here.
+
+## Installation
+
+Install with pip:
+
+```bash
+pip install littledl
+```
+
+Install with uv:
+
+```bash
+uv add littledl
+```
+
+CLI availability check:
+
+```bash
+littledl --version
+```
+
+Expected version at the time of this bundle: `littledl 0.9.0`.
+
+## Quick start
+
+### Synchronous download
+
+```python
+from littledl import download_file_sync
+
+path = download_file_sync("https://example.com/file.zip")
+print(f"Downloaded to: {path}")
+```
+
+### Asynchronous download
+
+```python
+import asyncio
+from littledl import download_file
+
+async def main():
+	path = await download_file(
+		"https://example.com/file.zip",
+		save_path="./downloads",
+		filename="my_file.zip",
+	)
+	print(f"Downloaded to: {path}")
+
+asyncio.run(main())
+```
+
+### Basic progress callback
+
+Recommended event-style callback:
+
+```python
+from littledl import download_file_sync, ProgressEvent
+
+def on_progress(event: ProgressEvent):
+	print(f"[{event.filename}] {event.progress:.1f}% {event.speed / 1024 / 1024:.1f} MB/s")
+
+download_file_sync("https://example.com/file.zip", progress_callback=on_progress)
+```
+
+Supported callback input styles:
+
+- Event object: `ProgressEvent`
+- Dictionary payload: `dict`
+- Keyword payload: `**payload`
+- Legacy positional form: `(downloaded, total, speed, eta)`
+
+## Download styles
+
+littledl supports five download styles plus one compatibility alias.
+
+| Style | Meaning | Best fit |
+| --- | --- | --- |
+| `single` | Single-threaded download | Small files or servers without Range support |
+| `multi` | Fixed multi-thread segmented download | Large files on stable connections |
+| `adaptive` | Traditional adaptive scheduler | Older tuning workflows |
+| `fusion` | Four-phase adaptive scheduler: PROBE -> RAMP -> CRUISE -> TAIL | Default and recommended mode |
+| `hybrid_turbo` | Aggressive AIMD adaptive mode | Bursty or unstable networks |
+| `auto` | Alias of `fusion` | Compatibility with older scripts |
+
+Important style notes from the README, CLI guide, advanced guide, and changelog:
+
+- FUSION is the default style as of 0.9.0.
+- CLI default changed from hybrid_turbo to fusion.
+- StrategySelector now prefers FUSION for medium and large files.
+- `apply_style()` accepts either `DownloadStyle` or style-name strings.
+- A style only changes behavior if it is mapped into `DownloadConfig` or CLI options used by the downloader flow.
+
+### Style examples
+
+CLI:
+
+```bash
+littledl "https://example.com/file.zip"
+littledl "https://example.com/file.zip" -s single
+littledl "https://example.com/file.zip" -s fusion -c 16
+littledl "https://example.com/file.zip" -s hybrid_turbo -c 32
+```
+
+Python:
+
+```python
+from littledl import DownloadConfig, DownloadStyle
+
+config = DownloadConfig().apply_style(DownloadStyle.FUSION)
+```
+
+## CLI reference
+
+The `littledl` command supports single-file downloads, multiple direct URLs, and batch input from a file.
+
+### Basic commands
+
+Single file:
+
+```bash
+littledl "https://example.com/large-file.zip" -o ./downloads
+```
+
+Multiple direct URLs:
+
+```bash
+littledl "https://example.com/file1.zip" "https://example.com/file2.pdf" -o ./downloads
+```
+
+Batch file mode:
+
+```text
+# comments allowed
+https://example.com/file1.zip
+https://example.com/file2.pdf
+https://example.com/file3.doc
+```
+
+```bash
+littledl -F urls.txt -o ./downloads
+```
+
+### Common options
+
+| Option | Meaning | Default |
+| --- | --- | --- |
+| `-o, --output PATH` | Output directory or file path | `./downloads` |
+| `-f, --filename NAME` | Explicit output filename | Server provided |
+| `-c, --max-chunks N` | Maximum parallel chunks | `16` |
+| `-t, --timeout SECONDS` | Request timeout | `300` |
+| `--proxy URL` | HTTP proxy | none |
+| `--speed-limit BYTES/s` | Speed cap | unlimited |
+| `--retry N` | Retry attempts | `3` |
+| `--temp-dir PATH` | Temporary file directory | same as output |
+| `-v, --verbose` | Verbose output | disabled |
+| `-q, --quiet` | Minimal output | disabled |
+| `-i, --info` | Show file info / analysis without downloading | disabled |
+| `-F, --batch-file` | Read URLs from a file | none |
+| `--max-concurrent` | Batch file concurrency | adaptive or configured |
+| `--output-format {auto,json,text}` | Output mode | `auto` |
+
+### Output modes
+
+- `auto`: text for TTY, JSON for piped or scripted use
+- `text`: human-readable output
+- `json`: structured output for integrations
+
+Example JSON output fields:
+
+- single download: success, path, size
+- batch download: total, completed, failed, total_bytes, elapsed_seconds, average_speed, tasks[]
+
+### Progress display behavior
+
+- TTY: animated progress bar and live stats
+- non-interactive stdout: reduced machine-friendly output
+- Rich-powered enhanced batch display is available, with graceful fallback to plain text
+
+### Exit codes
+
+| Code | Meaning |
+| --- | --- |
+| `0` | Success |
+| `1` | General error |
+| `2` | URL error or invalid argument |
+| `3` | Download failed after retries |
+| `4` | Cancelled by user |
+
+### CLI analysis mode
+
+Use `--info` to inspect a resource before downloading. Typical output includes:
+
+- filename
+- size
+- content type
+- resume support
+- recommended style
+- recommended chunks
+- estimated speedup
+
+### CLI environment variables
+
+- `LANG`: language selection, for example `zh_CN` or `en_US`
+- standard proxy variables are also respected, described in the proxy section
+
+## Library API overview
+
+### Core functions
+
+Synchronous download:
+
+```python
+from littledl import download_file_sync
+
+path = download_file_sync(
+	url,
+	save_path=".",
+	filename=None,
+	config=None,
+	progress_callback=None,
+	chunk_callback=None,
+)
+```
+
+Asynchronous download:
+
+```python
+from littledl import download_file
+
+path = await download_file(
+	url,
+	save_path=".",
+	filename=None,
+	config=None,
+	progress_callback=None,
+	chunk_callback=None,
+)
+```
+
+### DownloadConfig
+
+Main configuration model used by single-file and batch download flows.
+
+Representative initialization:
+
+```python
+from littledl import DownloadConfig
+
+config = DownloadConfig(
+	enable_chunking=True,
+	max_chunks=16,
+	chunk_size=4 * 1024 * 1024,
+	buffer_size=64 * 1024,
+	timeout=300,
+	resume=True,
+	verify_ssl=True,
+)
+```
+
+Key options consolidated from README, configuration guide, advanced docs, and API reference:
+
+| Option | Type | Default | Meaning |
+| --- | --- | --- | --- |
+| `enable_chunking` | bool | True | Enable segmented download |
+| `max_chunks` | int | 16 | Maximum concurrent chunks |
+| `chunk_size` | int | 4 MB | Default chunk size |
+| `buffer_size` | int | 64 KB | Write buffer size |
+| `timeout` | float | 300 | Read/write timeout in seconds |
+| `resume` | bool | True | Enable resume support |
+| `verify_ssl` | bool | True | Verify certificates |
+| `fallback_to_single_on_failure` | bool | True | Fallback to single-stream mode |
+| `enable_adaptive` | bool | True | Enable adaptive scheduling |
+| `enable_hybrid_turbo` | bool | True | Enable hybrid turbo AIMD mode |
+| `enable_fusion` | bool | True | Enable FUSION scheduler |
+| `fusion_probe_chunks` | int | 2 | Initial PROBE workers |
+| `fusion_probe_duration` | float | 2.0 | Probe phase duration |
+| `fusion_tail_ratio` | float | 0.20 | Remaining ratio to enter TAIL |
+| `fusion_tail_boost` | int | 2 | Extra workers allowed in TAIL |
+| `hybrid_aimd_increase_step` | int | 1 | AIMD additive increase step |
+| `hybrid_aimd_decrease_factor` | float | 0.5 | AIMD multiplicative decrease factor |
+| `hybrid_speedup_threshold` | float | 0.08 | Minimum relative gain to keep scaling |
+| `hybrid_slow_chunk_ratio` | float | 0.45 | Threshold for very slow chunks |
+| `verify_hash` | bool | False | Validate file hash after download |
+| `expected_hash` | str | None | Expected hash string |
+| `hash_algorithm` | str | `sha256` | Hash algorithm |
+| `min_file_size` | int | None | Reject too-small files |
+| `max_file_size` | int | None | Reject too-large files |
+| `progress_update_interval` | float | 0.5 | Callback emission interval |
+| `auth` | AuthConfig | None | Authentication settings |
+| `proxy` | ProxyConfig | None | Proxy settings |
+| `speed_limit` | SpeedLimitConfig | None | Speed-limiting settings |
+| `progress_callback` | Callable | None | File progress callback |
+| `chunk_callback` | Callable | None | Chunk status callback |
+
+### Important DownloadConfig methods
+
+`apply_style(style)`:
+
+- Reconfigures scheduling, chunking thresholds, and adaptive parameters from a named style.
+- Accepts either `DownloadStyle` or a style string such as `"FUSION"`.
+
+`create_file_config(...)`:
+
+- Creates a per-file config cloned from the parent config.
+- Used by batch downloaders so auth, proxy, retry, FUSION tuning, resplit settings, and speed limits are preserved while per-file chunk counts are overridden.
+- Added in 0.9.0 to fix incomplete per-file config inheritance.
+
+## Authentication
+
+Authentication is configured with `AuthConfig` and `AuthType`.
+
+Supported types:
+
+- BASIC
+- BEARER
+- DIGEST
+- API_KEY
+- OAUTH2
+
+Examples:
+
+Basic auth:
+
+```python
+from littledl import AuthConfig, AuthType
+
+auth = AuthConfig(
+	auth_type=AuthType.BASIC,
+	username="user",
+	password="pass",
+)
+```
+
+Bearer token:
+
+```python
+auth = AuthConfig(
+	auth_type=AuthType.BEARER,
+	token="your-api-token",
+)
+```
+
+API key:
+
+```python
+auth = AuthConfig(
+	auth_type=AuthType.API_KEY,
+	api_key="your-api-key",
+	api_key_header="X-API-Key",
+)
+```
+
+Digest auth:
+
+```python
+auth = AuthConfig(
+	auth_type=AuthType.DIGEST,
+	username="user",
+	password="pass",
+)
+```
+
+OAuth2:
+
+```python
+auth = AuthConfig(
+	auth_type=AuthType.OAUTH2,
+	client_id="client-id",
+	client_secret="client-secret",
+	token_url="https://example.com/oauth/token",
+)
+```
+
+Use with DownloadConfig:
+
+```python
+from littledl import DownloadConfig
+
+config = DownloadConfig(auth=auth)
+```
+
+## Proxy configuration
+
+Proxy support is configured with `ProxyConfig` and `ProxyMode`.
+
+Proxy modes:
+
+- `SYSTEM`: detect and use system proxy settings
+- `CUSTOM`: explicit proxy values
+- `NONE`: disable proxy use
+
+Examples:
+
+System proxy:
+
+```python
+from littledl import ProxyConfig, ProxyMode
+
+proxy = ProxyConfig(mode=ProxyMode.SYSTEM)
+```
+
+Custom HTTP/HTTPS proxy:
+
+```python
+proxy = ProxyConfig(
+	mode=ProxyMode.CUSTOM,
+	http_proxy="http://proxy.example.com:8080",
+	https_proxy="https://proxy.example.com:8080",
+)
+```
+
+SOCKS5:
+
+```python
+proxy = ProxyConfig(
+	mode=ProxyMode.CUSTOM,
+	socks5_proxy="socks5://user:pass@proxy.example.com:1080",
+)
+```
+
+Environment variables respected:
+
+- `HTTP_PROXY` / `http_proxy`
+- `HTTPS_PROXY` / `https_proxy`
+- `SOCKS_PROXY` / `socks_proxy`
+- `NO_PROXY` / `no_proxy`
+
+## Speed limiting
+
+Use `SpeedLimitConfig` with `SpeedLimitMode`.
+
+Representative example:
+
+```python
+from littledl import DownloadConfig, SpeedLimitConfig, SpeedLimitMode
+
+speed_limit = SpeedLimitConfig(
+	enabled=True,
+	mode=SpeedLimitMode.GLOBAL,
+	max_speed=1024 * 1024,
+)
+
+config = DownloadConfig(speed_limit=speed_limit)
+```
+
+Modes:
+
+- `GLOBAL`: cap total download speed
+- `PER_CHUNK`: cap each chunk independently
+
+## Progress and callback model
+
+### Single-file callbacks
+
+Supported input styles:
+
+- `ProgressEvent`
+- `dict`
+- `**payload`
+- legacy positional arguments
+
+`ProgressEvent` fields include:
+
+- downloaded
+- total
+- speed
+- eta
+- progress
+- remaining
+- timestamp
+- unknown_size
+- filename
+- url
+
+### Chunk callbacks
+
+Chunk mode emits `ChunkEvent` containing:
+
+- chunk_index
+- status
+- downloaded
+- total
+- progress
+- speed
+- error
+- timestamp
+
+### Unified callback system
+
+The callback subsystem also exposes richer event types for custom download managers and UI layers.
+
+Important event categories:
+
+- FILE_PROGRESS
+- FILE_COMPLETE
+- FILE_ERROR
+- FILE_RETRY
+- BATCH_PROGRESS
+- BATCH_COMPLETE
+- CHUNK_PROGRESS
+- CHUNK_COMPLETE
+- CHUNK_ERROR
+
+Important exported callback helpers:
+
+- `UnifiedCallbackAdapter`
+- `ThrottledCallback`
+- `CallbackChain`
+- `ProgressAggregator`
+- `detect_callback_mode`
+
+Representative rich event types:
+
+- `FileProgressEvent`
+- `FileCompleteEvent`
+- `BatchProgressEvent`
+- `ChunkProgressEvent`
+
+Callback helper behavior from docs and changelog:
+
+- `ProgressEvent` now includes `filename` and `url`
+- batch callbacks now standardize on `BatchProgress`
+- adapters auto-detect event, dict, kwargs, and legacy forms
+- throttling is available to avoid UI overload
+
+## Batch download
+
+littledl provides specialized batch downloaders for mixed workloads and large task sets.
+
+### Core batch features
+
+- Adaptive concurrency across files
+- Small-file prioritization
+- Shared connection pool
+- Domain affinity scheduling to reuse hot connections
+- Batch probe via parallel HEAD requests
+- Smart per-file chunking based on file size
+- Global chunk budget to limit aggregate active chunks across all files
+- Optional existing-file reuse
+- Optional multi-source failover support
+
+### Quick examples
+
+Synchronous batch:
+
+```python
+from littledl import batch_download_sync
+
+results = batch_download_sync(
+	urls=[
+		"https://example.com/file1.zip",
+		"https://example.com/file2.zip",
+		"https://example.com/file3.zip",
+	],
+	save_path="./downloads",
+	max_concurrent_files=5,
+)
+```
+
+Asynchronous batch:
+
+```python
+import asyncio
+from littledl import BatchDownloader
+
+async def main():
+	downloader = BatchDownloader(
+		max_concurrent_files=5,
+		max_concurrent_chunks_per_file=4,
+		enable_adaptive_concurrency=True,
+	)
+	await downloader.add_urls([
+		"https://example.com/file1.zip",
+		"https://example.com/file2.zip",
+	], "./downloads")
+	await downloader.start()
+
+asyncio.run(main())
+```
+
+High-performance batch downloader pattern from the README:
+
+```python
+from littledl import EnhancedBatchDownloader
+
+downloader = EnhancedBatchDownloader(
+	max_concurrent_files=5,
+	max_total_threads=15,
+	enable_existing_file_reuse=True,
+	enable_multi_source=True,
+)
+```
+
+### Batch callback model
+
+Batch progress callbacks support:
+
+- `BatchProgress` object
+- `dict`
+- `**kwargs`
+- legacy positional format
+
+`BatchProgress` includes:
+
+- total_files
+- completed_files
+- failed_files
+- active_files
+- pending_files
+- total_bytes
+- downloaded_bytes
+- overall_speed
+- smooth_speed
+- eta
+- speed_stability
+- elapsed_time
+- files: tuple of per-file entries
+- progress property
+- files_progress property
+
+Per-file progress entries include file identity, status, size, downloaded bytes, speed, progress, timestamps, and error state.
+
+### File complete callbacks
+
+File completion handlers receive a `FileTask` object.
+
+### Smart chunking guidance
+
+Default chunking strategy from the docs:
+
+| File size | Typical strategy |
+| --- | --- |
+| < 5 MB | single chunk |
+| 5 MB to 100 MB | about 4 chunks |
+| > 100 MB | about 8 chunks |
+
+### Adaptive concurrency behavior
+
+Batch mode automatically adjusts concurrency:
+
+- speed trend improving: increase file concurrency gradually
+- speed trend degrading: reduce concurrency to stabilize throughput
+- error rate rising: reduce concurrency
+- per-file chunk growth remains bounded by the batch-wide chunk budget
+
+### Operational controls
+
+Batch downloader APIs support:
+
+- add_url
+- add_urls
+- start
+- pause
+- resume
+- cancel
+- stop
+- get_task
+- get_all_tasks
+- get_progress
+- get_stats
+
+### Batch implementation notes consolidated from changelog and repo memory
+
+- batch per-file configs now clone the full parent DownloadConfig via `create_file_config()`
+- dynamic style allocation sorting was fixed to use the correct tuple fields
+- adaptive concurrency logic was fixed so positive trends increase concurrency and negative trends reduce it
+- global chunk budget prevents over-expansion when many files are active
+- domain affinity helps reuse warm connections within the same host set
+
+## Advanced usage
+
+### Manual chunk tuning
+
+```python
+from littledl import DownloadConfig
+
+config = DownloadConfig(
+	enable_chunking=True,
+	chunk_size=8 * 1024 * 1024,
+	max_chunks=8,
+)
+```
+
+### Disable chunking
+
+```python
+config = DownloadConfig(enable_chunking=False)
+```
+
+### Multiple simultaneous downloads
+
+```python
+import asyncio
+from littledl import download_file
+
+async def download_multiple(urls):
+	tasks = [download_file(url) for url in urls]
+	return await asyncio.gather(*tasks)
+```
+
+### Custom headers
+
+```python
+config = DownloadConfig(
+	headers={
+		"User-Agent": "MyApp/1.0",
+		"Accept": "application/octet-stream",
+	}
+)
+```
+
+### Cookies
+
+```python
+config = DownloadConfig(cookies={"session_id": "abc123"})
+```
+
+### SSL configuration
+
+Custom CA bundle:
+
+```python
+config = DownloadConfig(verify_ssl=True, ssl_cert="/path/to/ca-bundle.crt")
+```
+
+Disable verification only for controlled scenarios:
+
+```python
+config = DownloadConfig(verify_ssl=False)
+```
+
+### Streaming API
+
+```python
+from littledl import download_file_stream
+
+async for chunk in download_file_stream("https://example.com/large_file.zip"):
+	process(chunk)
+```
+
+### Performance tuning knobs
+
+- `buffer_size`
+- `max_connections`
+- `max_keepalive_connections`
+- `chunk_size`
+- `max_chunks`
+
+Performance guidance from changelog and repo notes:
+
+- FUSION is now the default main strategy
+- FUSION has four phases: PROBE, RAMP, CRUISE, TAIL
+- Tail phase can temporarily exceed normal chunk count by `fusion_tail_boost`
+- resume checkpoints and pause/cancel checks are important for stability in long-running downloads
+- hash verification should be enforced post-download if integrity guarantees matter
+
+## Error handling
+
+Primary documented exceptions:
+
+- `DownloadException`: base download error
+- `NetworkError`: connection, timeout, DNS, and related transport failures
+- `AuthenticationError`: auth failures
+- `FileExistsError`: target exists while overwrite is disabled
+
+Typical handling:
+
+```python
+from littledl import DownloadException
+
+try:
+	path = download_file_sync("https://example.com/file.zip")
+except DownloadException as exc:
+	print(f"Download failed: {exc}")
+```
+
+### Retry configuration
+
+```python
+from littledl import DownloadConfig, RetryConfig, RetryMode
+
+retry = RetryConfig(
+	enabled=True,
+	mode=RetryMode.EXPONENTIAL,
+	max_retries=3,
+	initial_delay=1.0,
+	max_delay=60.0,
+)
+
+config = DownloadConfig(retry=retry)
+```
+
+### Validation guidance
+
+Recommended safeguards before download:
+
+- validate URL scheme and host
+- restrict protocols to HTTP/HTTPS where appropriate
+- set `max_file_size` if the caller needs hard caps
+- set `min_file_size` if undersized responses should be rejected
+
+Example URL validation logic from the docs:
+
+```python
+from urllib.parse import urlparse
+
+def validate_url(url: str) -> bool:
+	parsed = urlparse(url)
+	return parsed.scheme in ("http", "https")
+```
+
+## Security guidance
+
+### Supported version line
+
+The security policy currently lists 0.4.x as the actively supported version line for security updates. This appears outdated relative to the package version and should be interpreted carefully.
+
+### Reporting vulnerabilities
+
+Do not report vulnerabilities through public GitHub issues.
+
+Preferred channels:
+
+1. GitHub Security Advisories
+2. Email: zsxiaoshu@outlook.com
+
+Suggested report contents:
+
+- vulnerability description
+- impact
+- reproduction steps
+- proof of concept if available
+- suggested fix if available
+
+Published response expectations:
+
+- initial response within 48 hours
+- confirmation within 5 business days
+- fix timing based on severity
+- disclosure after release of the fix
+
+### Secure usage practices
+
+- keep `verify_ssl=True` in production
+- avoid embedding tokens in source code; prefer environment variables
+- validate untrusted URLs before passing them to the downloader
+- restrict protocols to safe allowlists
+- block internal IPs if SSRF is a concern
+- use caution when enabling proxies
+- reduce chunk counts for very large files if memory pressure matters
+
+Example secure auth pattern:
+
+```python
+import os
+from littledl import AuthConfig
+
+config = AuthConfig(
+	auth_type="bearer",
+	token=os.environ.get("API_TOKEN"),
+)
+```
+
+### Known security considerations
+
+- SSRF risk when accepting arbitrary URLs from untrusted users
+- memory pressure on very large multi-chunk downloads
+
+## Development and contribution
+
+### Contributor prerequisites
+
+- Python 3.10+
+- uv package manager
+- Git
+
+### Development setup
+
+```bash
+git clone https://github.com/YOUR_USERNAME/little-tree-downloader.git
+cd little-tree-downloader
+uv sync --all-extras
+uv run pytest tests/ -v
+uv run ruff check src/
+```
+
+### Contribution expectations
+
+- check existing issues before filing duplicates
+- provide reproduction steps and environment details for bugs
+- provide concrete use cases for feature requests
+- add tests for new functionality
+- update docs when behavior changes
+
+### Coding standards
+
+- follow PEP 8
+- add type hints for function signatures
+- write docstrings for public modules, functions, classes, and methods
+- keep maximum line length at 120 characters
+
+### Commit format
+
+Conventional Commits are used:
+
+```text
+<type>(<scope>): <description>
+
+[optional body]
+
+[optional footer(s)]
+```
+
+Common types:
+
+- feat
+- fix
+- docs
+- style
+- refactor
+- perf
+- test
+- chore
+
+### Pull request process
+
+- ensure tests pass
+- update documentation for new features
+- add tests for new functionality
+- follow the PR template
+- request maintainer review
+- respond to review feedback promptly
+
+## Release highlights
+
+This section condenses the changelog into agent-relevant history.
+
+### Unreleased
+
+- documentation updated to reflect FUSION as default
+- batch docs updated for global chunk budgeting and domain affinity
+- config/API docs updated for FUSION settings and `create_file_config()`
+- outdated README style examples corrected
+
+### 0.9.0 - 2026-04-12
+
+- added FUSION four-phase adaptive scheduler
+- added `DownloadStyle.FUSION` and top-level export for `FusionScheduler`
+- added per-file config cloning via `DownloadConfig.create_file_config()`
+- added batch chunk budget controls
+- made FUSION the default style for CLI and automatic selection
+- fixed batch config propagation for advanced settings
+- fixed adaptive concurrency direction logic
+- fixed dynamic style allocator priority sorting
+- fixed FUSION tail resplit bookkeeping
+
+### 0.8.0 - 2026-04-11
+
+- exported unified callback building blocks from top-level package
+- added CLI batch auto concurrency flags
+- added Rich batch progress UI
+- `ProgressEvent` gained `filename` and `url`
+- batch scheduling improved with domain affinity and prewarming heuristics
+- rich moved into main runtime dependencies
+- several downloader and writer correctness fixes landed
+
+### 0.7.0 - 2026-03-29
+
+- fixed batch callback mode detection for 4-parameter file progress callbacks
+- improved EWMA smoothing and scheduler stability tuning across thread pool, speed monitor, chunk manager, and smart scheduler
+
+### 0.6.1
+
+- added byte-based and file-based batch progress metrics
+- renamed `files_completed_ratio` to `files_progress`
+
+### 0.6.0
+
+- added preconnect support
+- added high-performance direct write path
+- increased default concurrency and write buffers
+
+### 0.5.0
+
+- introduced enhanced batch progress callback system
+- added per-file progress visibility and better ETA stability metrics
+
+### 0.4.x
+
+- introduced CLI batch download support, structured output modes, exit codes, and `--version`
+- fixed timeout construction, event-loop handling, filename fallback, and temp-dir wiring
+
+## Implementation map
+
+Use this source map for implementation questions instead of relying on README-level descriptions alone.
+
+- `src/littledl/__init__.py`: top-level exports and public API surface
+- `src/littledl/downloader.py`: single-file downloader, ProgressEvent, chunk flow, callback adapters
+- `src/littledl/batch.py`: BatchDownloader, EnhancedBatchDownloader, FileTask, BatchProgress, batch callbacks
+- `src/littledl/callback.py`: EventType, event dataclasses, UnifiedCallbackAdapter, ThrottledCallback, CallbackChain
+- `src/littledl/__main__.py`: argparse CLI, output modes, progress display, batch CLI behavior
+- `src/littledl/config.py`: DownloadConfig and related configuration types/enums
+- `src/littledl/connection.py`: connection pool and request construction
+- `src/littledl/scheduler.py`: chunk scheduling, adaptive behavior, FusionScheduler, strategy logic
+- `src/littledl/worker.py`: worker execution model
+- `src/littledl/writer.py`: buffered and direct file writers
+- `tests/test_littledl.py`: usage examples and regression coverage for callbacks, CLI, scheduling, and batch logic
+
+## Source coverage inventory
+
+The following maintained documentation sources are represented in this bundle.
+
+Root docs:
+
+- README.md
+- README.zh.md
+- CONTRIBUTING.md
+- CONTRIBUTING.zh.md
+- SECURITY.md
+- SECURITY.zh.md
+- CHANGELOG.md
+- CHANGELOG.zh.md
+
+English docs:
+
+- docs/en/index.md
+- docs/en/getting-started/index.md
+- docs/en/configuration/index.md
+- docs/en/authentication/index.md
+- docs/en/proxy/index.md
+- docs/en/error-handling/index.md
+- docs/en/advanced/index.md
+- docs/en/batch-download/index.md
+- docs/en/cli/index.md
+- docs/en/api-reference/index.md
+
+Chinese docs:
+
+- docs/zh/index.md
+- docs/zh/getting-started/index.md
+- docs/zh/configuration/index.md
+- docs/zh/authentication/index.md
+- docs/zh/proxy/index.md
+- docs/zh/error-handling/index.md
+- docs/zh/advanced/index.md
+- docs/zh/batch-download/index.md
+- docs/zh/cli/index.md
+- docs/zh/api-reference/index.md
+
+## Practical usage guidance for agents
+
+If answering product usage questions:
+
+- prefer the sections above over the README alone
+- assume FUSION is the default style unless the user explicitly overrides it
+- mention that callbacks support event, dict, kwargs, and legacy forms
+- mention batch global chunk budgeting and domain affinity for multi-file performance questions
+
+If answering implementation questions:
+
+- use the implementation map and source files
+- verify behavior in `config.py`, `downloader.py`, `batch.py`, and `scheduler.py`
+- use changelog notes to understand recent behavior changes around FUSION and callbacks
+
+If answering security-sensitive questions:
+
+- recommend URL validation, SSL verification, and careful credential handling
+- mention SSRF considerations when users accept arbitrary URLs

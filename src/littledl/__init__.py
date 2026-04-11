@@ -73,7 +73,7 @@ from .monitor import DownloadMonitor, DownloadStats
 from .proxy import ProxyDetector, ProxyInfo, ProxyManager
 from .reuse import FileReuseChecker, MultiSourceManager, SharedFileRegistry
 from .resume import DownloadMetadata, ResumeManager
-from .scheduler import AdaptiveChunkSizer, ConnectionOptimizer, SmartScheduler
+from .scheduler import AdaptiveChunkSizer, ConnectionOptimizer, FusionScheduler, SmartScheduler
 from .strategy import (
     DownloadStyle,
     DynamicStyleAllocator,
@@ -141,6 +141,7 @@ __all__ = [
     "DownloadMetadata",
     "ResumeManager",
     "SmartScheduler",
+    "FusionScheduler",
     "AdaptiveChunkSizer",
     "ConnectionOptimizer",
     "DownloadWorker",

@@ -58,10 +58,10 @@ def parse_args(args: list[str] | None = None) -> argparse.Namespace:
         "-s",
         "--style",
         dest="style",
-        choices=["single", "multi", "adaptive", "hybrid", "hybrid_turbo", "auto"],
-        default="hybrid_turbo",
+        choices=["single", "multi", "adaptive", "hybrid", "hybrid_turbo", "fusion", "auto"],
+        default="fusion",
         help=_(
-            "Download style: single (单线程), multi (多线程分段), adaptive (传统自适应), hybrid_turbo (极速稳态), auto (自动分析)"
+            "Download style: single (单线程), multi (多线程分段), adaptive (传统自适应), hybrid_turbo (极速稳态), fusion (四阶段自适应, 默认), auto (自动=fusion)"
         ),
     )
     parser.add_argument("-i", "--info", dest="info_only", action="store_true", help=_("Show file info and exit"))
@@ -120,7 +120,7 @@ def parse_args(args: list[str] | None = None) -> argparse.Namespace:
         default="auto",
         help=_("Output format: auto (根据环境), json (结构化), text (纯文本)"),
     )
-    parser.add_argument("--version", action="version", version="%(prog)s 0.8.0")
+    parser.add_argument("--version", action="version", version="%(prog)s 0.9.0")
     return parser.parse_args(args)
 
 
@@ -176,9 +176,10 @@ def style_to_enum(style_str: str) -> DownloadStyle:
         "adaptive": DownloadStyle.ADAPTIVE,
         "hybrid": DownloadStyle.HYBRID_TURBO,
         "hybrid_turbo": DownloadStyle.HYBRID_TURBO,
-        "auto": DownloadStyle.HYBRID_TURBO,
+        "fusion": DownloadStyle.FUSION,
+        "auto": DownloadStyle.FUSION,
     }
-    return mapping.get(style_str.lower(), DownloadStyle.HYBRID_TURBO)
+    return mapping.get(style_str.lower(), DownloadStyle.FUSION)
 
 
 def read_urls_from_file(file_path: str) -> list[tuple[int, str]]:

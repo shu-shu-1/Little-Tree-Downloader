@@ -9,8 +9,8 @@
 ### 核心功能
 
 - 🚀 **多线程分段下载**：使用 HTTP Range 请求将文件分块并行下载，最大化速度（参考 Aria2、IDM 等工具）
-- 🧠 **智能策略选择**：根据文件大小、服务器能力和网络状况自动选择最优下载风格（单线程/多线程/自适应/hybrid_turbo）
-- 🎨 **多种下载风格**：支持单线程、多线程、自适应和 hybrid_turbo 混合加速等多种下载风格，适应不同场景和需求
+- 🧠 **智能策略选择**：根据文件大小、服务器能力和网络状况自动选择最优下载风格（单线程/多线程/自适应/fusion/hybrid_turbo）
+- 🎨 **多种下载风格**：支持单线程、多线程、自适应、FUSION 和 hybrid_turbo 等多种下载风格，适应不同场景和需求
 - 🎯 **直接写入文件**：直接写入最终文件，无需临时文件合并
 - ⏯️ **断点续传**：支持从上次中断处继续下载
 - 📊 **实时速度监控**：实时速度计算、预计剩余时间和趋势分析
@@ -82,27 +82,28 @@ asyncio.run(main())
 
 ## 下载风格
 
-littledl 支持三种下载风格，您可以根据需要选择：
+littledl 支持五种下载风格，您可以根据需要选择：
 
-| 风格           | 说明                                     | 适用场景                            |
-| -------------- | ---------------------------------------- | ----------------------------------- |
-| `single`       | 单线程下载                               | 小文件、不支持 Range 的服务器       |
-| `multi`        | 多线程分段下载                           | 大文件、稳定网络                    |
-| `adaptive`     | 自动选择最优风格                         | 大多数场景                          |
-| `hybrid_turbo` | 自适应分块 + AIMD 拥塞控制               | 不稳定网络下追求极限速度             |
+| 风格 | 说明 | 适用场景 |
+| -------------- | ------------------------------------------------------ | ----------------------------------- |
+| `single` | 单线程下载 | 小文件、不支持 Range 的服务器 |
+| `multi` | 多线程分段下载 | 大文件、稳定网络 |
+| `adaptive` | 传统自适应分块调度 | 兼容旧版调参习惯 |
+| `fusion` | 四阶段自适应调度（PROBE -> RAMP -> CRUISE -> TAIL） | 默认推荐，兼顾速度与稳定性 |
+| `hybrid_turbo` | 激进型 AIMD 自适应模式 | 不稳定网络下追求更强突发速度 |
 
 ### 自动风格选择（推荐）
 
 ```bash
-littledl "https://example.com/file.zip" --style adaptive
+# 默认就是 FUSION，因此可以省略 --style
+littledl "https://example.com/file.zip"
 ```
 
 ```python
-from littledl import DownloadStyle
+from littledl import DownloadConfig, DownloadStyle
 
-# 根据文件和网络自动选择
-config = DownloadConfig()
-# 系统自动选择最优风格
+# 使用默认的 FUSION 策略
+config = DownloadConfig().apply_style(DownloadStyle.FUSION)
 ```
 
 ### 手动风格选择
@@ -111,7 +112,10 @@ config = DownloadConfig()
 # 强制多线程
 littledl "https://example.com/file.zip" --style multi --max-chunks 8
 
-# 强制 hybrid_turbo 模式（推荐用于不稳定网络）
+# 强制使用四阶段 FUSION 调度
+littledl "https://example.com/file.zip" --style fusion
+
+# 强制 hybrid_turbo 模式以获得更激进的 AIMD 行为
 littledl "https://example.com/file.zip" --style hybrid_turbo
 ```
 
@@ -119,10 +123,10 @@ littledl "https://example.com/file.zip" --style hybrid_turbo
 from littledl import StrategySelector, DownloadStyle
 
 selector = StrategySelector(
-    default_style=DownloadStyle.HYBRID_TURBO,
+    default_style=DownloadStyle.FUSION,
     enable_single=True,
     enable_multi=True,
-    enable_hybrid_turbo=True,
+    max_chunks=16,
 )
 ```
 
@@ -156,10 +160,10 @@ littledl "https://example.com/large_file.zip" --info
 策略分析:
   文件: large_file.zip
   大小: 1.5 GB
-  推荐风格: MULTI
-  推荐分块: 8
-  预估加速: 3.5x
-  原因: 大文件 + 稳定快速网络
+    推荐风格: FUSION
+    推荐分块: 12
+    预估加速: 4.0x
+    原因: 大文件 + 稳定快速网络，进入 FUSION 全速模式
   大小分类: 大文件 (> 100MB)
   Range 支持: 是
 ```
@@ -207,6 +211,9 @@ downloader = EnhancedBatchDownloader(
     enable_existing_file_reuse=True,
     enable_multi_source=True,
 )
+
+# 线程会在多个文件之间复用，并自动遵守批量任务的
+# 全局分块预算，避免同时把每个文件都拉满。
 
 # 添加带备用 URL 的文件
 await downloader.add_url(
@@ -262,6 +269,9 @@ for url, path, error in results:
 ```bash
 # 自动风格选择下载
 littledl "https://example.com/file.zip" -o ./downloads
+
+# 显式启用 FUSION
+littledl "https://example.com/file.zip" --style fusion
 
 # 分析并获取下载策略建议
 littledl "https://example.com/file.zip" --info

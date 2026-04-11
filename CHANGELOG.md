@@ -7,6 +7,51 @@ All notable changes to littledl will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Changed
+
+- **Documentation Refresh for FUSION**: Updated English docs to reflect `fusion` as the default CLI/download style and clarified that `auto` is now an alias of `fusion`
+- **Batch Download Documentation**: Documented global chunk budgeting, domain-affinity scheduling, and corrected adaptive concurrency behavior descriptions
+- **Configuration/API Documentation**: Added `enable_fusion`, key `fusion_*` settings, and the `DownloadConfig.create_file_config()` helper to the docs
+
+### Fixed
+
+- **README Examples**: Corrected outdated style-selection examples so they match the current `StrategySelector` API and FUSION-based defaults
+
+## 0.9.0 - 2026-04-12
+
+### Added
+
+- **FUSION Adaptive Scheduler**: Added a new four-phase adaptive scheduling algorithm for chunked downloads
+  - Introduced `FusionScheduler` with `PROBE -> RAMP -> CRUISE -> TAIL` phases
+  - Added `DownloadStyle.FUSION` and exported `FusionScheduler` from the top-level package
+  - Added dedicated FUSION tuning parameters to `DownloadConfig` for probe, ramp, cruise, and tail behavior
+- **Per-File Config Cloning API**: Added `DownloadConfig.create_file_config()` so batch downloads can inherit the full parent configuration safely
+- **Batch Chunk Budget Control**: Added `FileScheduler.max_total_chunks` and active chunk tracking to cap total chunk fan-out across batch tasks
+
+### Changed
+
+- **FUSION Becomes Default Style**: FUSION is now the default strategy for CLI and automatic style selection
+  - CLI `--style` now supports `fusion`
+  - CLI default style changed from `hybrid_turbo` to `fusion`
+  - `auto` style now maps to `fusion`
+- **Strategy Selection Updates**: `StrategySelector` now prefers FUSION for medium and large files, with updated chunk heuristics for fast and unstable networks
+- **Downloader Scheduler Selection**: `Downloader` now chooses `FusionScheduler` automatically when FUSION is enabled, including temporary tail-phase worker expansion
+- **Batch Scheduling Efficiency**: Batch downloads now balance per-file chunk counts against a global chunk budget to reduce over-allocation under heavy workloads
+
+### Fixed
+
+- **Batch Per-File Config Propagation**: Fixed batch per-file downloader creation so advanced options such as FUSION, adaptive tuning, resplit parameters, speed limits, auth, and proxy settings are preserved
+- **Adaptive Concurrency Direction Logic**: Fixed `AdaptiveConcurrencyController.adjust()` so it increases concurrency on strong positive trends and decreases it on negative trends instead of reacting in the wrong direction
+- **Dynamic Style Priority Sorting**: Fixed `DynamicStyleAllocator.rebalance()` sorting keys so file size and priority are evaluated correctly during allocation
+- **Tail Resplit Bookkeeping**: Improved FUSION tail-phase resplit bookkeeping so repeated resplits are tracked correctly and stay bounded
+
+### Documentation
+
+- Updated CLI documentation examples to reflect version `0.9.0`
+- Updated `llms.txt` package version metadata for agent-facing project indexing
+
 ## 0.8.0 - 2026-04-11
 
 ### Added

@@ -34,6 +34,11 @@ config = DownloadConfig(
 | `fallback_to_single_on_failure` | bool | True | Auto fallback to single-stream mode on chunked failure |
 | `enable_adaptive` | bool | True | Enable adaptive network scheduling |
 | `enable_hybrid_turbo` | bool | True | Enable hybrid turbo download with AIMD congestion control and smart chunk fallback |
+| `enable_fusion` | bool | True | Enable the FUSION four-phase adaptive scheduler |
+| `fusion_probe_chunks` | int | 2 | Initial worker count during the PROBE phase |
+| `fusion_probe_duration` | float | 2.0 | Probe duration before entering the RAMP phase |
+| `fusion_tail_ratio` | float | 0.20 | Enter TAIL when remaining bytes ratio falls below this threshold |
+| `fusion_tail_boost` | int | 2 | Extra concurrent workers allowed in the TAIL phase |
 | `hybrid_aimd_increase_step` | int | 1 | Target worker increase step size (Additive Increase) |
 | `hybrid_aimd_decrease_factor` | float | 0.5 | Factor used to multiply target workers on speed decline (Multiplicative Decrease) |
 | `hybrid_speedup_threshold` | float | 0.08 | Minimum relative speedup threshold required to trigger AIMD |
@@ -45,6 +50,18 @@ config = DownloadConfig(
 | `max_file_size` | int | None | Reject files larger than this size |
 | `progress_update_interval` | float | 0.5 | Progress callback interval in seconds |
 | `chunk_callback` | Callable | None | Per-chunk status callback during chunked download |
+
+## Per-file Batch Config Inheritance
+
+Batch downloaders derive per-file configs from the parent `DownloadConfig`, so advanced settings such as auth, proxy, FUSION, adaptive tuning, resplit controls, and speed limits are preserved automatically.
+
+```python
+file_config = config.create_file_config(
+    max_chunks=8,
+    min_chunks=1,
+    enable_chunking=True,
+)
+```
 
 ## Proxy Configuration
 

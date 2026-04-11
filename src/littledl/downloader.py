@@ -20,7 +20,7 @@ from .exceptions import CancelledError, ConfigurationError, DownloadError, HTTPE
 from .limiter import SpeedLimiter
 from .monitor import DownloadMonitor
 from .resume import ResumeManager
-from .scheduler import SmartScheduler
+from .scheduler import FusionScheduler, SmartScheduler
 from .utils import generate_download_id, normalize_url, resolve_download_path, safe_filename, validate_url
 from .writer import BufferedFileWriter
 
@@ -369,7 +369,7 @@ class Downloader:
         self.config = config or DownloadConfig()
         self._connection_pool: ConnectionPool | None = None
         self._monitor: DownloadMonitor | None = None
-        self._scheduler: SmartScheduler | None = None
+        self._scheduler: SmartScheduler | FusionScheduler | None = None
         self._chunk_manager: ChunkManager | None = None
         self._resume_manager: ResumeManager | None = None
         self._running = False
@@ -657,17 +657,28 @@ class Downloader:
         )
         await self._h2_downloader.writer.open()
 
-        self._scheduler = SmartScheduler(
-            chunk_manager=self._chunk_manager,
-            config=self.config,
-            monitor=self._monitor,
+        self._scheduler = (
+            FusionScheduler(
+                chunk_manager=self._chunk_manager,
+                config=self.config,
+                monitor=self._monitor,
+            )
+            if self.config.enable_fusion
+            else SmartScheduler(
+                chunk_manager=self._chunk_manager,
+                config=self.config,
+                monitor=self._monitor,
+            )
         )
 
         await self._scheduler.start()
         self._monitor.start()
 
-        # 使用信号量控制并发数，简化任务管理
-        semaphore = asyncio.Semaphore(self.config.max_chunks)
+        # 信号量上限需要容纳 FUSION TAIL 阶段的额外并发
+        max_concurrent = self.config.max_chunks
+        if self.config.enable_fusion:
+            max_concurrent += self.config.fusion_tail_boost
+        semaphore = asyncio.Semaphore(max_concurrent)
 
         async def download_with_limit(chunk: Chunk) -> tuple[int, bool, str | None]:
             """带并发限制的下载任务"""

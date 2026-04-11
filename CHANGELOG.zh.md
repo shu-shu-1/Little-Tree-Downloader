@@ -7,6 +7,51 @@ English | 简体中文
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)，
 本项目遵循 [语义化版本](https://semver.org/spec/v2.0.0.html)。
 
+## Unreleased
+
+### 优化变更
+
+- **FUSION 文档刷新**：更新中文文档，明确 `fusion` 已是 CLI 和下载策略的默认模式，并说明 `auto` 现在是 `fusion` 的兼容别名
+- **批量下载文档补充**：补充全局分块预算、域名亲和调度，并修正文档中对自适应并发行为的描述
+- **配置/API 文档补充**：补充 `enable_fusion`、关键 `fusion_*` 参数，以及 `DownloadConfig.create_file_config()` 帮助方法说明
+
+### 修复
+
+- **README 示例修正**：修正文档中过时的风格选择示例，使其与当前 `StrategySelector` API 和基于 FUSION 的默认行为一致
+
+## 0.9.0 - 2026-04-12
+
+### 新增
+
+- **FUSION 自适应调度器**：新增四阶段分块调度算法，用于进一步提升分块下载的速度与稳定性
+  - 引入 `FusionScheduler`，包含 `PROBE -> RAMP -> CRUISE -> TAIL` 四个阶段
+  - 新增 `DownloadStyle.FUSION`，并从顶层包导出 `FusionScheduler`
+  - 为 `DownloadConfig` 新增 FUSION 专属参数，可分别控制探测、爬升、巡航和收尾阶段行为
+- **单文件配置克隆 API**：新增 `DownloadConfig.create_file_config()`，让批量下载中的单文件任务能够安全继承完整父配置
+- **批量总分块预算控制**：为 `FileScheduler` 新增 `max_total_chunks` 和活动分块统计，用于限制批量任务的总分块扩张
+
+### 优化变更
+
+- **FUSION 成为默认风格**：FUSION 现在是 CLI 与自动策略选择的默认下载风格
+  - CLI `--style` 新增 `fusion`
+  - CLI 默认风格从 `hybrid_turbo` 调整为 `fusion`
+  - `auto` 现在映射到 `fusion`
+- **策略选择更新**：`StrategySelector` 现在优先为中大文件选择 FUSION，并根据高速稳定网络或不稳定网络调整推荐分块数
+- **下载器调度器选择**：当启用 FUSION 时，`Downloader` 会自动切换到 `FusionScheduler`，并在收尾阶段允许临时扩大 worker 并发
+- **批量调度效率提升**：批量下载会在全局分块预算下平衡每个文件的分块数，降低高负载场景下的过度分块
+
+### 修复
+
+- **批量单文件配置继承**：修复批量下载为单文件任务创建下载器时丢失高级配置的问题，FUSION、自适应调优、重切分参数、限速、认证、代理等设置现在都会正确保留
+- **自适应并发方向判断**：修复 `AdaptiveConcurrencyController.adjust()` 趋势方向判断相反的问题，现在会在速度趋势明显向上时提高并发、在趋势下滑时降低并发
+- **动态风格优先级排序**：修复 `DynamicStyleAllocator.rebalance()` 中排序键使用错误，确保按文件体积特征与优先级正确分配风格
+- **收尾阶段重切分统计**：改进 FUSION 收尾阶段的重切分计数与状态记录，避免重复重切失控
+
+### 文档
+
+- 更新 CLI 文档示例中的版本号为 `0.9.0`
+- 更新 `llms.txt` 中面向 agent 的项目版本元数据
+
 ## 0.8.0 - 2026-04-11
 
 ### 新增

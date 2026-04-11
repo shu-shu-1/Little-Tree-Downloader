@@ -14,7 +14,7 @@ pip install littledl
 
 ```bash
 littledl --version
-# 输出: littledl 0.8.0
+# 输出: littledl 0.9.0
 ```
 
 ## 基本用法
@@ -64,24 +64,28 @@ littledl -F urls.txt -o ./downloads
 
 ## 下载模式
 
-| 模式             | 说明                   | 适用场景                      |
-| ---------------- | ---------------------- | ----------------------------- |
-| `single`       | 单线程下载             | 小文件、不支持 Range 的服务器 |
-| `multi`        | 多线程分段下载         | 大文件、稳定连接              |
-| `adaptive`     | 根据条件自动选择       | 大多数场景                    |
-| `hybrid_turbo` | 自适应 + AIMD 拥塞控制 | 追求极致速度、不稳定网络      |
-| `auto`         | 由 littledl 分析后决定 | 推荐给新手用户                |
+| 模式 | 说明 | 适用场景 |
+| ---------------- | ------------------------------------ | ----------------------------- |
+| `single` | 单线程下载 | 小文件、不支持 Range 的服务器 |
+| `multi` | 多线程分段下载 | 大文件、稳定连接 |
+| `adaptive` | 传统自适应调度器 | 兼容旧版调参方式 |
+| `fusion` | 四阶段自适应调度器，CLI 默认值 | 推荐给绝大多数用户 |
+| `hybrid_turbo` | 激进型 AIMD 自适应模式 | 追求极致突发速度、不稳定网络 |
+| `auto` | `fusion` 的兼容别名 | 兼容旧脚本 |
 
 ### 示例
 
 ```bash
-# 自动选择最佳模式
-littledl "https://example.com/file.zip" -s auto
+# 默认模式（FUSION）
+littledl "https://example.com/file.zip"
 
 # 强制单线程
 littledl "https://example.com/file.zip" -s single
 
-# 最高性能
+# 显式启用 FUSION
+littledl "https://example.com/file.zip" -s fusion -c 16
+
+# 激进旧版模式
 littledl "https://example.com/file.zip" -s hybrid_turbo -c 32
 ```
 

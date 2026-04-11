@@ -14,6 +14,7 @@ class DownloadStyle(Enum):
     MULTI = "multi"
     ADAPTIVE = "adaptive"
     HYBRID_TURBO = "hybrid_turbo"
+    FUSION = "fusion"
 
 
 @dataclass
@@ -95,7 +96,7 @@ class StrategySelector:
 
     def __init__(
         self,
-        default_style: DownloadStyle = DownloadStyle.HYBRID_TURBO,
+        default_style: DownloadStyle = DownloadStyle.FUSION,
         enable_single: bool = True,
         enable_multi: bool = True,
         min_chunk_size: int = CHUNK_SIZE_MIN,
@@ -291,39 +292,39 @@ class StrategySelector:
         network = network_profile or NetworkProfile()
 
         if file_profile.is_large:
-            chunks = self._calculate_hybrid_chunks(file_profile, network)
-            reason = f"大文件({file_profile.size_category})使用 HYBRID_TURBO 拖尾抢占与自适应并发"
-            confidence = 0.78
+            chunks = self._calculate_fusion_chunks(file_profile, network)
+            reason = f"大文件({file_profile.size_category})使用 FUSION 四阶段自适应"
+            confidence = 0.82
             if network.is_stable and network.avg_speed > self.SPEED_THRESHOLD_HIGH:
-                reason = f"大文件({file_profile.size_category}) + 稳定快速网络，优先 HYBRID_TURBO"
-                confidence = 0.92
+                reason = f"大文件({file_profile.size_category}) + 稳定快速网络，FUSION 全速模式"
+                confidence = 0.95
             elif network.is_stable:
-                reason = f"大文件({file_profile.size_category}) + 稳定网络，启用 HYBRID_TURBO"
-                confidence = 0.84
+                reason = f"大文件({file_profile.size_category}) + 稳定网络，FUSION 稳速模式"
+                confidence = 0.88
             return StyleDecision(
-                style=DownloadStyle.HYBRID_TURBO,
+                style=DownloadStyle.FUSION,
                 confidence=confidence,
                 reason=reason,
                 recommended_chunks=chunks,
-                estimated_speedup=self._estimate_speedup(chunks, network) * 1.1,
+                estimated_speedup=self._estimate_speedup(chunks, network) * 1.15,
             )
 
         if file_profile.is_medium:
-            chunks = min(self._calculate_hybrid_chunks(file_profile, network), 8)
+            chunks = min(self._calculate_fusion_chunks(file_profile, network), 8)
             if network.is_stable and network.avg_speed > self.SPEED_THRESHOLD_MID:
                 return StyleDecision(
-                    style=DownloadStyle.HYBRID_TURBO,
-                    confidence=0.78,
-                    reason=f"中等文件({file_profile.size_category}) + 良好网络，使用 HYBRID_TURBO",
+                    style=DownloadStyle.FUSION,
+                    confidence=0.82,
+                    reason=f"中等文件({file_profile.size_category}) + 良好网络，FUSION 自适应",
                     recommended_chunks=chunks,
-                    estimated_speedup=self._estimate_speedup(chunks, network) * 1.05,
+                    estimated_speedup=self._estimate_speedup(chunks, network) * 1.1,
                 )
 
-        chunks = self._calculate_hybrid_chunks(file_profile, network)
+        chunks = self._calculate_fusion_chunks(file_profile, network)
         return StyleDecision(
-            style=DownloadStyle.HYBRID_TURBO,
-            confidence=0.68,
-            reason="默认使用 HYBRID_TURBO，在速度和稳定之间动态平衡",
+            style=DownloadStyle.FUSION,
+            confidence=0.75,
+            reason="默认使用 FUSION，四阶段自适应在速度和稳定之间动态平衡",
             recommended_chunks=chunks,
         )
 
@@ -371,6 +372,30 @@ class StrategySelector:
 
         return max(1, min(self.max_chunks, chunks))
 
+    def _calculate_fusion_chunks(self, file_profile: FileProfile, network: NetworkProfile | None = None) -> int:
+        """计算 FUSION 初始分块数。
+
+        FUSION 在 PROBE 阶段只启动少量连接（由 config.fusion_probe_chunks 决定），
+        所以这里计算的是 RAMP 阶段的目标上限。实际并发由 FusionScheduler 动态控制。
+        """
+        base = self._calculate_chunks(file_profile, network)
+        if not network:
+            return min(self.max_chunks, max(2, base))
+
+        # 稳定快网：给更多初始空间让 RAMP 更快收敛
+        if network.is_stable and network.avg_speed > self.SPEED_THRESHOLD_HIGH:
+            base = max(base, 6)
+        elif network.is_stable:
+            base = max(base, 4)
+        elif network.stability < 0.4:
+            # 不稳定网络：保守起步，靠 RAMP 自动探测
+            base = max(2, base - 2)
+
+        if file_profile.is_large:
+            base = max(4, base)
+
+        return max(2, min(self.max_chunks, base))
+
     def _estimate_speedup(self, chunks: int, network: NetworkProfile) -> float:
         """估算加速比"""
         if chunks <= 1:
@@ -416,6 +441,7 @@ class StrategySelector:
             "multi_accuracy": self.get_style_accuracy(DownloadStyle.MULTI),
             "adaptive_accuracy": self.get_style_accuracy(DownloadStyle.ADAPTIVE),
             "hybrid_turbo_accuracy": self.get_style_accuracy(DownloadStyle.HYBRID_TURBO),
+            "fusion_accuracy": self.get_style_accuracy(DownloadStyle.FUSION),
             "speed_avg": self._speed_avg.get_average(),
             "speed_trend": self._speed_avg.get_trend(),
             "prediction": self.predict_next_speed(),
@@ -509,9 +535,9 @@ class DynamicStyleAllocator:
 
             files_with_priority.sort(
                 key=lambda x: (
-                    -x[0].is_large if hasattr(x[1], "is_large") else False,
+                    -(1 if hasattr(x[1], "is_large") and x[1].is_large else 0),
+                    -(x[1].priority if hasattr(x[1], "priority") else 0),
                     -x[2],
-                    x[0].priority if hasattr(x[2], "priority") else 0,
                 )
             )
 

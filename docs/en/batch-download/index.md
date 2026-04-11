@@ -7,8 +7,10 @@ littledl supports multi-file batch downloading with specialized optimizations fo
 - **Adaptive Concurrency**: Dynamically adjusts concurrent downloads based on network conditions
 - **Small File Priority**: Automatically identifies and prioritizes small files for better UX
 - **Connection Pooling**: All files share a connection pool to reduce connection overhead
+- **Domain Affinity**: Prefer scheduling files from hot domains together to reuse live connections
 - **Batch Probe**: Parallel HEAD requests to fetch file information
 - **Smart Chunking**: Automatically selects optimal chunk strategy based on file size
+- **Global Chunk Budget**: Caps aggregate active chunks across files so batch mode does not over-expand
 
 ## Quick Start
 
@@ -114,9 +116,10 @@ downloader.set_file_complete_callback(on_file_complete)
 
 Adaptive concurrency is enabled by default. The system automatically adjusts concurrency based on download speed:
 
-- Speed continuously decreasing → Increase concurrency to utilize more bandwidth
-- Speed stable or increasing → Maintain or increase concurrency
+- Speed trend improving → Gradually increase file concurrency
+- Speed trend degrading → Reduce file concurrency to stabilize throughput
 - Error rate rising → Automatically reduce concurrency
+- Per-file chunks are still bounded by the batch-wide chunk budget
 
 ```python
 downloader = BatchDownloader(
@@ -405,6 +408,8 @@ def batch_download_sync(
 |---------|-------------|
 | Intelligent Style Selection | Automatically select optimal download style based on file size, server support, and network conditions |
 | Dynamic Thread Allocation | Global thread pool unified scheduling to avoid resource waste |
+| Domain-aware Scheduling | Prefer same-domain tasks together to reuse warm connections |
+| Global Chunk Budget | Prevent all active files from claiming max chunks simultaneously |
 | Multi-source Backup | Support for multiple backup URLs with automatic failover |
 | File Reuse | Content-aware matching to avoid duplicate downloads |
 
@@ -416,7 +421,7 @@ The system automatically analyzes and selects the best download style:
 from littledl import DownloadStyle, StrategySelector
 
 selector = StrategySelector(
-    default_style=DownloadStyle.ADAPTIVE,
+    default_style=DownloadStyle.FUSION,
     enable_single=True,
     enable_multi=True,
 )
@@ -500,7 +505,7 @@ from littledl import (
 )
 
 selector = StrategySelector(
-    default_style=DownloadStyle.ADAPTIVE,
+    default_style=DownloadStyle.FUSION,
     enable_single=True,
     enable_multi=True,
     max_chunks=16,

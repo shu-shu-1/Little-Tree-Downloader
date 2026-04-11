@@ -65,7 +65,11 @@ config = DownloadConfig(
 
 **`apply_style(style: Any) -> "DownloadConfig"`**
 
-Quickly reconfigures all internal scheduling variables, chunking thresholds, and AIMD congestion control parameters based on a provided style. Supports either a `DownloadStyle` enum or a standard string style name (e.g., `"SINGLE"`, `"MULTI"`, `"ADAPTIVE"`, or `"HYBRID_TURBO"`). Returns the modified `DownloadConfig` instance.
+Quickly reconfigures all internal scheduling variables, chunking thresholds, and adaptive scheduling parameters based on a provided style. Supports either a `DownloadStyle` enum or a standard string style name (e.g., `"SINGLE"`, `"MULTI"`, `"ADAPTIVE"`, `"FUSION"`, or `"HYBRID_TURBO"`). Returns the modified `DownloadConfig` instance.
+
+**`create_file_config(*, max_chunks: int | None = None, min_chunks: int | None = None, enable_chunking: bool | None = None) -> "DownloadConfig"`**
+
+Creates a per-file `DownloadConfig` derived from the current one. Used internally by batch downloaders so FUSION, proxy, auth, retry, speed-limit, and other settings remain consistent while applying per-file chunk overrides.
 
 ## Callback Events
 

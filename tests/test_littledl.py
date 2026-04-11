@@ -464,7 +464,7 @@ class TestDownloader:
 
 
 class TestStrategyAndHybridStyle:
-    def test_strategy_prefers_hybrid_turbo_for_large_range_file(self) -> None:
+    def test_strategy_prefers_fusion_for_large_range_file(self) -> None:
         selector = StrategySelector()
         profile = selector.analyze_file(
             url="https://example.com/large.iso",
@@ -474,12 +474,14 @@ class TestStrategyAndHybridStyle:
         )
         decision = selector.select_style(profile)
 
-        assert decision.style == DownloadStyle.HYBRID_TURBO
+        assert decision.style == DownloadStyle.FUSION
         assert decision.recommended_chunks >= 4
 
     def test_style_to_enum_supports_hybrid_alias(self) -> None:
         assert style_to_enum("hybrid") == DownloadStyle.HYBRID_TURBO
         assert style_to_enum("hybrid_turbo") == DownloadStyle.HYBRID_TURBO
+        assert style_to_enum("fusion") == DownloadStyle.FUSION
+        assert style_to_enum("auto") == DownloadStyle.FUSION
 
     def test_apply_style_to_config_single_and_hybrid(self) -> None:
         single_config = DownloadConfig()

@@ -34,6 +34,11 @@ config = DownloadConfig(
 | `fallback_to_single_on_failure` | bool | True | 分块失败时自动回退到单连接下载 |
 | `enable_adaptive` | bool | True | 启用自适应网络调度 |
 | `enable_hybrid_turbo` | bool | True | 启用具有 AIMD 拥塞控制和智能重切策略的混合涡轮加速 |
+| `enable_fusion` | bool | True | 启用 FUSION 四阶段自适应调度器 |
+| `fusion_probe_chunks` | int | 2 | PROBE 阶段的初始工作线程数 |
+| `fusion_probe_duration` | float | 2.0 | 进入 RAMP 阶段前的探测时长 |
+| `fusion_tail_ratio` | float | 0.20 | 剩余字节比例低于该值时进入 TAIL 阶段 |
+| `fusion_tail_boost` | int | 2 | TAIL 阶段允许追加的额外并发数 |
 | `hybrid_aimd_increase_step` | int | 1 | 每次增加的并发目标线程数 (加性增) |
 | `hybrid_aimd_decrease_factor` | float | 0.5 | 遇到速度骤降时的并发减少系数 (乘性减) |
 | `hybrid_speedup_threshold` | float | 0.08 | 触发 AIMD 提速的最小相对网络加速阈值 |
@@ -45,6 +50,18 @@ config = DownloadConfig(
 | `max_file_size` | int | None | 拒绝大于该值的文件 |
 | `progress_update_interval` | float | 0.5 | 回调刷新间隔（秒） |
 | `chunk_callback` | Callable | None | 分块下载过程中的分片状态回调 |
+
+## 批量下载中的单文件配置继承
+
+批量下载器会从父级 `DownloadConfig` 派生每个文件的配置，因此认证、代理、FUSION、自适应调优、重切控制和限速等高级设置都会自动保留。
+
+```python
+file_config = config.create_file_config(
+    max_chunks=8,
+    min_chunks=1,
+    enable_chunking=True,
+)
+```
 
 ## 代理配置
 

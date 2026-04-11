@@ -65,7 +65,11 @@ config = DownloadConfig(
 
 **`apply_style(style: Any) -> "DownloadConfig"`**
 
-根据相应的下载风格（支持 `DownloadStyle` 枚举对象，或对应名称的字符串如 `"SINGLE"`, `"MULTI"`, `"ADAPTIVE"`, `"HYBRID_TURBO"`）一次性更改当前所有相关的调度算法配置、分块开关与 AIMD 网络拥塞控制参数，返回修改后的配置对象自身。
+根据相应的下载风格（支持 `DownloadStyle` 枚举对象，或对应名称的字符串如 `"SINGLE"`, `"MULTI"`, `"ADAPTIVE"`, `"FUSION"`, `"HYBRID_TURBO"`）一次性更改当前所有相关的调度算法配置、分块开关与自适应控制参数，返回修改后的配置对象自身。
+
+**`create_file_config(*, max_chunks: int | None = None, min_chunks: int | None = None, enable_chunking: bool | None = None) -> "DownloadConfig"`**
+
+基于当前配置创建单文件专用 `DownloadConfig`。批量下载器内部会使用它，因此 FUSION、代理、认证、重试、限速等设置会在每个文件上保持一致，同时允许覆盖单文件的分块参数。
 
 ## 回调事件
 
