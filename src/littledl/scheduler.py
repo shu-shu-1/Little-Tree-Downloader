@@ -191,7 +191,11 @@ class SmartScheduler:
             if chunk.progress > 75:
                 return False
             num_splits = min(2 + resplit_times, 4)
-            new_chunks = self.chunk_manager.resplit_chunk(chunk.index, num_splits)
+            new_chunks = self.chunk_manager.resplit_chunk(
+                chunk.index,
+                num_splits,
+                bypass_can_resplit=True,
+            )
             return new_chunks is not None and len(new_chunks) > 0
 
     def get_stats(self) -> SchedulerStats:
@@ -651,15 +655,21 @@ class FusionScheduler:
             self._transition_to(FusionPhase.CRUISE)
 
         # 任何阶段都可以进入 TAIL（除了已经在 TAIL）
-        if self._phase != FusionPhase.TAIL:
-            total_size = stats.total_size if stats.total_size > 0 else self.chunk_manager.file_size
-            if total_size > 0:
-                remaining_ratio = (total_size - stats.downloaded) / total_size
-                incomplete_chunks = sum(
-                    1 for c in self.chunk_manager.chunks if not c.is_completed
-                )
-                if remaining_ratio <= self.config.fusion_tail_ratio or incomplete_chunks <= 3:
-                    self._transition_to(FusionPhase.TAIL)
+        if self._phase != FusionPhase.TAIL and self._should_enter_tail(stats):
+            self._transition_to(FusionPhase.TAIL)
+
+    def _should_enter_tail(self, stats: Any) -> bool:
+        total_size = stats.total_size if stats.total_size > 0 else self.chunk_manager.file_size
+        if total_size <= 0:
+            return False
+
+        remaining_ratio = (total_size - stats.downloaded) / total_size
+        if remaining_ratio <= self.config.fusion_tail_ratio:
+            return True
+
+        incomplete_chunks = sum(1 for c in self.chunk_manager.chunks if not c.is_completed)
+        soft_tail_ratio = max(self.config.fusion_tail_ratio * 2, 0.35)
+        return incomplete_chunks <= 3 and remaining_ratio <= soft_tail_ratio
 
     def _transition_to(self, new_phase: FusionPhase) -> None:
         """切换阶段"""
@@ -670,6 +680,7 @@ class FusionScheduler:
         self._phase_transitions += 1
 
         if new_phase == FusionPhase.RAMP:
+            self._plateau_reached = False
             self._ramp_prev_speed = self._speed_avg.get_average()
             self._ramp_rounds = 0
         elif new_phase == FusionPhase.CRUISE:
@@ -769,7 +780,6 @@ class FusionScheduler:
                 trend > 0.05
                 and speed_change >= 0
                 and self._target_workers < self.config.max_chunks
-                and not self._plateau_reached
             ):
                 # 只在边际收益可能存在时增加
                 mg = self._bw.marginal_gain(self._target_workers, self._target_workers + 1)
@@ -880,7 +890,11 @@ class FusionScheduler:
             num_splits = min(2 + resplit_times, 4)
             if is_tail:
                 num_splits = min(4, max(2, chunk.remaining // max(min_size, 1)))
-            new_chunks = self.chunk_manager.resplit_chunk(chunk.index, num_splits)
+            new_chunks = self.chunk_manager.resplit_chunk(
+                chunk.index,
+                num_splits,
+                bypass_can_resplit=True,
+            )
             return new_chunks is not None and len(new_chunks) > 0
 
     # -- Worker management --

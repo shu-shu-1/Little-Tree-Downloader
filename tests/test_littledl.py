@@ -1,3 +1,4 @@
+import argparse
 import hashlib
 import tempfile
 from pathlib import Path
@@ -17,16 +18,18 @@ from littledl import (
     DownloadStyle,
     ProgressEvent,
     ResumeManager,
+    StyleDecision,
     StrategySelector,
 )
+import littledl.__main__ as cli_main
 from littledl.batch import BatchDownloader, EnhancedBatchDownloader, FileScheduler, FileTask
 from littledl.connection import ConnectionPool
 from littledl.downloader import ChunkCallbackAdapter, ProgressCallbackAdapter
 from littledl.exceptions import ConfigurationError, HTTPError
 from littledl.monitor import DownloadStats
-from littledl.scheduler import SmartScheduler
+from littledl.scheduler import BandwidthEstimate, FusionPhase, FusionScheduler, SmartScheduler
 from littledl.writer import BufferedFileWriter
-from littledl.__main__ import resolve_single_download_path, select_batch_concurrency, style_to_enum
+from littledl.__main__ import OutputMode, resolve_single_download_path, run_download, select_batch_concurrency, style_to_enum
 
 
 class TestDownloadConfig:
@@ -538,6 +541,148 @@ class TestSmartSchedulerHybrid:
         await scheduler._run_adaptive_adjustments()
 
         assert scheduler.get_optimal_worker_count() <= 4
+
+
+class TestFusionScheduler:
+    class _FakeMonitor:
+        def __init__(self, speed: float, total_size: int, downloaded: int) -> None:
+            self.speed = speed
+            self.total_size = total_size
+            self.downloaded = downloaded
+
+        def get_stats(self) -> DownloadStats:
+            return DownloadStats(
+                total_size=self.total_size,
+                downloaded=self.downloaded,
+                speed=self.speed,
+                is_active=True,
+            )
+
+    @pytest.mark.asyncio
+    async def test_cruise_can_probe_after_ramp_plateau(self) -> None:
+        file_size = 8 * 1024 * 1024
+        config = DownloadConfig(min_chunks=1, max_chunks=8, enable_fusion=True)
+        manager = ChunkManager(file_size=file_size, max_chunks=8, min_chunk_size=1024 * 1024)
+        manager.initialize_chunks()
+        scheduler = FusionScheduler(
+            manager,
+            config=config,
+            monitor=self._FakeMonitor(speed=1500.0, total_size=file_size, downloaded=file_size // 2),
+        )
+        scheduler._phase = FusionPhase.CRUISE
+        scheduler._target_workers = 3
+        scheduler._last_speed = 1200.0
+        scheduler._plateau_reached = True
+        scheduler._last_adjustment_time = 0.0
+        scheduler._speed_avg.add(1000.0)
+        scheduler._speed_avg.add(1250.0)
+        scheduler._speed_avg.add(1500.0)
+
+        await scheduler._do_cruise(1500.0, BandwidthEstimate())
+
+        assert scheduler._target_workers == 4
+
+    def test_tail_waits_for_real_tail_progress(self) -> None:
+        file_size = 4 * 1024 * 1024
+        config = DownloadConfig(min_chunks=1, max_chunks=4, enable_fusion=True)
+        manager = ChunkManager(file_size=file_size, max_chunks=4, min_chunk_size=1024 * 1024)
+        manager.initialize_chunks()
+        manager.chunks[0].complete()
+        scheduler = FusionScheduler(manager, config=config)
+        scheduler._phase = FusionPhase.CRUISE
+
+        scheduler._check_phase_transition(
+            DownloadStats(total_size=file_size, downloaded=file_size // 4, speed=1000.0, is_active=True),
+            BandwidthEstimate(),
+        )
+
+        assert scheduler._phase == FusionPhase.CRUISE
+
+    def test_tail_enters_when_remaining_ratio_is_low(self) -> None:
+        file_size = 4 * 1024 * 1024
+        config = DownloadConfig(min_chunks=1, max_chunks=4, enable_fusion=True)
+        manager = ChunkManager(file_size=file_size, max_chunks=4, min_chunk_size=1024 * 1024)
+        manager.initialize_chunks()
+        scheduler = FusionScheduler(manager, config=config)
+        scheduler._phase = FusionPhase.CRUISE
+
+        scheduler._check_phase_transition(
+            DownloadStats(total_size=file_size, downloaded=int(file_size * 0.85), speed=1000.0, is_active=True),
+            BandwidthEstimate(),
+        )
+
+        assert scheduler._phase == FusionPhase.TAIL
+
+
+class TestDownloaderScheduling:
+    def test_collect_schedulable_chunks_respects_limit_and_state(self) -> None:
+        downloader = Downloader(DownloadConfig(max_chunks=4))
+        manager = ChunkManager(file_size=4 * 1024 * 1024, max_chunks=4, min_chunk_size=1024 * 1024)
+        manager.initialize_chunks()
+        manager.chunks[1].status = ChunkStatus.DOWNLOADING
+        manager.chunks[2].complete()
+        downloader._chunk_manager = manager
+
+        selected = downloader._collect_schedulable_chunks({0}, limit=3)
+
+        assert [chunk.index for chunk in selected] == [3]
+
+
+class TestCliAutoSelection:
+    @pytest.mark.asyncio
+    async def test_run_download_auto_applies_recommended_chunks(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        captured: dict[str, int | bool] = {}
+
+        async def fake_download_file(*, config: DownloadConfig, **_: object) -> Path:
+            captured["max_chunks"] = config.max_chunks
+            captured["enable_fusion"] = config.enable_fusion
+            output_path = tmp_path / "download.bin"
+            output_path.write_bytes(b"ok")
+            return output_path
+
+        class FakeSelector:
+            def __init__(self, *args: object, **kwargs: object) -> None:
+                pass
+
+            def analyze_file(self, *args: object, **kwargs: object) -> object:
+                return object()
+
+            def select_style(self, profile: object) -> StyleDecision:
+                return StyleDecision(
+                    style=DownloadStyle.FUSION,
+                    confidence=1.0,
+                    reason="test",
+                    recommended_chunks=6,
+                )
+
+        monkeypatch.setattr(cli_main, "download_file", fake_download_file)
+        monkeypatch.setattr(cli_main, "StrategySelector", FakeSelector)
+
+        config = DownloadConfig(max_chunks=16)
+        args = argparse.Namespace(style="auto", verbose=False, resume=True)
+        output = OutputMode(format_pref="json", quiet=False, is_tty=False)
+
+        exit_code = await run_download(
+            "https://example.com/file.bin",
+            config,
+            tmp_path / "download.bin",
+            output,
+            args,
+            DownloadStyle.FUSION,
+            probe_info={
+                "size": 200 * 1024 * 1024,
+                "supports_range": True,
+                "content_type": "application/octet-stream",
+            },
+        )
+
+        assert exit_code == 0
+        assert captured["max_chunks"] == 6
+        assert captured["enable_fusion"] is True
 
 
 class TestIntegration:

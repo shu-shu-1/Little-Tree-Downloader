@@ -644,8 +644,16 @@ async def run_download(
         )
         decision = selector.select_style(profile)
         config.apply_style(decision.style)
+        if decision.recommended_chunks > 0:
+            config.max_chunks = max(
+                config.min_chunks,
+                min(config.max_chunks, decision.recommended_chunks),
+            )
         if output.use_progress_bar and args.verbose:
-            print(f"{_('Auto-selected style')}: {decision.style.value.upper()} ({decision.reason})")
+            print(
+                f"{_('Auto-selected style')}: {decision.style.value.upper()} "
+                f"({_('Recommended Chunks')}: {config.max_chunks}; {decision.reason})"
+            )
 
     progress = ProgressDisplay() if output.use_progress_bar else None
 

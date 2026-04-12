@@ -13,7 +13,7 @@ import httpx
 from loguru import logger
 
 from .callback import detect_callback_mode
-from .chunk import Chunk, ChunkManager
+from .chunk import Chunk, ChunkManager, ChunkStatus
 from .config import DownloadConfig
 from .connection import ConnectionPool, RequestBuilder
 from .exceptions import CancelledError, ConfigurationError, DownloadError, HTTPError, ResourceNotFoundError
@@ -383,6 +383,26 @@ class Downloader:
         self._connection_pool = pool
         self._owns_connection_pool = False
 
+    def _get_desired_active_downloads(self) -> int:
+        if self._scheduler:
+            return max(1, self._scheduler.get_optimal_worker_count())
+        return max(1, self.config.max_chunks)
+
+    def _collect_schedulable_chunks(self, active_task_indexes: set[int], limit: int) -> list[Chunk]:
+        if not self._chunk_manager or limit <= 0:
+            return []
+
+        selected: list[Chunk] = []
+        for chunk in self._chunk_manager.chunks:
+            if len(selected) >= limit:
+                break
+            if chunk.index in active_task_indexes:
+                continue
+            if chunk.is_completed or chunk.is_failed or chunk.is_active:
+                continue
+            selected.append(chunk)
+        return selected
+
     async def download(
         self,
         url: str,
@@ -731,17 +751,20 @@ class Downloader:
                         t.cancel()
                     break
 
-                # 收集可下载的分片（包括重切产生的新分片）
-                for chunk in self._chunk_manager.chunks:
-                    if chunk.index in active_tasks:
-                        continue
-                    if chunk.is_completed or chunk.is_failed:
-                        continue
-                    if chunk.status.name == "DOWNLOADING":
-                        continue
+                desired_active = self._get_desired_active_downloads()
+                spawn_budget = max(0, desired_active - len(active_tasks))
+
+                # 只补足调度器允许的并发，避免 FUSION 目标并发被固定任务派发短路。
+                for chunk in self._collect_schedulable_chunks(set(active_tasks), spawn_budget):
                     active_tasks[chunk.index] = asyncio.create_task(download_with_limit(chunk))
 
                 if not active_tasks:
+                    if any(
+                        c.status in (ChunkStatus.PENDING, ChunkStatus.RESPLITTING)
+                        for c in self._chunk_manager.chunks
+                    ):
+                        await asyncio.sleep(0.05)
+                        continue
                     break
 
                 # 等待至少一个任务完成

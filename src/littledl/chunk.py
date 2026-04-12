@@ -273,11 +273,17 @@ class ChunkManager:
                 self.chunks[chunk_index].fail(error)
                 self._update_status_count(old_status, ChunkStatus.FAILED)
 
-    def resplit_chunk(self, chunk_index: int, num_splits: int = 2) -> list[Chunk] | None:
+    def resplit_chunk(
+        self,
+        chunk_index: int,
+        num_splits: int = 2,
+        *,
+        bypass_can_resplit: bool = False,
+    ) -> list[Chunk] | None:
         if chunk_index >= len(self.chunks):
             return None
         chunk = self.chunks[chunk_index]
-        if not chunk.can_resplit():
+        if not bypass_can_resplit and not chunk.can_resplit():
             return None
         remaining = chunk.remaining
         min_size = self.min_chunk_size // num_splits
