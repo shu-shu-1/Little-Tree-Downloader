@@ -22,7 +22,7 @@ Scope intentionally excluded:
 - Project: littledl
 - Package import: littledl
 - Package location: src/littledl
-- Current version: 0.9.0
+- Current version: 0.9.1
 - Python requirement: 3.10+
 - Primary interfaces: Python library and `littledl` CLI
 - Supported platforms: Windows, macOS, Linux, FreeBSD
@@ -84,7 +84,7 @@ CLI availability check:
 littledl --version
 ```
 
-Expected version at the time of this bundle: `littledl 0.9.0`.
+Expected version at the time of this bundle: `littledl 0.9.1`.
 
 ## Quick start
 

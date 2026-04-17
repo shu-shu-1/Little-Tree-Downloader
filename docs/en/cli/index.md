@@ -14,7 +14,7 @@ Verify installation:
 
 ```bash
 littledl --version
-# Output: littledl 0.9.0
+# Output: littledl 0.9.1
 ```
 
 ## Basic Usage
@@ -64,14 +64,14 @@ littledl -F urls.txt -o ./downloads
 
 ## Download Styles
 
-| Style | Description | Best For |
-| ---------------- | ----------------------------------------- | ------------------------------------------ |
-| `single` | Single-threaded download | Small files, servers without Range support |
-| `multi` | Multi-threaded segmented | Large files, stable connections |
-| `adaptive` | Traditional adaptive scheduler | Older tuning workflows |
-| `fusion` | Four-phase adaptive scheduler; CLI default | Recommended for most users |
-| `hybrid_turbo` | Aggressive AIMD adaptive mode | Maximum burst speed on unstable networks |
-| `auto` | Alias of `fusion` | Compatibility with older scripts |
+| Style            | Description                                | Best For                                   |
+| ---------------- | ------------------------------------------ | ------------------------------------------ |
+| `single`       | Single-threaded download                   | Small files, servers without Range support |
+| `multi`        | Multi-threaded segmented                   | Large files, stable connections            |
+| `adaptive`     | Traditional adaptive scheduler             | Older tuning workflows                     |
+| `fusion`       | Four-phase adaptive scheduler; CLI default | Recommended for most users                 |
+| `hybrid_turbo` | Aggressive AIMD adaptive mode              | Maximum burst speed on unstable networks   |
+| `auto`         | Alias of `fusion`                        | Compatibility with older scripts           |
 
 ### Examples
 
