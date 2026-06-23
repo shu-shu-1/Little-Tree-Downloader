@@ -5,6 +5,20 @@ from typing import Any
 
 from .strategy import DownloadStyle
 
+
+def _library_version() -> str:
+    try:
+        from importlib.metadata import version
+
+        return version("littledl")
+    except Exception:  # pragma: no cover - source checkout without installed metadata
+        return "0.0.0"
+
+
+def _default_user_agent() -> str:
+    return f"Little-Tree-Downloader/{_library_version()}"
+
+
 DEFAULT_MIN_CHUNK_SIZE = 2 * 1024 * 1024
 DEFAULT_MAX_CHUNK_SIZE = 8 * 1024 * 1024
 DEFAULT_CHUNK_SIZE = 4 * 1024 * 1024
@@ -236,7 +250,7 @@ class DownloadConfig:
     health_check_interval: float = 10.0
     verify_ssl: bool = True
     ssl_cert_path: str | None = None
-    user_agent: str = "Little-Tree-Downloader/0.6.1"
+    user_agent: str = field(default_factory=_default_user_agent)
     headers: dict[str, str] = field(default_factory=dict)
     auth: AuthConfig | None = None
     proxy: ProxyConfig | None = None
@@ -471,37 +485,3 @@ class DownloadConfig:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "DownloadConfig":
         return cls(**{k: v for k, v in data.items() if k in cls.__dataclass_fields__})
-
-
-@dataclass
-class DownloadResult:
-    success: bool
-    file_path: str | None = None
-    file_size: int = 0
-    total_time: float = 0.0
-    average_speed: float = 0.0
-    peak_speed: float = 0.0
-    total_chunks: int = 0
-    chunks_completed: int = 0
-    retries: int = 0
-    error: str | None = None
-    hash_verified: bool | None = None
-    metadata: dict[str, Any] = field(default_factory=dict)
-
-    @property
-    def formatted_size(self) -> str:
-        from .utils import format_size
-
-        return format_size(self.file_size)
-
-    @property
-    def formatted_speed(self) -> str:
-        from .utils import format_speed
-
-        return format_speed(self.average_speed)
-
-    @property
-    def formatted_time(self) -> str:
-        from .utils import format_time
-
-        return format_time(self.total_time)

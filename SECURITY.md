@@ -8,7 +8,7 @@ We actively support the following versions with security updates:
 
 | Version | Supported |
 | ------- | --------- |
-| 0.4.x   | ✅        |
+| 1.0.x   | ✅        |
 
 ## Reporting a Vulnerability
 

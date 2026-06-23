@@ -36,7 +36,7 @@ config = DownloadConfig(
 | `enable_hybrid_turbo` | bool | True | Enable hybrid turbo download with AIMD congestion control and smart chunk fallback |
 | `enable_fusion` | bool | True | Enable the FUSION four-phase adaptive scheduler |
 | `fusion_probe_chunks` | int | 2 | Initial worker count during the PROBE phase |
-| `fusion_probe_duration` | float | 2.0 | Probe duration before entering the RAMP phase |
+| `fusion_probe_duration` | float | 2.0 | Upper bound on PROBE duration; advances to RAMP after one speed sample once `min(this, adaptive_interval)` elapses |
 | `fusion_tail_ratio` | float | 0.20 | Enter TAIL when remaining bytes ratio falls below this threshold |
 | `fusion_tail_boost` | int | 2 | Extra concurrent workers allowed in the TAIL phase |
 | `hybrid_aimd_increase_step` | int | 1 | Target worker increase step size (Additive Increase) |

@@ -1,6 +1,7 @@
 import asyncio
 import contextlib
 import json
+import os
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -74,7 +75,6 @@ class ResumeManager:
         self._lock = asyncio.Lock()
         self._last_save_time: float = 0
         self._save_interval: float = 1.0
-        self._pending_save: bool = False
 
     @property
     def metadata(self) -> DownloadMetadata | None:
@@ -133,20 +133,15 @@ class ResumeManager:
             return
         now = time.time()
         if not force and (now - self._last_save_time) < self._save_interval:
-            self._pending_save = True
             return
         async with self._lock:
             if not self._metadata:
                 return
             self._metadata.updated_at = now
             self._metadata.total_downloaded = sum(chunk.get("downloaded", 0) for chunk in self._metadata.chunks)
-            try:
-                content = json.dumps(self._metadata.to_dict(), indent=2, ensure_ascii=False)
-                await self._write_file(self.meta_path, content)
-                self._last_save_time = now
-                self._pending_save = False
-            except Exception:
-                raise
+            content = json.dumps(self._metadata.to_dict(), indent=2, ensure_ascii=False)
+            await self._write_file(self.meta_path, content)
+            self._last_save_time = now
 
     async def update_from_chunk_manager(self, chunk_manager: ChunkManager) -> None:
         if not self._metadata:
@@ -154,6 +149,13 @@ class ResumeManager:
         async with self._lock:
             self._metadata.chunks = chunk_manager.to_dict()
             self._metadata.total_downloaded = chunk_manager.total_downloaded
+
+    def adopt_chunks(self, chunks: list[dict[str, Any]]) -> None:
+        """Seed metadata with a restored chunk layout (used when resuming)."""
+        if not self._metadata:
+            return
+        self._metadata.chunks = list(chunks)
+        self._metadata.total_downloaded = sum(c.get("downloaded", 0) for c in chunks)
 
     async def update_chunk_progress(self, chunk: Chunk) -> None:
         if not self._metadata:
@@ -172,17 +174,25 @@ class ResumeManager:
             return False
         if not self._metadata.supports_range:
             return False
-        return not self._metadata.total_downloaded >= self._metadata.file_size
+        return self._metadata.total_downloaded < self._metadata.file_size
 
-    def get_progress_dict(self) -> dict[int, int]:
+    def is_compatible(self, etag: str | None, last_modified: str | None) -> bool:
+        """Whether the stored resource identity still matches the remote one.
+
+        If the server advertised no identity (no ETag and no Last-Modified) we
+        cannot prove the file changed, so we optimistically allow resuming.
+        """
         if not self._metadata:
-            return {}
-        progress: dict[int, int] = {}
-        for chunk_data in self._metadata.chunks:
-            index = chunk_data.get("index", 0)
-            downloaded = chunk_data.get("downloaded", 0)
-            progress[index] = downloaded
-        return progress
+            return False
+        stored_etag = self._metadata.etag
+        stored_lm = self._metadata.last_modified
+        if not stored_etag and not stored_lm:
+            return True
+        if stored_etag and etag:
+            return stored_etag == etag
+        if stored_lm and last_modified:
+            return stored_lm == last_modified
+        return True
 
     async def mark_completed(self) -> None:
         if self._metadata:
@@ -202,30 +212,26 @@ class ResumeManager:
                 with contextlib.suppress(Exception):
                     await self._delete_file(self.meta_path)
 
-    async def flush_pending(self) -> None:
-        if self._pending_save:
-            await self.save(force=True)
-
     async def _read_file(self, path: Path) -> str:
-        import aiofiles
+        def _read() -> str:
+            with open(path, encoding="utf-8") as f:
+                return f.read()
 
-        async with aiofiles.open(path, encoding="utf-8") as f:
-            return await f.read()
+        return await asyncio.to_thread(_read)
 
     async def _write_file(self, path: Path, content: str) -> None:
-        import aiofiles
+        def _write() -> None:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            temp_path = path.with_suffix(".tmp_write")
+            with open(temp_path, "w", encoding="utf-8") as f:
+                f.write(content)
+            # Atomic replace: no window where `path` is absent and a symlink can
+            # be swapped in, and no symlink-following on the destination.
+            os.replace(temp_path, path)
 
-        path.parent.mkdir(parents=True, exist_ok=True)
-        temp_path = path.with_suffix(".tmp_write")
-        async with aiofiles.open(temp_path, "w", encoding="utf-8") as f:
-            await f.write(content)
-        if path.exists():
-            await self._delete_file(path)
-        temp_path.rename(path)
+        await asyncio.to_thread(_write)
 
     async def _delete_file(self, path: Path) -> None:
-        import os
-
         await asyncio.to_thread(os.remove, path)
 
     @staticmethod

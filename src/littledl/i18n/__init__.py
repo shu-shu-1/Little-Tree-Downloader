@@ -24,7 +24,7 @@ class Language(Enum):
 
 
 _current_language: str = DEFAULT_LANGUAGE
-_translator: _gettext_module.GNUTranslations | None = None
+_translator: _gettext_module.NullTranslations | None = None
 
 
 def _get_translation_dir() -> Path:
@@ -47,7 +47,7 @@ def _load_translations(language: str) -> _gettext_module.GNUTranslations | None:
 
 
 @lru_cache(maxsize=2)
-def get_translator(language: str | None = None) -> _gettext_module.GNUTranslations:
+def get_translator(language: str | None = None) -> _gettext_module.NullTranslations:
     global _current_language, _translator
 
     if language is None:

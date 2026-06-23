@@ -93,6 +93,7 @@ class ConnectionPool:
         from urllib.parse import urlparse
 
         async def _preconnect_one(url: str) -> None:
+            assert self._client is not None
             try:
                 async with self._client.stream(
                     "GET",
@@ -139,105 +140,6 @@ class ConnectionPool:
 
     def get_available_slots(self) -> int:
         return max(0, self._max_connections - self._connection_count)
-
-
-class ConnectionHealth:
-    def __init__(self) -> None:
-        self._latencies: list[float] = []
-        self._errors: int = 0
-        self._successful_requests: int = 0
-        self._last_error_time: float = 0.0
-        self._window_size: int = 20
-
-    def record_latency(self, latency: float) -> None:
-        self._latencies.append(latency)
-        if len(self._latencies) > self._window_size:
-            self._latencies.pop(0)
-
-    def record_success(self) -> None:
-        self._successful_requests += 1
-
-    def record_error(self) -> None:
-        import time
-
-        self._errors += 1
-        self._last_error_time = time.time()
-
-    def get_average_latency(self) -> float:
-        if not self._latencies:
-            return 0.0
-        return sum(self._latencies) / len(self._latencies)
-
-    def get_error_rate(self) -> float:
-        total = self._errors + self._successful_requests
-        if total == 0:
-            return 0.0
-        return self._errors / total
-
-    def is_healthy(self) -> bool:
-        error_rate = self.get_error_rate()
-        if error_rate > 0.5:
-            return False
-        avg_latency = self.get_average_latency()
-        return avg_latency <= 10.0
-
-    def should_backoff(self) -> bool:
-        import time
-
-        if self._errors >= 3:
-            if time.time() - self._last_error_time < 30:
-                return True
-            self._errors = 0
-        return False
-
-    def reset(self) -> None:
-        self._latencies.clear()
-        self._errors = 0
-        self._successful_requests = 0
-
-
-class URLHandler:
-    @staticmethod
-    def parse_url(url: str) -> dict[str, Any]:
-        from urllib.parse import parse_qs, urlparse
-
-        parsed = urlparse(url)
-        return {
-            "scheme": parsed.scheme,
-            "netloc": parsed.netloc,
-            "path": parsed.path,
-            "params": parsed.params,
-            "query": parsed.query,
-            "fragment": parsed.fragment,
-            "query_params": parse_qs(parsed.query),
-        }
-
-    @staticmethod
-    def is_valid_url(url: str) -> bool:
-        from urllib.parse import urlparse
-
-        try:
-            parsed = urlparse(url)
-            return bool(parsed.scheme in ("http", "https") and parsed.netloc)
-        except Exception:
-            return False
-
-    @staticmethod
-    def normalize_url(url: str) -> str:
-        url = url.strip()
-        if not url.startswith(("http://", "https://")):
-            url = f"https://{url}"
-        return url
-
-    @staticmethod
-    def extract_domain(url: str) -> str | None:
-        from urllib.parse import urlparse
-
-        try:
-            parsed = urlparse(url)
-            return parsed.netloc
-        except Exception:
-            return None
 
 
 class RequestBuilder:

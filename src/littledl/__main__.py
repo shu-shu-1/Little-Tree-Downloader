@@ -16,12 +16,12 @@ try:
 
     RICH_AVAILABLE = True
 except Exception:
-    Group = Any  # type: ignore[assignment]
-    Live = Any  # type: ignore[assignment]
-    Table = Any  # type: ignore[assignment]
+    Group = Any  # type: ignore[assignment,misc]
+    Live = Any  # type: ignore[assignment,misc]
+    Table = Any  # type: ignore[assignment,misc]
     RICH_AVAILABLE = False
 
-from . import DownloadConfig, ProgressEvent, download_file
+from . import DownloadConfig, ProgressEvent, __version__, download_file
 from .batch import BatchDownloader, BatchProgress, FileTaskStatus
 from .i18n import gettext as _
 from .strategy import DownloadStyle, StrategySelector
@@ -120,7 +120,7 @@ def parse_args(args: list[str] | None = None) -> argparse.Namespace:
         default="auto",
         help=_("Output format: auto (根据环境), json (结构化), text (纯文本)"),
     )
-    parser.add_argument("--version", action="version", version="%(prog)s 0.9.1")
+    parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     return parser.parse_args(args)
 
 
@@ -307,7 +307,7 @@ class BatchProgressDisplay:
     def __init__(self, total_tasks: int, quiet: bool = False) -> None:
         self.total_tasks = total_tasks
         self.quiet = quiet
-        self.tasks: dict[str, dict] = {}
+        self.tasks: dict[str, dict[str, Any]] = {}
         self.completed = 0
         self.failed = 0
         self.cancelled = 0
@@ -865,7 +865,7 @@ def get_unique_path(path: Path) -> Path:
         counter += 1
 
 
-def print_file_info(info: dict, output: OutputMode) -> None:
+def print_file_info(info: dict[str, Any], output: OutputMode) -> None:
     output.print(f"\n{_('File Info')}:")
     output.print(f"  {_('Filename')}: {info['filename']}")
     if info["size"] > 0:
@@ -876,7 +876,7 @@ def print_file_info(info: dict, output: OutputMode) -> None:
     output.print(f"  {_('Resume Support')}: {_('Yes') if info['supports_resume'] else _('No')}")
 
 
-async def analyze_and_recommend(url: str, config: DownloadConfig) -> dict:
+async def analyze_and_recommend(url: str, config: DownloadConfig) -> dict[str, Any]:
     """Analyze URL and recommend download strategy"""
     info = await probe_url(url, config)
 
@@ -904,7 +904,7 @@ async def analyze_and_recommend(url: str, config: DownloadConfig) -> dict:
     }
 
 
-def print_strategy_recommendation(recommendation: dict, output: OutputMode) -> None:
+def print_strategy_recommendation(recommendation: dict[str, Any], output: OutputMode) -> None:
     """Print strategy recommendation"""
     info = recommendation["file_info"]
     style = recommendation["style"]

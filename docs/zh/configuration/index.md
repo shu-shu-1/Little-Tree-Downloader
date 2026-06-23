@@ -36,7 +36,7 @@ config = DownloadConfig(
 | `enable_hybrid_turbo` | bool | True | 启用具有 AIMD 拥塞控制和智能重切策略的混合涡轮加速 |
 | `enable_fusion` | bool | True | 启用 FUSION 四阶段自适应调度器 |
 | `fusion_probe_chunks` | int | 2 | PROBE 阶段的初始工作线程数 |
-| `fusion_probe_duration` | float | 2.0 | 进入 RAMP 阶段前的探测时长 |
+| `fusion_probe_duration` | float | 2.0 | PROBE 时长上限；获得首个速度采样且经过 `min(该值, adaptive_interval)` 后即进入 RAMP |
 | `fusion_tail_ratio` | float | 0.20 | 剩余字节比例低于该值时进入 TAIL 阶段 |
 | `fusion_tail_boost` | int | 2 | TAIL 阶段允许追加的额外并发数 |
 | `hybrid_aimd_increase_step` | int | 1 | 每次增加的并发目标线程数 (加性增) |

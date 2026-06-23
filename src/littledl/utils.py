@@ -201,7 +201,7 @@ def determine_filename(
 
 
 def exponential_backoff(attempt: int, base_delay: float = 1.0, max_delay: float = 30.0, jitter: bool = True) -> float:
-    delay = min(base_delay * (2**attempt), max_delay)
+    delay = float(min(base_delay * (2**attempt), max_delay))
     if jitter:
         import random
 
@@ -278,37 +278,6 @@ def clean_temp_files(directory: Path, download_id: str | None = None) -> None:
                 meta_file.unlink(missing_ok=True)
 
 
-class SpeedCalculator:
-    def __init__(self, window_size: int = 10) -> None:
-        self.window_size = window_size
-        self.samples: list[tuple[float, int]] = []
-        self._last_speed: float = 0.0
-
-    def add_sample(self, bytes_downloaded: int) -> None:
-        now = time.time()
-        self.samples.append((now, bytes_downloaded))
-        while len(self.samples) > self.window_size:
-            self.samples.pop(0)
-
-    def get_speed(self) -> float:
-        if len(self.samples) < 2:
-            return self._last_speed
-        time_diff = self.samples[-1][0] - self.samples[0][0]
-        if time_diff <= 0:
-            return self._last_speed
-        total_bytes = sum(bytes_count for _, bytes_count in self.samples[1:])
-        speed = total_bytes / time_diff
-        self._last_speed = speed
-        return speed
-
-    def get_average_speed(self) -> float:
-        return self._last_speed
-
-    def reset(self) -> None:
-        self.samples.clear()
-        self._last_speed = 0.0
-
-
 class MovingAverage:
     def __init__(self, window_size: int = 5) -> None:
         self.window_size = window_size
@@ -371,8 +340,8 @@ class MovingAverage:
         if avg == 0:
             return 0.0
         variance = sum((v - avg) ** 2 for v in self.values) / len(self.values)
-        std_dev = variance**0.5
-        return max(0.0, 1.0 - (std_dev / avg))
+        std_dev = float(variance) ** 0.5
+        return float(max(0.0, 1.0 - (std_dev / avg)))
 
     def is_stable(self, threshold: float = 0.3) -> bool:
         return self.get_stability() >= threshold

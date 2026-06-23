@@ -164,7 +164,7 @@ class ChunkManager:
         self._chunk_index_map: dict[int, int] = {}
         self._lock = asyncio.Lock()
         self._chunk_counter = 0
-        self._status_counts: dict[ChunkStatus, int] = {s: 0 for s in ChunkStatus}
+        self._status_counts: dict[ChunkStatus, int] = dict.fromkeys(ChunkStatus, 0)
 
     def _update_status_count(self, old_status: ChunkStatus | None, new_status: ChunkStatus) -> None:
         if old_status is not None:
@@ -205,11 +205,11 @@ class ChunkManager:
     def is_completed(self) -> bool:
         return len(self.chunks) > 0 and all(c.is_completed for c in self.chunks)
 
-    def initialize_chunks(self, existing_progress: dict[int, int] | None = None) -> None:
+    def initialize_chunks(self) -> None:
         self.chunks.clear()
         self._chunk_index_map.clear()
         self._chunk_counter = 0
-        self._status_counts = {s: 0 for s in ChunkStatus}
+        self._status_counts = dict.fromkeys(ChunkStatus, 0)
         optimal_chunks = self._calculate_optimal_chunks()
         chunk_size = self.file_size // optimal_chunks
         remainder = self.file_size % optimal_chunks
@@ -222,19 +222,87 @@ class ChunkManager:
                 end_byte=chunk_end,
                 total_size=self.file_size,
             )
-            if existing_progress and i in existing_progress:
-                chunk.downloaded = existing_progress[i]
-                if chunk.downloaded >= chunk.size:
-                    chunk.complete()
-                    self._update_status_count(None, ChunkStatus.COMPLETED)
-                else:
-                    self._update_status_count(None, ChunkStatus.PENDING)
-            else:
-                self._update_status_count(None, ChunkStatus.PENDING)
+            self._update_status_count(None, ChunkStatus.PENDING)
             self.chunks.append(chunk)
             self._chunk_index_map[chunk.index] = len(self.chunks) - 1
             current_pos = chunk_end
         self._chunk_counter = optimal_chunks
+
+    def restore_chunks(self, saved: list[dict[str, Any]]) -> bool:
+        """Rebuild the exact chunk layout persisted for resume.
+
+        Unlike :meth:`initialize_chunks`, this preserves the real byte ranges of
+        resplit chunks instead of recomputing a uniform split and re-mapping
+        progress by index (which would scramble byte offsets after a resplit).
+        In-flight chunks are demoted to PENDING while keeping their flushed
+        ``downloaded`` offset, so resumed Range requests are always safe.
+
+        Returns False and leaves the manager untouched if the layout is invalid
+        or does not cover the whole file.
+        """
+        if not saved:
+            return False
+
+        chunks: list[Chunk] = []
+        index_map: dict[int, int] = {}
+        status_counts: dict[ChunkStatus, int] = dict.fromkeys(ChunkStatus, 0)
+        covered = 0
+        max_index = -1
+
+        for pos, data in enumerate(saved):
+            try:
+                start = int(data["start_byte"])
+                end = int(data["end_byte"])
+            except (KeyError, TypeError, ValueError):
+                return False
+            if start < 0 or end <= start:
+                return False
+            index = int(data.get("index", pos))
+            size = end - start
+            downloaded = max(0, int(data.get("downloaded", 0)))
+            downloaded = min(downloaded, size)
+
+            chunk = Chunk(
+                index=index,
+                start_byte=start,
+                end_byte=end,
+                total_size=self.file_size,
+                downloaded=downloaded,
+            )
+            try:
+                chunk.status = ChunkStatus(data.get("status", "pending"))
+            except ValueError:
+                chunk.status = ChunkStatus.PENDING
+
+            if chunk.status in (
+                ChunkStatus.DOWNLOADING,
+                ChunkStatus.RESPLITTING,
+                ChunkStatus.PAUSED,
+                ChunkStatus.FAILED,
+            ):
+                # In-flight or previously failed chunks restart from their last
+                # flushed offset; give them a fresh retry budget on resume.
+                chunk.status = ChunkStatus.PENDING
+                chunk.error_count = 0
+                chunk.last_error = None
+            if downloaded >= size:
+                chunk.status = ChunkStatus.COMPLETED
+                chunk.downloaded = size
+
+            chunks.append(chunk)
+            index_map[index] = pos
+            status_counts[chunk.status] = status_counts.get(chunk.status, 0) + 1
+            covered += size
+            max_index = max(max_index, index)
+
+        if covered != self.file_size or not chunks:
+            return False
+
+        self.chunks = chunks
+        self._chunk_index_map = index_map
+        self._status_counts = status_counts
+        self._chunk_counter = max_index + 1
+        return True
 
     def _calculate_optimal_chunks(self) -> int:
         if self.file_size <= 0:

@@ -242,104 +242,6 @@ class SmartScheduler:
         return optimal
 
 
-class AdaptiveChunkSizer:
-    def __init__(self, config: DownloadConfig) -> None:
-        self.config = config
-        self._speed_history: list[float] = []
-        self._chunk_size_history: list[int] = []
-        self._optimal_chunk_size: int = config.chunk_size
-
-    @property
-    def optimal_chunk_size(self) -> int:
-        return self._optimal_chunk_size
-
-    def record_sample(self, speed: float, chunk_size: int) -> None:
-        self._speed_history.append(speed)
-        self._chunk_size_history.append(chunk_size)
-        if len(self._speed_history) > 20:
-            self._speed_history.pop(0)
-            self._chunk_size_history.pop(0)
-
-    def calculate_optimal_chunk_size(self, current_speed: float) -> int:
-        if current_speed <= 0:
-            return self._optimal_chunk_size
-        target_chunk_time = 2.0
-        ideal_size = int(current_speed * target_chunk_time)
-        ideal_size = max(self.config.min_chunk_size, ideal_size)
-        ideal_size = min(self.config.max_chunk_size, ideal_size)
-        if len(self._speed_history) >= 5:
-            avg_speed = sum(self._speed_history[-5:]) / 5
-            current_trend = (current_speed - avg_speed) / max(avg_speed, 1)
-            if current_trend > 0.3:
-                ideal_size = int(ideal_size * 1.1)
-            elif current_trend < -0.3:
-                ideal_size = int(ideal_size * 0.9)
-        self._optimal_chunk_size = ideal_size
-        return ideal_size
-
-    def suggest_chunk_count(self, file_size: int, speed: float) -> int:
-        optimal_size = self.calculate_optimal_chunk_size(speed)
-        chunks = file_size // optimal_size
-        chunks = max(self.config.min_chunks, chunks)
-        chunks = min(self.config.max_chunks, chunks)
-        return chunks
-
-
-class ConnectionOptimizer:
-    def __init__(self) -> None:
-        self._connection_times: list[float] = []
-        self._download_times: list[float] = []
-        self._error_count: int = 0
-        self._last_error_time: float = 0.0
-
-    def record_connection_time(self, duration: float) -> None:
-        self._connection_times.append(duration)
-        if len(self._connection_times) > 20:
-            self._connection_times.pop(0)
-
-    def record_download_time(self, duration: float) -> None:
-        self._download_times.append(duration)
-        if len(self._download_times) > 20:
-            self._download_times.pop(0)
-
-    def record_error(self) -> None:
-        self._error_count += 1
-        self._last_error_time = time.time()
-
-    def get_average_connection_time(self) -> float:
-        if not self._connection_times:
-            return 0.0
-        return sum(self._connection_times) / len(self._connection_times)
-
-    def get_average_download_time(self) -> float:
-        if not self._download_times:
-            return 0.0
-        return sum(self._download_times) / len(self._download_times)
-
-    def should_reduce_concurrency(self) -> bool:
-        if self._error_count >= 3:
-            if time.time() - self._last_error_time < 60:
-                return True
-            self._error_count = 0
-        if len(self._connection_times) >= 5:
-            avg_conn = self.get_average_connection_time()
-            if avg_conn > 5.0:
-                return True
-        return False
-
-    def can_increase_concurrency(self) -> bool:
-        if self._error_count > 0:
-            return False
-        if len(self._connection_times) >= 5:
-            avg_conn = self.get_average_connection_time()
-            if avg_conn > 2.0:
-                return False
-        return True
-
-    def reset_errors(self) -> None:
-        self._error_count = 0
-
-
 # ---------------------------------------------------------------------------
 # FUSION Algorithm – 4-phase adaptive scheduler
 # ---------------------------------------------------------------------------
@@ -463,7 +365,7 @@ class BandwidthEstimator:
             return False
         # 变异系数 < 0.15 说明每连接速度非常稳定，服务器可能有限速
         cv = (sum((s - mean) ** 2 for s in recent_per_conn) / len(recent_per_conn)) ** 0.5 / mean
-        return cv < 0.15
+        return bool(cv < 0.15)
 
     def marginal_gain(self, from_count: int, to_count: int) -> float:
         """计算从 from_count 增加到 to_count 的边际收益"""
@@ -639,17 +541,16 @@ class FusionScheduler:
         elapsed = now - self._phase_start_time
 
         if self._phase == FusionPhase.PROBE:
-            # 探测期结束条件：持续 >= probe_duration 且有 >= 2 个速度采样
-            if elapsed >= self.config.fusion_probe_duration and bw_est.samples >= 2:
+            # 只需 1 个有效采样即可得到带宽基线：RAMP 会逐轮精修，无需等待
+            # 完整 probe_duration 与两次采样，避免“前几秒很慢”的启动观感。
+            min_elapsed = min(self.config.fusion_probe_duration, self.config.adaptive_interval)
+            if elapsed >= min_elapsed and bw_est.samples >= 1:
                 self._transition_to(FusionPhase.RAMP)
 
-        elif (
-            self._phase == FusionPhase.RAMP
-            and (
-                self._plateau_reached
-                or self._target_workers >= self.config.max_chunks
-                or self._ramp_rounds >= self.config.fusion_ramp_max_rounds
-            )
+        elif self._phase == FusionPhase.RAMP and (
+            self._plateau_reached
+            or self._target_workers >= self.config.max_chunks
+            or self._ramp_rounds >= self.config.fusion_ramp_max_rounds
         ):
             # 爬升期结束条件：达到平台 / 达到最大并发 / 超过最大轮数
             self._transition_to(FusionPhase.CRUISE)
@@ -705,8 +606,8 @@ class FusionScheduler:
         如果增速 < plateau_threshold，判定达到平台，停止爬升。
         """
         now = time.time()
-        # 等待足够时间让速度稳定
-        if now - self._phase_start_time < self.config.adaptive_interval * 1.5:
+        # 每轮等一个调度周期即可测量速度提升（旧值为 1.5 个周期，爬升过慢）。
+        if now - self._phase_start_time < self.config.adaptive_interval:
             return
 
         avg_speed = self._speed_avg.get_average()
@@ -748,8 +649,10 @@ class FusionScheduler:
         avg_speed = self._speed_avg.get_average()
         trend = self._speed_avg.get_trend()
 
-        # 计算速度变化信号（结合瞬时和趋势）
-        speed_change = (current_speed - self._last_speed) / max(self._last_speed, 1.0) if self._last_speed > 0 else 0.0
+        # 用 P50（抗抖动）作为速度变化基线，避免单次抖动触发误判。
+        p50 = self._bw.p50_speed
+        baseline = p50 if p50 > 0 else current_speed
+        speed_change = (current_speed - baseline) / max(baseline, 1.0) if baseline > 0 else 0.0
 
         changed = False
 
@@ -768,19 +671,15 @@ class FusionScheduler:
             # 在天花板附近 → 不动
             if self._bw.near_ceiling(current_speed):
                 pass
-            # 拥塞信号 → 乘性减
-            elif speed_change < -self.config.fusion_congestion_drop or trend < -0.15:
+            # 拥塞信号：要求“相对 P50 显著下降”且“趋势确认”，缺一不降（滞回，减少锯齿）。
+            elif speed_change < -self.config.fusion_congestion_drop and trend < -0.05:
                 self._target_workers = max(
                     self.min_workers,
                     int(self._target_workers * self.config.fusion_cruise_decrease_factor),
                 )
                 changed = True
             # 正向趋势 + 未达天花板 → 加性增
-            elif (
-                trend > 0.05
-                and speed_change >= 0
-                and self._target_workers < self.config.max_chunks
-            ):
+            elif trend > 0.05 and speed_change >= 0 and self._target_workers < self.config.max_chunks:
                 # 只在边际收益可能存在时增加
                 mg = self._bw.marginal_gain(self._target_workers, self._target_workers + 1)
                 if mg > self.config.fusion_plateau_threshold or mg >= 1.0:
@@ -790,8 +689,14 @@ class FusionScheduler:
                     )
                     changed = True
 
-        # 速度极低保护
-        if avg_speed > 0 and current_speed < avg_speed * 0.35 and self._target_workers > self.min_workers:
+        # 速度极低保护：要求“持续下滑（trend 明显为负）”才减并发，单个抖动不再误降。
+        if (
+            p50 > 0
+            and current_speed < p50 * 0.35
+            and avg_speed > 0
+            and trend < -0.1
+            and self._target_workers > self.min_workers
+        ):
             self._target_workers = max(self.min_workers, self._target_workers - 1)
             changed = True
 
@@ -809,13 +714,13 @@ class FusionScheduler:
         - 主动拆分所有慢块
         - 微分片：小于阈值的块不再拆分
         """
-        # 允许超过常规 max_chunks
+        # 允许超过常规 max_chunks：直接把目标并发拉到能覆盖待处理块的上限，
+        # 而非每轮 +2 缓慢爬升——收尾阶段应当尽快跑满，避免“最后一点卡很久”。
         tail_max = self.config.max_chunks + self.config.fusion_tail_boost
-        if self._target_workers < tail_max:
-            # 如果还有待处理的块，提升并发
-            pending = len(self.chunk_manager.pending_chunks)
-            if pending > 0:
-                self._target_workers = min(tail_max, self._target_workers + 2)
+        pending = len(self.chunk_manager.pending_chunks)
+        if pending > 0:
+            self._target_workers = max(self._target_workers, min(tail_max, pending))
+            self._target_workers = min(self._target_workers, tail_max)
 
         # 激进抢占慢块
         avg_speed = self._speed_avg.get_average()
@@ -850,7 +755,7 @@ class FusionScheduler:
             return
 
         active_count = len(self.chunk_manager.active_chunks)
-        max_process = max(1, int(active_count ** 0.5))
+        max_process = max(1, int(active_count**0.5))
         global_avg_speed = self._bw.p50_speed
 
         processed = 0
@@ -878,11 +783,7 @@ class FusionScheduler:
 
     async def _resplit_chunk(self, chunk: Chunk, resplit_times: int = 0, is_tail: bool = False) -> bool:
         async with self._lock:
-            min_size = (
-                self.config.fusion_tail_micro_split_min
-                if is_tail
-                else self.config.min_chunk_size
-            )
+            min_size = self.config.fusion_tail_micro_split_min if is_tail else self.config.min_chunk_size
             if chunk.remaining < min_size:
                 return False
             if not is_tail and chunk.progress > 75:

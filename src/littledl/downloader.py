@@ -2,13 +2,13 @@ import asyncio
 import contextlib
 import hashlib
 import inspect
+import os
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-import aiofiles
 import httpx
 from loguru import logger
 
@@ -16,13 +16,20 @@ from .callback import detect_callback_mode
 from .chunk import Chunk, ChunkManager, ChunkStatus
 from .config import DownloadConfig
 from .connection import ConnectionPool, RequestBuilder
-from .exceptions import CancelledError, ConfigurationError, DownloadError, HTTPError, ResourceNotFoundError
+from .exceptions import (
+    CancelledError,
+    ConfigurationError,
+    DownloadError,
+    HTTPError,
+    ResourceNotFoundError,
+    ResumeDataCorruptedError,
+)
 from .limiter import SpeedLimiter
 from .monitor import DownloadMonitor
 from .resume import ResumeManager
 from .scheduler import FusionScheduler, SmartScheduler
 from .utils import generate_download_id, normalize_url, resolve_download_path, safe_filename, validate_url
-from .writer import BufferedFileWriter
+from .writer import FileWriter
 
 
 @dataclass(frozen=True)
@@ -57,6 +64,22 @@ CALLBACK_MODE_LEGACY = "legacy"
 CALLBACK_MODE_KWARGS = "kwargs"
 CALLBACK_MODE_DICT = "dict"
 CALLBACK_MODE_EVENT = "event"
+
+
+def _replace_file(src: Path, dst: Path) -> None:
+    """Promote ``src`` to ``dst`` atomically; refuse to follow a symlink at ``dst``."""
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    if dst.is_symlink():
+        # os.replace would replace the symlink itself, but the cross-filesystem
+        # fallback below would follow it; refuse either way to avoid writing the
+        # finalized download through an attacker-controlled link.
+        raise OSError(f"Refusing to replace: destination is a symlink: {dst}")
+    try:
+        os.replace(src, dst)
+    except OSError:
+        import shutil
+
+        shutil.move(str(src), str(dst))
 
 
 class ProgressCallbackAdapter:
@@ -184,6 +207,8 @@ class H2MultiPlexDownloader:
         client: httpx.AsyncClient,
         config: DownloadConfig,
         output_path: Path,
+        file_size: int,
+        resume: bool = False,
         should_pause: Callable[[], bool] | None = None,
         should_cancel: Callable[[], bool] | None = None,
         bytes_callback: Callable[[int], None] | None = None,
@@ -192,13 +217,7 @@ class H2MultiPlexDownloader:
         self.client = client
         self.config = config
         self.output_path = output_path
-        self.writer = BufferedFileWriter(
-            output_path,
-            "r+b" if output_path.exists() else "wb",
-            buffer_size=getattr(config, "buffer_size", 1024 * 1024),
-            flush_interval=0.5,
-            max_buffers=16,
-        )
+        self.writer = FileWriter(output_path, file_size=file_size, resume=resume)
         self._download_speed = 0.0
         self._bytes_downloaded = 0
         self._start_time = 0.0
@@ -234,7 +253,7 @@ class H2MultiPlexDownloader:
                     delay = self.config.retry.calculate_delay(attempt)
                     await asyncio.sleep(delay)
             except httpx.HTTPError as e:
-                status = getattr(getattr(e, 'response', None), 'status_code', 0)
+                status = getattr(getattr(e, "response", None), "status_code", 0)
                 if status in (404, 403):
                     raise
                 last_error = e
@@ -444,23 +463,47 @@ class Downloader:
 
             callback_adapter.set_context(filename=final_filename, url=url)
 
-            if final_path.exists() and not resume and not self.config.overwrite:
-                logger.info(f"File already exists: {final_path}")
-                return final_path
-
             download_id = generate_download_id(url)
             temp_dir = Path(self.config.temp_dir).expanduser().resolve() if self.config.temp_dir else final_path.parent
 
             self._resume_manager = ResumeManager(temp_dir, download_id)
+            part_path = final_path.with_name(final_path.name + ".part")
 
+            if final_path.exists() and not resume and not self.config.overwrite:
+                logger.info(f"File already exists: {final_path}")
+                await self._discard_resume_state(part_path)
+                return final_path
+
+            restored_chunks: list[dict[str, Any]] | None = None
+            resuming = False
             if resume:
                 try:
                     metadata = await self._resume_manager.load()
-                    if metadata and self._resume_manager.can_resume():
-                        file_size = metadata.file_size
-                        supports_range = metadata.supports_range
-                except Exception:
-                    pass
+                except ResumeDataCorruptedError as e:
+                    logger.warning(f"Resume metadata corrupted, starting fresh: {e}")
+                    await self._discard_resume_state(part_path)
+                    metadata = None
+                else:
+                    if (
+                        metadata
+                        and self._resume_manager.can_resume()
+                        and self._resume_manager.is_compatible(file_info.get("etag"), file_info.get("last_modified"))
+                    ):
+                        # Only resume when the part file actually holds a full-size
+                        # download; otherwise the restored "already downloaded" ranges
+                        # would point at zero-filled gaps and silently corrupt output.
+                        if (
+                            metadata.file_size == file_size
+                            and part_path.exists()
+                            and part_path.stat().st_size == file_size
+                        ):
+                            supports_range = metadata.supports_range
+                            restored_chunks = metadata.chunks
+                            resuming = True
+                        else:
+                            await self._discard_resume_state(part_path)
+                    elif metadata:
+                        await self._discard_resume_state(part_path)
 
             self._resume_manager.initialize(
                 url=url,
@@ -471,6 +514,8 @@ class Downloader:
                 last_modified=file_info.get("last_modified"),
                 content_type=file_info.get("content_type"),
             )
+            if resuming and restored_chunks is not None:
+                self._resume_manager.adopt_chunks(restored_chunks)
 
             use_chunking = self.config.enable_chunking and supports_range and file_size > 0
 
@@ -479,6 +524,7 @@ class Downloader:
                     client=client,
                     url=url,
                     output_path=final_path,
+                    part_path=part_path,
                     progress_callback=callback_adapter,
                 )
                 await self._verify_downloaded_file(output)
@@ -489,7 +535,10 @@ class Downloader:
                     client=client,
                     url=url,
                     output_path=final_path,
+                    part_path=part_path,
                     file_size=file_size,
+                    resume=resuming,
+                    restored_chunks=restored_chunks,
                     progress_callback=callback_adapter,
                     chunk_callback=chunk_callback_adapter,
                 )
@@ -501,6 +550,7 @@ class Downloader:
                     client=client,
                     url=url,
                     output_path=final_path,
+                    part_path=part_path,
                     progress_callback=callback_adapter,
                 )
 
@@ -592,10 +642,16 @@ class Downloader:
         client: httpx.AsyncClient,
         url: str,
         output_path: Path,
+        part_path: Path,
         progress_callback: ProgressCallbackAdapter | None,
     ) -> Path:
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        temp_path = output_path.with_suffix(output_path.suffix + ".tmp")
+        part_path.parent.mkdir(parents=True, exist_ok=True)
+
+        def _open() -> int:
+            flags = os.O_RDWR | os.O_CREAT | os.O_TRUNC | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0)
+            return os.open(str(part_path), flags, 0o644)
+
+        fd = await asyncio.to_thread(_open)
 
         downloaded = 0
         start_time = time.time()
@@ -603,16 +659,16 @@ class Downloader:
         if self.config.speed_limit and self.config.speed_limit.enabled:
             speed_limiter = SpeedLimiter(self.config.speed_limit)
 
-        async with client.stream("GET", url, follow_redirects=True) as response:
-            if response.status_code == 404:
-                raise ResourceNotFoundError(url)
-            if response.status_code >= 400:
-                raise HTTPError(f"HTTP {response.status_code}", response.status_code, url)
+        try:
+            async with client.stream("GET", url, follow_redirects=True) as response:
+                if response.status_code == 404:
+                    raise ResourceNotFoundError(url)
+                if response.status_code >= 400:
+                    raise HTTPError(f"HTTP {response.status_code}", response.status_code, url)
 
-            content_length = response.headers.get("Content-Length")
-            total_size = int(content_length) if content_length else -1
+                content_length = response.headers.get("Content-Length")
+                total_size = int(content_length) if content_length else -1
 
-            async with aiofiles.open(temp_path, "wb") as f:
                 async for chunk_data in response.aiter_bytes(chunk_size=self.config.buffer_size):
                     if self._cancelled:
                         raise CancelledError("Download cancelled", url)
@@ -622,7 +678,10 @@ class Downloader:
                     if speed_limiter:
                         await speed_limiter.acquire(len(chunk_data))
 
-                    await f.write(chunk_data)
+                    view = memoryview(chunk_data)
+                    while view:
+                        written = await asyncio.to_thread(os.write, fd, view)
+                        view = view[written:]
                     downloaded += len(chunk_data)
 
                     if progress_callback:
@@ -633,13 +692,12 @@ class Downloader:
                             await progress_callback.emit(downloaded, total_size, speed, int(eta), unknown_size=False)
                         else:
                             await progress_callback.emit(downloaded, -1, speed, -1, unknown_size=True)
+        finally:
+            with contextlib.suppress(OSError):
+                await asyncio.to_thread(os.fsync, fd)
+            await asyncio.to_thread(os.close, fd)
 
-        try:
-            temp_path.rename(output_path)
-        except OSError:
-            import shutil
-            shutil.move(str(temp_path), str(output_path))
-
+        await asyncio.to_thread(_replace_file, part_path, output_path)
         return output_path
 
     async def _download_chunked_direct(
@@ -647,7 +705,10 @@ class Downloader:
         client: httpx.AsyncClient,
         url: str,
         output_path: Path,
+        part_path: Path,
         file_size: int,
+        resume: bool,
+        restored_chunks: list[dict[str, Any]] | None,
         progress_callback: ProgressCallbackAdapter | None,
         chunk_callback: ChunkCallbackAdapter | None,
     ) -> Path:
@@ -657,19 +718,28 @@ class Downloader:
             min_chunk_size=self.config.min_chunk_size,
         )
 
-        existing_progress = self._resume_manager.get_progress_dict() if self._resume_manager else {}
-        self._chunk_manager.initialize_chunks(existing_progress)
+        restored = bool(resume and restored_chunks and self._chunk_manager.restore_chunks(restored_chunks))
+        if not restored:
+            # Invalid/stale layout: discard the part + meta so a fresh uniform
+            # split matches an empty file instead of failing hard.
+            if resume and restored_chunks:
+                await self._discard_resume_state(part_path)
+            self._chunk_manager.initialize_chunks()
 
         self._monitor = DownloadMonitor(
             total_size=file_size,
             update_interval=0.5,
             progress_callback=progress_callback,
         )
+        if self._chunk_manager.total_downloaded > 0:
+            self._monitor.update_downloaded(self._chunk_manager.total_downloaded)
 
         self._h2_downloader = H2MultiPlexDownloader(
             client,
             self.config,
-            output_path,
+            part_path,
+            file_size=file_size,
+            resume=resume,
             should_pause=lambda: self._paused,
             should_cancel=lambda: self._cancelled,
             bytes_callback=lambda size: self._monitor.increment_downloaded(size) if self._monitor else None,
@@ -760,8 +830,7 @@ class Downloader:
 
                 if not active_tasks:
                     if any(
-                        c.status in (ChunkStatus.PENDING, ChunkStatus.RESPLITTING)
-                        for c in self._chunk_manager.chunks
+                        c.status in (ChunkStatus.PENDING, ChunkStatus.RESPLITTING) for c in self._chunk_manager.chunks
                     ):
                         await asyncio.sleep(0.05)
                         continue
@@ -792,8 +861,7 @@ class Downloader:
 
                 # 全部完成则退出
                 if not active_tasks and not any(
-                    c.status.name in ("PENDING", "RESPLITTING")
-                    for c in self._chunk_manager.chunks
+                    c.status.name in ("PENDING", "RESPLITTING") for c in self._chunk_manager.chunks
                 ):
                     break
 
@@ -806,17 +874,20 @@ class Downloader:
                     failed=len(self._chunk_manager.failed_chunks),
                 )
 
-            # 保存恢复数据
-            if self._resume_manager:
-                await self._resume_manager.update_from_chunk_manager(self._chunk_manager)
-                await self._resume_manager.flush_pending()
-
         finally:
             if checkpoint_task:
                 checkpoint_task.cancel()
                 with contextlib.suppress(asyncio.CancelledError):
                     await checkpoint_task
-            await self._h2_downloader.writer.close()
+            # Persist resume state on every exit (success, failure, cancel) so an
+            # interrupted download can be resumed even if the periodic checkpoint
+            # never ran. On success this is later cleared by mark_completed/cleanup.
+            if self._resume_manager and self._chunk_manager:
+                with contextlib.suppress(Exception):
+                    await self._resume_manager.update_from_chunk_manager(self._chunk_manager)
+                    await self._resume_manager.save(force=True)
+            if self._h2_downloader:
+                await self._h2_downloader.writer.close()
 
         if self._cancelled:
             raise CancelledError("Download cancelled", url)
@@ -828,6 +899,9 @@ class Downloader:
 
             if not self._chunk_manager.is_completed:
                 raise DownloadError("Download incomplete")
+
+        # Atomically promote the part file to the final destination.
+        await asyncio.to_thread(_replace_file, part_path, output_path)
 
         if self._resume_manager:
             await self._resume_manager.mark_completed()
@@ -918,6 +992,14 @@ class Downloader:
         async with self._lock:
             self._cancelled = True
             self._running = False
+
+    async def _discard_resume_state(self, part_path: Path) -> None:
+        """Remove stale resume metadata and part file before a fresh start."""
+        if self._resume_manager:
+            with contextlib.suppress(Exception):
+                await self._resume_manager.cleanup()
+        with contextlib.suppress(FileNotFoundError, OSError):
+            await asyncio.to_thread(part_path.unlink, missing_ok=True)
 
     async def _cleanup(self) -> None:
         if self._scheduler:

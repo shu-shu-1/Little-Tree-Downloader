@@ -11,7 +11,7 @@ High-performance download library with multi-threaded segmented downloading, int
 - 🚀 **Multi-threaded Segmented Download**: Split files into chunks and download in parallel using HTTP Range requests for maximum speed (inspired by aria2, IDM and other tools)
 - 🧠 **Intelligent Strategy Selection**: Automatically choose optimal download style (single/multi/adaptive/fusion/hybrid_turbo) based on file size, server capabilities, and network conditions
 - 🎨 **Multiple Download Styles**: Support for single-threaded, multi-threaded, adaptive, FUSION, and hybrid_turbo download styles to suit different scenarios and preferences
-- 🎯 **Direct File Writing**: Write directly to final file, no temporary file merging
+- 🎯 **Atomic File Writing**: Downloads land in a `.part` file and are atomically renamed to the final name on success
 - ⏯️ **Resume Support**: Continue interrupted downloads from where they left off
 - 📊 **Real-time Speed Monitoring**: Live speed calculation, ETA estimation, and trend analysis
 - 🔁 **Reliable Fallback**: Auto fallback to single-stream mode when chunked download fails
@@ -293,7 +293,7 @@ littledl "https://example.com/file.zip" --no-resume
 | Multi-threaded download | ✅      | ✅    | ✅    | ✅      |
 | Resume support          | ✅      | ✅    | ✅    | ✅      |
 | System proxy detection  | ✅      | ✅    | ✅    | ✅      |
-| Direct file writing     | ✅      | ✅    | ✅    | ✅      |
+| Atomic file writing       | ✅      | ✅    | ✅    | ✅      |
 
 ## Contributing
 

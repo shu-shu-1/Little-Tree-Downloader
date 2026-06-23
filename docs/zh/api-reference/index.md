@@ -264,19 +264,19 @@ print(get_available_languages())  # {'en': 'English', 'zh': '中文'}
 
 ## 文件写入器
 
-### BufferedFileWriter
+### FileWriter
 
-高性能缓冲文件写入器，用于优化并发下载性能。
+分块下载使用的定位写入器。它通过单个 OS 文件描述符进行写入，seek+write 操作由锁串行化，
+并按目标大小预分配文件，因此并发分块写入任意偏移都安全。下载数据先写入 `.part` 文件，
+成功后再原子地重命名为最终文件名。
 
 ```python
-from littledl import BufferedFileWriter
+from littledl.writer import FileWriter
 
-writer = BufferedFileWriter(
+writer = FileWriter(
     file_path="/path/to/file.zip",
-    mode="wb",
-    buffer_size=512 * 1024,  # 512KB 缓冲
-    flush_interval=0.5,      # 500ms 自动刷新
-    max_buffers=16,          # 最大并发缓冲数
+    file_size=1048576,   # 按此大小预分配（稀疏）
+    resume=False,         # 续传时设为 True 以保留已写入的字节
 )
 
 await writer.open()
@@ -284,17 +284,4 @@ await writer.write_at(offset=0, data=b"chunk data")
 await writer.close()
 ```
 
-### DirectFileWriter
-
-直接文件写入器（传统实现，保留向后兼容）。
-
-```python
-from littledl import DirectFileWriter
-
-writer = DirectFileWriter(file_path="/path/to/file.zip")
-await writer.open()
-await writer.write_at(offset=0, data=b"chunk data")
-await writer.close()
-```
-
-**注意**: BufferedFileWriter 会自动在分块下载中使用，无需手动配置。
+**注意**: `FileWriter` 由下载器内部使用，无需手动配置。

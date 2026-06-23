@@ -10,11 +10,11 @@ class NetworkError(DownloadError):
         self.original_error = original_error
 
 
-class ConnectionError(NetworkError):
+class NetworkConnectionError(NetworkError):
     pass
 
 
-class TimeoutError(NetworkError):
+class DownloadTimeoutError(NetworkError):
     pass
 
 

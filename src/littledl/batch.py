@@ -243,10 +243,12 @@ class BatchProgressCallbackAdapter:
         if base_mode == "legacy":
             try:
                 import inspect
+
                 sig = inspect.signature(callback)
                 params = list(sig.parameters.values())
                 positional = [
-                    p for p in params
+                    p
+                    for p in params
                     if p.kind in (inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD)
                 ]
                 if len(positional) == 4:
@@ -612,8 +614,8 @@ class FileScheduler:
         if avg == 0:
             return 0.0
         variance = sum((s - avg) ** 2 for s in self._speed_history) / len(self._speed_history)
-        std_dev = variance**0.5
-        return max(0.0, 1.0 - (std_dev / avg))
+        std_dev = float(variance) ** 0.5
+        return float(max(0.0, 1.0 - (std_dev / avg)))
 
 
 class AdaptiveConcurrencyController:
@@ -1517,9 +1519,9 @@ class EnhancedBatchDownloader:
 
             done_tasks = [tid for tid, t in download_tasks.items() if t.done()]
             for tid in done_tasks:
-                task = download_tasks.pop(tid)
+                done_task = download_tasks.pop(tid)
                 with contextlib.suppress(asyncio.CancelledError):
-                    await task
+                    await done_task
 
             now = time.time()
             if self._progress_callback and (now - last_progress_time) >= progress_interval:

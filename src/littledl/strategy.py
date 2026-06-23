@@ -2,6 +2,7 @@ import math
 import time
 from dataclasses import dataclass
 from enum import Enum
+from typing import Any
 
 from .utils import MovingAverage
 
@@ -427,7 +428,7 @@ class StrategySelector:
             return 0.5
         return sum(self._style_performance[style]) / len(self._style_performance[style])
 
-    def get_stats(self) -> dict:
+    def get_stats(self) -> dict[str, Any]:
         """获取选择器统计"""
         return {
             "enable_single": self.enable_single,
@@ -566,9 +567,9 @@ class DynamicStyleAllocator:
             return (style, chunks)
         return None
 
-    def get_stats(self) -> dict:
+    def get_stats(self) -> dict[str, Any]:
         """获取分配统计"""
-        style_counts = {}
+        style_counts: dict[str, int] = {}
         total_chunks = 0
 
         for fid, style in self._file_assignments.items():

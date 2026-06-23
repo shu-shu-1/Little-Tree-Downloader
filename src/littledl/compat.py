@@ -207,23 +207,26 @@ def get_memory_info() -> dict[str, int]:
                         key, value = line.split(":", 1)
                         key = key.strip()
                         value = value.strip()
+                        parsed: int
                         if value.endswith(" kB"):
-                            value = int(value[:-3]) * 1024
+                            parsed = int(value[:-3]) * 1024
                         else:
                             try:
-                                value = int(value)
+                                parsed = int(value)
                             except ValueError:
                                 continue
-                        meminfo[key] = value
+                        meminfo[key] = parsed
                 result["total"] = meminfo.get("MemTotal", 0)
                 result["available"] = meminfo.get("MemAvailable", meminfo.get("MemFree", 0))
                 result["used"] = result["total"] - result["available"]
         elif MACOS:
             import subprocess
+
             output = subprocess.check_output(["sysctl", "-n", "hw.memsize"], text=True)
             result["total"] = int(output.strip())
         elif WINDOWS:
             import ctypes
+
             class MEMORYSTATUSEX(ctypes.Structure):
                 _fields_ = [
                     ("dwLength", ctypes.c_ulong),
@@ -231,6 +234,7 @@ def get_memory_info() -> dict[str, int]:
                     ("ullTotalPhys", ctypes.c_ulonglong),
                     ("ullAvailPhys", ctypes.c_ulonglong),
                 ]
+
             stat = MEMORYSTATUSEX()
             stat.dwLength = ctypes.sizeof(stat)
             ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(stat))

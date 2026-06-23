@@ -1,35 +1,42 @@
 import argparse
 import hashlib
 import tempfile
+import time
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
 import httpx
 import pytest
 
+import littledl.__main__ as cli_main
 from littledl import (
     Chunk,
     ChunkEvent,
     ChunkManager,
     ChunkStatus,
     DownloadConfig,
-    DownloadMonitor,
     Downloader,
+    DownloadMonitor,
     DownloadStyle,
     ProgressEvent,
     ResumeManager,
-    StyleDecision,
     StrategySelector,
+    StyleDecision,
 )
-import littledl.__main__ as cli_main
+from littledl.__main__ import (
+    OutputMode,
+    resolve_single_download_path,
+    run_download,
+    select_batch_concurrency,
+    style_to_enum,
+)
 from littledl.batch import BatchDownloader, EnhancedBatchDownloader, FileScheduler, FileTask
 from littledl.connection import ConnectionPool
 from littledl.downloader import ChunkCallbackAdapter, ProgressCallbackAdapter
 from littledl.exceptions import ConfigurationError, HTTPError
 from littledl.monitor import DownloadStats
 from littledl.scheduler import BandwidthEstimate, FusionPhase, FusionScheduler, SmartScheduler
-from littledl.writer import BufferedFileWriter
-from littledl.__main__ import OutputMode, resolve_single_download_path, run_download, select_batch_concurrency, style_to_enum
+from littledl.writer import FileWriter
 
 
 class TestDownloadConfig:
@@ -184,6 +191,48 @@ class TestChunkManager:
 
         await manager.update_chunk_progress(0, 100)
         assert manager.chunks[0].downloaded == 100
+
+    def test_restore_chunks_preserves_resplit_layout(self) -> None:
+        file_size = 10 * 1024 * 1024
+        manager = ChunkManager(file_size=file_size, max_chunks=4, min_chunk_size=1024 * 1024)
+        manager.initialize_chunks()
+        # Simulate a resplit: chunk 0 reduced to [0, 2MB) with 1MB done,
+        # plus a new non-uniform chunk [2MB, 6MB) pending.
+        saved = [
+            {"index": 0, "start_byte": 0, "end_byte": 2 * 1024 * 1024, "downloaded": 1024 * 1024, "status": "pending"},
+            {
+                "index": 2,
+                "start_byte": 2 * 1024 * 1024,
+                "end_byte": 6 * 1024 * 1024,
+                "downloaded": 0,
+                "status": "pending",
+            },
+            {
+                "index": 1,
+                "start_byte": 6 * 1024 * 1024,
+                "end_byte": file_size,
+                "downloaded": file_size - 6 * 1024 * 1024,
+                "status": "completed",
+            },
+        ]
+
+        assert manager.restore_chunks(saved) is True
+
+        by_index = {c.index: c for c in manager.chunks}
+        assert by_index[0].start_byte == 0
+        assert by_index[0].end_byte == 2 * 1024 * 1024
+        assert by_index[0].downloaded == 1024 * 1024
+        assert by_index[2].start_byte == 2 * 1024 * 1024
+        assert by_index[1].is_completed
+        assert manager.is_completed is False
+        assert manager.total_downloaded == 5 * 1024 * 1024
+
+    def test_restore_chunks_rejects_incomplete_layout(self) -> None:
+        manager = ChunkManager(file_size=1000, max_chunks=2, min_chunk_size=1)
+        manager.initialize_chunks()
+        # Gaps in coverage must be rejected so the manager falls back to fresh init.
+        bad = [{"index": 0, "start_byte": 0, "end_byte": 400, "downloaded": 0, "status": "pending"}]
+        assert manager.restore_chunks(bad) is False
 
 
 class TestDownloadMonitor:
@@ -613,6 +662,92 @@ class TestFusionScheduler:
 
         assert scheduler._phase == FusionPhase.TAIL
 
+    def test_probe_advances_to_ramp_with_single_sample(self) -> None:
+        # PROBE should reach RAMP after one usable sample + a short min-elapsed,
+        # instead of waiting the full probe_duration with two samples (slow start).
+        config = DownloadConfig(min_chunks=1, max_chunks=8, enable_fusion=True)
+        manager = ChunkManager(file_size=8 * 1024 * 1024, max_chunks=8, min_chunk_size=1024 * 1024)
+        manager.initialize_chunks()
+        scheduler = FusionScheduler(
+            manager,
+            config=config,
+            monitor=self._FakeMonitor(speed=1000.0, total_size=8 * 1024 * 1024, downloaded=0),
+        )
+        bw_est = scheduler._bw.record(1000.0, 2)  # a single speed sample
+        assert bw_est.samples >= 1
+        scheduler._phase = FusionPhase.PROBE
+        scheduler._phase_start_time = time.time() - (config.adaptive_interval + 0.1)
+        scheduler._check_phase_transition(
+            DownloadStats(total_size=8 * 1024 * 1024, downloaded=0, speed=1000.0, is_active=True),
+            bw_est,
+        )
+        assert scheduler._phase == FusionPhase.RAMP
+
+    @pytest.mark.asyncio
+    async def test_ramp_advances_one_tick_per_round(self) -> None:
+        # RAMP settles for one adaptive_interval per round (previously 1.5x), so a
+        # round fires as soon as one interval has elapsed.
+        config = DownloadConfig(min_chunks=1, max_chunks=8, enable_fusion=True)
+        manager = ChunkManager(file_size=8 * 1024 * 1024, max_chunks=8, min_chunk_size=1024 * 1024)
+        manager.initialize_chunks()
+        scheduler = FusionScheduler(manager, config=config)
+        scheduler._phase = FusionPhase.RAMP
+        scheduler._target_workers = 2
+        scheduler._ramp_prev_speed = 1000.0
+        scheduler._ramp_rounds = 0
+        for s in (1000.0, 1200.0, 1400.0):
+            scheduler._speed_avg.add(s)
+        scheduler._phase_start_time = time.time() - (config.adaptive_interval + 0.1)
+
+        await scheduler._do_ramp(1400.0, BandwidthEstimate())
+
+        assert scheduler._ramp_rounds == 1
+        assert scheduler._target_workers > 2  # doubled upward
+
+        # Before a full interval elapses again, a second round must NOT fire.
+        scheduler._phase_start_time = time.time() - (config.adaptive_interval * 0.5)
+        before = scheduler._target_workers
+        await scheduler._do_ramp(1400.0, BandwidthEstimate())
+        assert scheduler._target_workers == before
+
+    @pytest.mark.asyncio
+    async def test_cruise_ignores_single_bad_tick(self) -> None:
+        # A single low-speed sample against a healthy P50 + flat trend should not
+        # trigger a multiplicative decrease (hysteresis avoids visible sawtooth).
+        config = DownloadConfig(min_chunks=1, max_chunks=8, enable_fusion=True)
+        manager = ChunkManager(file_size=8 * 1024 * 1024, max_chunks=8, min_chunk_size=1024 * 1024)
+        manager.initialize_chunks()
+        scheduler = FusionScheduler(manager, config=config)
+        scheduler._phase = FusionPhase.CRUISE
+        scheduler._target_workers = 5
+        scheduler._last_adjustment_time = 0.0
+        for _ in range(5):
+            scheduler._bw.record(1000.0, 5)  # healthy, makes p50 ~ 1000
+        for s in (1000.0, 1000.0, 1000.0, 1000.0):
+            scheduler._speed_avg.add(s)
+
+        await scheduler._do_cruise(100.0, scheduler._bw.record(1000.0, 5))  # one bad tick
+
+        assert scheduler._target_workers == 5  # unchanged
+
+    @pytest.mark.asyncio
+    async def test_tail_lifts_target_to_pending(self) -> None:
+        # TAIL should jump target concurrency toward the number of pending chunks
+        # (up to tail_max) instead of crawling +2 per tick, to finish the tail fast.
+        config = DownloadConfig(min_chunks=1, max_chunks=8, enable_fusion=True)
+        manager = ChunkManager(file_size=8 * 1024 * 1024, max_chunks=8, min_chunk_size=1024 * 1024)
+        manager.initialize_chunks()  # 8 chunks, all pending
+        for c in manager.chunks[:2]:
+            c.complete()  # 6 pending remain
+        scheduler = FusionScheduler(manager, config=config)
+        scheduler._phase = FusionPhase.TAIL
+        scheduler._target_workers = 2  # well below pending
+
+        await scheduler._do_tail(1000.0, BandwidthEstimate())
+
+        pending = len(manager.pending_chunks)
+        assert scheduler._target_workers == pending  # lifted straight to pending (6), not 4
+
 
 class TestDownloaderScheduling:
     def test_collect_schedulable_chunks_respects_limit_and_state(self) -> None:
@@ -706,56 +841,80 @@ class TestIntegration:
         assert manager.is_completed
 
 
-class TestBufferedFileWriterDirectWrite:
+class TestFileWriter:
     @pytest.mark.asyncio
-    async def test_direct_write_threshold(self) -> None:
+    async def test_positional_write_at_zero(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             file_path = Path(tmpdir) / "test.bin"
-            writer = BufferedFileWriter(
-                file_path,
-                "wb",
-                buffer_size=1024 * 1024,
-                direct_write_threshold=256 * 1024,
-            )
+            writer = FileWriter(file_path, file_size=1024)
             await writer.open()
 
-            large_data = b"x" * 300 * 1024
-            result = await writer.write_at(0, large_data)
-            assert result == len(large_data)
+            data = b"x" * 300
+            written = await writer.write_at(0, data)
+            assert written == len(data)
+
+            await writer.close()
+            assert file_path.read_bytes()[: len(data)] == data
+
+    @pytest.mark.asyncio
+    async def test_out_of_order_writes_do_not_clobber(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            file_path = Path(tmpdir) / "test.bin"
+            writer = FileWriter(file_path, file_size=1024)
+            await writer.open()
+
+            await writer.write_at(512, b"BBB")
+            await writer.write_at(0, b"AAA")
 
             await writer.close()
 
-            assert file_path.read_bytes() == large_data
+            content = file_path.read_bytes()
+            assert content[0:3] == b"AAA"
+            assert content[512:515] == b"BBB"
 
     @pytest.mark.asyncio
-    async def test_buffered_write_below_threshold(self) -> None:
+    async def test_fresh_start_clears_stale_part(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             file_path = Path(tmpdir) / "test.bin"
-            writer = BufferedFileWriter(
-                file_path,
-                "wb",
-                buffer_size=1024 * 1024,
-                direct_write_threshold=256 * 1024,
-            )
+            file_path.write_bytes(b"stale-garbage-that-must-go")
+
+            writer = FileWriter(file_path, file_size=64, resume=False)
             await writer.open()
-
-            small_data = b"y" * 100
-            result = await writer.write_at(0, small_data)
-            assert result == len(small_data)
-
+            await writer.write_at(0, b"new")
             await writer.close()
 
-            assert file_path.read_bytes() == small_data
+            assert file_path.read_bytes()[:3] == b"new"
+            assert b"stale-garbage" not in file_path.read_bytes()
 
     @pytest.mark.asyncio
-    async def test_default_buffer_size(self) -> None:
+    async def test_resume_keeps_existing_bytes(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             file_path = Path(tmpdir) / "test.bin"
-            writer = BufferedFileWriter(file_path, "wb")
-            assert writer.buffer_size == 1024 * 1024
-            assert writer.direct_write_threshold == 256 * 1024
+            file_path.write_bytes(b"already-here")
+
+            writer = FileWriter(file_path, file_size=len(b"already-here"), resume=True)
             await writer.open()
+            await writer.write_at(0, b"ALREADY")
             await writer.close()
+
+            content = file_path.read_bytes()
+            assert content.startswith(b"ALREADY")
+            assert content.endswith(b"-here")
+
+    @pytest.mark.asyncio
+    async def test_binary_fidelity_no_crlf_translation(self) -> None:
+        # Regression: on Windows the raw fd must be opened in binary mode so that
+        # 0x0a bytes are not translated to 0x0d0a, which would corrupt downloads.
+        with tempfile.TemporaryDirectory() as tmpdir:
+            file_path = Path(tmpdir) / "test.bin"
+            data = bytes(range(256)) * 64  # contains 0x0a and 0x0d bytes
+            writer = FileWriter(file_path, file_size=len(data))
+            await writer.open()
+            await writer.write_at(0, data)
+            await writer.close()
+
+            assert file_path.read_bytes() == data
+            assert len(file_path.read_bytes()) == len(data)
 
 
 class TestConnectionPoolPreconnect:

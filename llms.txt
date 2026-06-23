@@ -22,7 +22,7 @@ Scope intentionally excluded:
 - Project: littledl
 - Package import: littledl
 - Package location: src/littledl
-- Current version: 0.9.1
+- Current version: 1.0.0
 - Python requirement: 3.10+
 - Primary interfaces: Python library and `littledl` CLI
 - Supported platforms: Windows, macOS, Linux, FreeBSD
@@ -37,7 +37,7 @@ Core capabilities consolidated from the README and user guides:
 - Multi-threaded segmented download using HTTP Range requests
 - Automatic strategy selection based on file size, server capability, and network conditions
 - Multiple download styles: single, multi, adaptive, fusion, hybrid_turbo
-- Direct write to the final file without temporary merge steps in the normal flow
+- Atomic file writing: chunked downloads land in a `.part` file (preallocated, positional writes serialized by a lock) and are atomically renamed to the final name on success; existing files are never destroyed mid-download
 - Resume support for interrupted downloads
 - Real-time speed, ETA, and progress reporting
 - Automatic fallback to single-stream mode when chunked transfer is not viable
@@ -84,7 +84,7 @@ CLI availability check:
 littledl --version
 ```
 
-Expected version at the time of this bundle: `littledl 0.9.1`.
+Expected version at the time of this bundle: `littledl 1.0.0`.
 
 ## Quick start
 
@@ -147,11 +147,11 @@ littledl supports five download styles plus one compatibility alias.
 | `hybrid_turbo` | Aggressive AIMD adaptive mode | Bursty or unstable networks |
 | `auto` | Alias of `fusion` | Compatibility with older scripts |
 
-Important style notes from the README, CLI guide, advanced guide, and changelog:
+Important style notes from the README, CLI guide, and advanced guide:
 
-- FUSION is the default style as of 0.9.0.
-- CLI default changed from hybrid_turbo to fusion.
-- StrategySelector now prefers FUSION for medium and large files.
+- FUSION is the default style.
+- The CLI `auto` style is an alias of `fusion`.
+- StrategySelector recommends FUSION for medium and large files.
 - `apply_style()` accepts either `DownloadStyle` or style-name strings.
 - A style only changes behavior if it is mapped into `DownloadConfig` or CLI options used by the downloader flow.
 
@@ -338,7 +338,7 @@ Key options consolidated from README, configuration guide, advanced docs, and AP
 | `enable_hybrid_turbo` | bool | True | Enable hybrid turbo AIMD mode |
 | `enable_fusion` | bool | True | Enable FUSION scheduler |
 | `fusion_probe_chunks` | int | 2 | Initial PROBE workers |
-| `fusion_probe_duration` | float | 2.0 | Probe phase duration |
+| `fusion_probe_duration` | float | 2.0 | Upper bound on PROBE duration; PROBE advances to RAMP after one speed sample once `min(this, adaptive_interval)` elapses |
 | `fusion_tail_ratio` | float | 0.20 | Remaining ratio to enter TAIL |
 | `fusion_tail_boost` | int | 2 | Extra workers allowed in TAIL |
 | `hybrid_aimd_increase_step` | int | 1 | AIMD additive increase step |
@@ -368,7 +368,6 @@ Key options consolidated from README, configuration guide, advanced docs, and AP
 
 - Creates a per-file config cloned from the parent config.
 - Used by batch downloaders so auth, proxy, retry, FUSION tuning, resplit settings, and speed limits are preserved while per-file chunk counts are overridden.
-- Added in 0.9.0 to fix incomplete per-file config inheritance.
 
 ## Authentication
 
@@ -724,13 +723,13 @@ Batch downloader APIs support:
 - get_progress
 - get_stats
 
-### Batch implementation notes consolidated from changelog and repo memory
+### Batch implementation notes
 
-- batch per-file configs now clone the full parent DownloadConfig via `create_file_config()`
-- dynamic style allocation sorting was fixed to use the correct tuple fields
-- adaptive concurrency logic was fixed so positive trends increase concurrency and negative trends reduce it
-- global chunk budget prevents over-expansion when many files are active
-- domain affinity helps reuse warm connections within the same host set
+- each file's config is cloned from the full parent `DownloadConfig` via `create_file_config()`
+- dynamic style allocation sorts by file size, priority, and current chunk count
+- adaptive concurrency increases on positive speed trends and reduces on negative ones
+- a global chunk budget prevents over-expansion when many files are active
+- domain affinity reuses warm connections within the same host set
 
 ## Advanced usage
 
@@ -811,11 +810,13 @@ async for chunk in download_file_stream("https://example.com/large_file.zip"):
 - `chunk_size`
 - `max_chunks`
 
-Performance guidance from changelog and repo notes:
+Performance guidance:
 
-- FUSION is now the default main strategy
-- FUSION has four phases: PROBE, RAMP, CRUISE, TAIL
-- Tail phase can temporarily exceed normal chunk count by `fusion_tail_boost`
+- FUSION is the default strategy, with four phases: PROBE, RAMP, CRUISE, TAIL
+- PROBE advances to RAMP after the first speed sample (once a short min-elapsed passes) to avoid a slow start
+- RAMP doubles concurrency one adaptive_interval per round, stopping at the bandwidth ceiling
+- CRUISE uses a ceiling-aware AIMD with P50/trend hysteresis so single speed blips do not cause sawtooth
+- TAIL lifts target concurrency toward the number of pending chunks and can temporarily exceed the normal chunk count by `fusion_tail_boost`
 - resume checkpoints and pause/cancel checks are important for stability in long-running downloads
 - hash verification should be enforced post-download if integrity guarantees matter
 
@@ -878,7 +879,7 @@ def validate_url(url: str) -> bool:
 
 ### Supported version line
 
-The security policy currently lists 0.4.x as the actively supported version line for security updates. This appears outdated relative to the package version and should be interpreted carefully.
+Security updates apply to the current 1.0.x line.
 
 ### Reporting vulnerabilities
 
@@ -998,62 +999,18 @@ Common types:
 
 ## Release highlights
 
-This section condenses the changelog into agent-relevant history.
+This section summarizes the capabilities of the current release.
 
-### Unreleased
+### 1.0.0
 
-- documentation updated to reflect FUSION as default
-- batch docs updated for global chunk budgeting and domain affinity
-- config/API docs updated for FUSION settings and `create_file_config()`
-- outdated README style examples corrected
-
-### 0.9.0 - 2026-04-12
-
-- added FUSION four-phase adaptive scheduler
-- added `DownloadStyle.FUSION` and top-level export for `FusionScheduler`
-- added per-file config cloning via `DownloadConfig.create_file_config()`
-- added batch chunk budget controls
-- made FUSION the default style for CLI and automatic selection
-- fixed batch config propagation for advanced settings
-- fixed adaptive concurrency direction logic
-- fixed dynamic style allocator priority sorting
-- fixed FUSION tail resplit bookkeeping
-
-### 0.8.0 - 2026-04-11
-
-- exported unified callback building blocks from top-level package
-- added CLI batch auto concurrency flags
-- added Rich batch progress UI
-- `ProgressEvent` gained `filename` and `url`
-- batch scheduling improved with domain affinity and prewarming heuristics
-- rich moved into main runtime dependencies
-- several downloader and writer correctness fixes landed
-
-### 0.7.0 - 2026-03-29
-
-- fixed batch callback mode detection for 4-parameter file progress callbacks
-- improved EWMA smoothing and scheduler stability tuning across thread pool, speed monitor, chunk manager, and smart scheduler
-
-### 0.6.1
-
-- added byte-based and file-based batch progress metrics
-- renamed `files_completed_ratio` to `files_progress`
-
-### 0.6.0
-
-- added preconnect support
-- added high-performance direct write path
-- increased default concurrency and write buffers
-
-### 0.5.0
-
-- introduced enhanced batch progress callback system
-- added per-file progress visibility and better ETA stability metrics
-
-### 0.4.x
-
-- introduced CLI batch download support, structured output modes, exit codes, and `--version`
-- fixed timeout construction, event-loop handling, filename fallback, and temp-dir wiring
+- atomic chunked downloads: data lands in a preallocated `.part` file via a single OS file descriptor with lock-serialized positional writes, then atomically renamed to the final name on success
+- layout-aware resume: persisted chunk byte ranges are restored exactly (including resplit chunks), with ETag/Last-Modified compatibility validation before resuming
+- FUSION four-phase adaptive scheduler (PROBE -> RAMP -> CRUISE -> TAIL) with bandwidth-ceiling estimation, P50 speed, and marginal-gain detection
+- intelligent strategy selection based on file size, server capability, and network conditions, with FUSION as the default style
+- unified callback system supporting event/dict/kwargs/legacy signatures for both single-file and batch downloads
+- batch downloads with global chunk budgeting, domain affinity, adaptive concurrency, and rich progress UI
+- authentication (Basic/Bearer/Digest/API Key/OAuth2), proxy (system/PAC/SOCKS5), speed limiting, hash verification, file reuse, and multi-source failover
+- single source of truth for the package version via `importlib.metadata`, reflected in `__version__` and the default User-Agent
 
 ## Implementation map
 
@@ -1067,9 +1024,9 @@ Use this source map for implementation questions instead of relying on README-le
 - `src/littledl/config.py`: DownloadConfig and related configuration types/enums
 - `src/littledl/connection.py`: connection pool and request construction
 - `src/littledl/scheduler.py`: chunk scheduling, adaptive behavior, FusionScheduler, strategy logic
-- `src/littledl/worker.py`: worker execution model
-- `src/littledl/writer.py`: buffered and direct file writers
-- `tests/test_littledl.py`: usage examples and regression coverage for callbacks, CLI, scheduling, and batch logic
+- `src/littledl/writer.py`: positional file writer used by chunked downloads
+- `src/littledl/resume.py`: resume metadata persistence and layout restoration
+- `tests/test_littledl.py`: usage examples and regression coverage for callbacks, CLI, scheduling, batch logic, and the writer/resume path
 
 ## Source coverage inventory
 
@@ -1125,7 +1082,7 @@ If answering implementation questions:
 
 - use the implementation map and source files
 - verify behavior in `config.py`, `downloader.py`, `batch.py`, and `scheduler.py`
-- use changelog notes to understand recent behavior changes around FUSION and callbacks
+- for FUSION scheduling behavior, read `scheduler.py` (`FusionScheduler` four-phase logic) and the resume/writer flow in `downloader.py`
 
 If answering security-sensitive questions:
 

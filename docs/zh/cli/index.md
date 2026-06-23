@@ -14,7 +14,7 @@ pip install littledl
 
 ```bash
 littledl --version
-# 输出: littledl 0.9.1
+# 输出: littledl 1.0.0
 ```
 
 ## 基本用法

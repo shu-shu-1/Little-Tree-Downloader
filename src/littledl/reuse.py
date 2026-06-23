@@ -1,8 +1,8 @@
 import hashlib
 from pathlib import Path
 from typing import Any
-from .utils import calculate_file_hash, format_size
 
+from .utils import calculate_file_hash, format_size
 
 FILE_SIGNATURES: dict[bytes, str] = {
     b"\x89PNG\r\n\x1a\n": "png",
@@ -16,7 +16,6 @@ FILE_SIGNATURES: dict[bytes, str] = {
     b"BZh": "bz2",
     b"\xfd7zXZ\x00": "xz",
     b"7z\xbc\xaf\x27\x1c": "7z",
-    b"\x50\x4b\x03\x04": "docx/xlsx/pptx",
     b"\x4f\x67\x67\x53": "ogg",
     b"\x49\x44\x33": "mp3",
     b"\xff\xfb": "mp3",
@@ -360,7 +359,7 @@ class MultiSourceManager:
     def _should_disable(self, source: dict[str, Any]) -> bool:
         """判断是否应该禁用此源"""
         if source["is_single_thread"]:
-            return source["fail_count"] >= 3
+            return int(source["fail_count"]) >= 3
 
         url = source["url"]
         error = source.get("last_error", "") or ""
@@ -486,7 +485,7 @@ class SharedFileRegistry:
 
     def get_stats(self) -> dict[str, Any]:
         """获取统计信息"""
-        states = {}
+        states: dict[str, int] = {}
         for file_info in self._files.values():
             state = file_info["state"]
             states[state] = states.get(state, 0) + 1

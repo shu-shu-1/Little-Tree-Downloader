@@ -1,8 +1,9 @@
-from .auth import AuthConfig, AuthManager, TokenInfo
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as _pkg_version
+
+from .auth import AuthManager, TokenInfo
 from .batch import (
     AdaptiveConcurrencyController,
-    batch_download,
-    batch_download_sync,
     BatchDownloader,
     BatchProgress,
     EnhancedBatchDownloader,
@@ -10,25 +11,27 @@ from .batch import (
     FileTask,
     FileTaskStatus,
     SharedConnectionBatchDownloader,
+    batch_download,
+    batch_download_sync,
 )
 from .callback import (
     BaseProgressEvent,
     BatchProgressEvent,
     CallbackChain,
     ChunkProgressEvent,
-    detect_callback_mode,
     EventType,
     FileCompleteEvent,
     FileProgressEvent,
     ProgressAggregator,
     ThrottledCallback,
     UnifiedCallbackAdapter,
+    detect_callback_mode,
 )
 from .chunk import Chunk, ChunkManager, ChunkStatus
 from .config import (
+    AuthConfig,
     AuthType,
     DownloadConfig,
-    DownloadResult,
     ProxyConfig,
     ProxyMode,
     RetryConfig,
@@ -37,17 +40,18 @@ from .config import (
     SpeedLimitMode,
 )
 from .detector import ServerCapabilities, ServerDetector
-from .downloader import ChunkEvent, download_file, download_file_sync, Downloader, ProgressEvent
+from .downloader import ChunkEvent, Downloader, ProgressEvent, download_file, download_file_sync
 from .exceptions import (
     CancelledError,
     ChunkDownloadError,
     ChunkError,
     ChunkResplitError,
     ConfigurationError,
-    ConnectionError,
     DownloadError,
+    DownloadTimeoutError,
     ForbiddenError,
     HTTPError,
+    NetworkConnectionError,
     NetworkError,
     RangeNotSupportedError,
     ResourceNotFoundError,
@@ -55,15 +59,14 @@ from .exceptions import (
     ResumeDataNotFoundError,
     ResumeError,
     SpeedLimitExceededError,
-    TimeoutError,
     ValidationError,
 )
-from .global_pool import GlobalThreadPool, SpeedAdaptiveController
+from .global_pool import GlobalThreadPool
 from .i18n import (
+    LANGUAGE_ENV_VAR,
     get_available_languages,
     gettext,
     init_language,
-    LANGUAGE_ENV_VAR,
     ngettext,
     pgettext,
     set_language,
@@ -71,9 +74,9 @@ from .i18n import (
 from .limiter import AdaptiveLimiter, SpeedLimiter, TokenBucketLimiter
 from .monitor import DownloadMonitor, DownloadStats
 from .proxy import ProxyDetector, ProxyInfo, ProxyManager
-from .reuse import FileReuseChecker, MultiSourceManager, SharedFileRegistry
 from .resume import DownloadMetadata, ResumeManager
-from .scheduler import AdaptiveChunkSizer, ConnectionOptimizer, FusionScheduler, SmartScheduler
+from .reuse import FileReuseChecker, MultiSourceManager, SharedFileRegistry
+from .scheduler import FusionScheduler, SmartScheduler
 from .strategy import (
     DownloadStyle,
     DynamicStyleAllocator,
@@ -82,24 +85,23 @@ from .strategy import (
     StrategySelector,
     StyleDecision,
 )
-from .utils import SpeedCalculator
-from .worker import DownloadWorker, WorkerPool
-from .writer import BufferedFileWriter, DirectFileWriter
 
 __all__ = [
+    # Core entry points
     "Downloader",
     "download_file",
     "download_file_sync",
     "BatchDownloader",
     "EnhancedBatchDownloader",
+    "SharedConnectionBatchDownloader",
+    "AdaptiveConcurrencyController",
     "BatchProgress",
     "FileScheduler",
     "FileTask",
     "FileTaskStatus",
-    "AdaptiveConcurrencyController",
-    "SharedConnectionBatchDownloader",
     "batch_download",
     "batch_download_sync",
+    # Progress / callbacks
     "ProgressEvent",
     "ChunkEvent",
     "EventType",
@@ -113,8 +115,8 @@ __all__ = [
     "ProgressAggregator",
     "CallbackChain",
     "detect_callback_mode",
+    # Configuration
     "DownloadConfig",
-    "DownloadResult",
     "AuthConfig",
     "AuthType",
     "TokenInfo",
@@ -131,6 +133,7 @@ __all__ = [
     "AdaptiveLimiter",
     "RetryConfig",
     "RetryStrategy",
+    # Introspection / building blocks
     "ServerCapabilities",
     "ServerDetector",
     "Chunk",
@@ -142,23 +145,29 @@ __all__ = [
     "ResumeManager",
     "SmartScheduler",
     "FusionScheduler",
-    "AdaptiveChunkSizer",
-    "ConnectionOptimizer",
-    "DownloadWorker",
-    "WorkerPool",
-    "SpeedCalculator",
-    "BufferedFileWriter",
-    "DirectFileWriter",
     "DownloadStyle",
     "StrategySelector",
     "DynamicStyleAllocator",
     "FileProfile",
     "NetworkProfile",
     "StyleDecision",
+    "GlobalThreadPool",
+    "FileReuseChecker",
+    "MultiSourceManager",
+    "SharedFileRegistry",
+    # i18n
+    "gettext",
+    "ngettext",
+    "pgettext",
+    "set_language",
+    "get_available_languages",
+    "init_language",
+    "LANGUAGE_ENV_VAR",
+    # Errors
     "DownloadError",
     "NetworkError",
-    "ConnectionError",
-    "TimeoutError",
+    "NetworkConnectionError",
+    "DownloadTimeoutError",
     "HTTPError",
     "ResourceNotFoundError",
     "ForbiddenError",
@@ -173,20 +182,11 @@ __all__ = [
     "ConfigurationError",
     "ValidationError",
     "CancelledError",
-    "GlobalThreadPool",
-    "SpeedAdaptiveController",
-    "FileReuseChecker",
-    "MultiSourceManager",
-    "SharedFileRegistry",
-    "gettext",
-    "ngettext",
-    "pgettext",
-    "set_language",
-    "get_available_languages",
-    "init_language",
-    "LANGUAGE_ENV_VAR",
 ]
 
-__version__ = "0.1.0"
+try:
+    __version__ = _pkg_version("littledl")
+except PackageNotFoundError:  # pragma: no cover - running from source without install metadata
+    __version__ = "0.0.0"
 
 init_language()

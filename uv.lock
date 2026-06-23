@@ -3,15 +3,6 @@ revision = 3
 requires-python = ">=3.10"
 
 [[package]]
-name = "aiofiles"
-version = "25.1.0"
-source = { registry = "https://mirrors.cloud.tencent.com/pypi/simple/" }
-sdist = { url = "https://mirrors.cloud.tencent.com/pypi/packages/41/c3/534eac40372d8ee36ef40df62ec129bee4fdb5ad9706e58a29be53b2c970/aiofiles-25.1.0.tar.gz", hash = "sha256:a8d728f0a29de45dc521f18f07297428d56992a742f0cd2701ba86e44d23d5b2" }
-wheels = [
-    { url = "https://mirrors.cloud.tencent.com/pypi/packages/bc/8a/340a1555ae33d7354dbca4faa54948d76d89a27ceef032c8c3bc661d003e/aiofiles-25.1.0-py3-none-any.whl", hash = "sha256:abe311e527c862958650f9438e859c1fa7568a141b22abcd015e120e86a85695" },
-]
-
-[[package]]
 name = "anyio"
 version = "4.13.0"
 source = { registry = "https://mirrors.cloud.tencent.com/pypi/simple/" }
@@ -360,10 +351,9 @@ wheels = [
 
 [[package]]
 name = "littledl"
-version = "0.9.1"
+version = "1.0.0"
 source = { editable = "." }
 dependencies = [
-    { name = "aiofiles" },
     { name = "httpx", extra = ["http2"] },
     { name = "loguru" },
     { name = "rich" },
@@ -383,7 +373,6 @@ progress = [
 
 [package.metadata]
 requires-dist = [
-    { name = "aiofiles", specifier = ">=24.1.0" },
     { name = "httpx", extras = ["http2"], specifier = ">=0.27.0" },
     { name = "loguru", specifier = ">=0.7.0" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.11.0" },

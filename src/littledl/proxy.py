@@ -2,6 +2,7 @@ import os
 import platform
 import re
 import subprocess
+from collections.abc import Callable
 from dataclasses import dataclass
 from urllib.parse import urlparse
 
@@ -186,11 +187,15 @@ class ProxyDetector:
     def _detect_env_proxy() -> ProxyInfo:
         info = ProxyInfo()
 
-        info.http_proxy = os.environ.get("http_proxy") or os.environ.get("HTTP_PROXY")
-        info.https_proxy = os.environ.get("https_proxy") or os.environ.get("HTTPS_PROXY")
-        info.ftp_proxy = os.environ.get("ftp_proxy") or os.environ.get("FTP_PROXY")
+        def _env(lower: str) -> str | None:
+            upper = lower.upper()
+            return os.environ.get(lower) or os.environ.get(upper)
 
-        all_proxy = os.environ.get("all_proxy") or os.environ.get("ALL_PROXY")
+        info.http_proxy = _env("http_proxy")
+        info.https_proxy = _env("https_proxy")
+        info.ftp_proxy = _env("ftp_proxy")
+
+        all_proxy = _env("all_proxy")
         if all_proxy:
             if all_proxy.startswith("socks"):
                 info.socks_proxy = all_proxy
@@ -198,7 +203,7 @@ class ProxyDetector:
                 info.http_proxy = info.http_proxy or all_proxy
                 info.https_proxy = info.https_proxy or all_proxy
 
-        no_proxy = os.environ.get("no_proxy") or os.environ.get("NO_PROXY")
+        no_proxy = _env("no_proxy")
         if no_proxy:
             info.no_proxy = [p.strip() for p in no_proxy.split(",") if p.strip()]
 
@@ -248,7 +253,7 @@ class ProxyResolver:
         if "isPlainHostName" in pac_content and "." not in host:
             return "DIRECT"
 
-        proxy_patterns = [
+        proxy_patterns: list[tuple[str, Callable[[re.Match[str]], str]]] = [
             (r'"PROXY\s+([^"]+)"', lambda m: f"http://{m.group(1).strip()}"),
             (r'"SOCKS\s+([^"]+)"', lambda m: f"socks5://{m.group(1).strip()}"),
             (r'"SOCKS5\s+([^"]+)"', lambda m: f"socks5://{m.group(1).strip()}"),
