@@ -1040,21 +1040,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#bufferedfilewriter" class="md-nav__link">
+  <a href="#filewriter" class="md-nav__link">
     <span class="md-ellipsis">
       
-        BufferedFileWriter
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#directfilewriter" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        DirectFileWriter
+        FileWriter
       
     </span>
   </a>
@@ -1299,32 +1288,23 @@ auth = AuthConfig(
 <span class="nb">print</span><span class="p">(</span><span class="n">get_available_languages</span><span class="p">())</span>  <span class="c1"># {&#39;en&#39;: &#39;English&#39;, &#39;zh&#39;: &#39;中文&#39;}</span>
 </code></pre></div>
 <h2 id="_8">文件写入器<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h2>
-<h3 id="bufferedfilewriter">BufferedFileWriter<a class="headerlink" href="#bufferedfilewriter" title="Permanent link">&para;</a></h3>
-<p>高性能缓冲文件写入器，用于优化并发下载性能。</p>
-<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">littledl</span><span class="w"> </span><span class="kn">import</span> <span class="n">BufferedFileWriter</span>
+<h3 id="filewriter">FileWriter<a class="headerlink" href="#filewriter" title="Permanent link">&para;</a></h3>
+<p>分块下载使用的定位写入器。它通过单个 OS 文件描述符进行写入，seek+write 操作由锁串行化，
+并按目标大小预分配文件，因此并发分块写入任意偏移都安全。下载数据先写入 <code>.part</code> 文件，
+成功后再原子地重命名为最终文件名。</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">littledl.writer</span><span class="w"> </span><span class="kn">import</span> <span class="n">FileWriter</span>
 
-<span class="n">writer</span> <span class="o">=</span> <span class="n">BufferedFileWriter</span><span class="p">(</span>
+<span class="n">writer</span> <span class="o">=</span> <span class="n">FileWriter</span><span class="p">(</span>
     <span class="n">file_path</span><span class="o">=</span><span class="s2">&quot;/path/to/file.zip&quot;</span><span class="p">,</span>
-    <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;wb&quot;</span><span class="p">,</span>
-    <span class="n">buffer_size</span><span class="o">=</span><span class="mi">512</span> <span class="o">*</span> <span class="mi">1024</span><span class="p">,</span>  <span class="c1"># 512KB 缓冲</span>
-    <span class="n">flush_interval</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>      <span class="c1"># 500ms 自动刷新</span>
-    <span class="n">max_buffers</span><span class="o">=</span><span class="mi">16</span><span class="p">,</span>          <span class="c1"># 最大并发缓冲数</span>
+    <span class="n">file_size</span><span class="o">=</span><span class="mi">1048576</span><span class="p">,</span>   <span class="c1"># 按此大小预分配（稀疏）</span>
+    <span class="n">resume</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>         <span class="c1"># 续传时设为 True 以保留已写入的字节</span>
 <span class="p">)</span>
 
 <span class="k">await</span> <span class="n">writer</span><span class="o">.</span><span class="n">open</span><span class="p">()</span>
 <span class="k">await</span> <span class="n">writer</span><span class="o">.</span><span class="n">write_at</span><span class="p">(</span><span class="n">offset</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="sa">b</span><span class="s2">&quot;chunk data&quot;</span><span class="p">)</span>
 <span class="k">await</span> <span class="n">writer</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
 </code></pre></div>
-<h3 id="directfilewriter">DirectFileWriter<a class="headerlink" href="#directfilewriter" title="Permanent link">&para;</a></h3>
-<p>直接文件写入器（传统实现，保留向后兼容）。</p>
-<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">littledl</span><span class="w"> </span><span class="kn">import</span> <span class="n">DirectFileWriter</span>
-
-<span class="n">writer</span> <span class="o">=</span> <span class="n">DirectFileWriter</span><span class="p">(</span><span class="n">file_path</span><span class="o">=</span><span class="s2">&quot;/path/to/file.zip&quot;</span><span class="p">)</span>
-<span class="k">await</span> <span class="n">writer</span><span class="o">.</span><span class="n">open</span><span class="p">()</span>
-<span class="k">await</span> <span class="n">writer</span><span class="o">.</span><span class="n">write_at</span><span class="p">(</span><span class="n">offset</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="sa">b</span><span class="s2">&quot;chunk data&quot;</span><span class="p">)</span>
-<span class="k">await</span> <span class="n">writer</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-</code></pre></div>
-<p><strong>注意</strong>: BufferedFileWriter 会自动在分块下载中使用，无需手动配置。</p>
+<p><strong>注意</strong>: <code>FileWriter</code> 由下载器内部使用，无需手动配置。</p>
 
 
 

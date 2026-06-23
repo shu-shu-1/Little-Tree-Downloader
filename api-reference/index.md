@@ -264,19 +264,17 @@ print(get_available_languages())  # {'en': 'English', 'zh': '中文'}
 
 ## File Writers
 
-### BufferedFileWriter
+### FileWriter
 
-High-performance buffered file writer for optimized concurrent download performance.
+Positional file writer used by chunked downloads. It writes through a single OS file descriptor with seek+write pairs serialized by a lock, and preallocates the target file so concurrent chunk writes to any offset are safe. Downloaded data lands in a `.part` file that is atomically renamed to the final name on success.
 
 ```
-from littledl import BufferedFileWriter
+from littledl.writer import FileWriter
 
-writer = BufferedFileWriter(
+writer = FileWriter(
     file_path="/path/to/file.zip",
-    mode="wb",
-    buffer_size=512 * 1024,  # 512KB buffer
-    flush_interval=0.5,      # 500ms auto flush
-    max_buffers=16,          # Maximum concurrent buffers
+    file_size=1048576,   # preallocate (sparse) to this size
+    resume=False,         # set True to keep existing bytes when resuming
 )
 
 await writer.open()
@@ -284,17 +282,4 @@ await writer.write_at(offset=0, data=b"chunk data")
 await writer.close()
 ```
 
-### DirectFileWriter
-
-Direct file writer (traditional implementation, kept for backward compatibility).
-
-```
-from littledl import DirectFileWriter
-
-writer = DirectFileWriter(file_path="/path/to/file.zip")
-await writer.open()
-await writer.write_at(offset=0, data=b"chunk data")
-await writer.close()
-```
-
-**Note**: BufferedFileWriter is automatically used in chunked downloads, no manual configuration needed.
+**Note**: `FileWriter` is used internally by the downloader; no manual configuration is needed.

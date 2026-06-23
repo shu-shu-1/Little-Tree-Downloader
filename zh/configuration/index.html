@@ -959,7 +959,7 @@
 <td><code>fusion_probe_duration</code></td>
 <td>float</td>
 <td>2.0</td>
-<td>进入 RAMP 阶段前的探测时长</td>
+<td>PROBE 时长上限；获得首个速度采样且经过 <code>min(该值, adaptive_interval)</code> 后即进入 RAMP</td>
 </tr>
 <tr>
 <td><code>fusion_tail_ratio</code></td>

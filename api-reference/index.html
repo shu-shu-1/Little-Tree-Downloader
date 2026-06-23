@@ -1040,21 +1040,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#bufferedfilewriter" class="md-nav__link">
+  <a href="#filewriter" class="md-nav__link">
     <span class="md-ellipsis">
       
-        BufferedFileWriter
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#directfilewriter" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        DirectFileWriter
+        FileWriter
       
     </span>
   </a>
@@ -1299,32 +1288,25 @@ auth = AuthConfig(
 <span class="nb">print</span><span class="p">(</span><span class="n">get_available_languages</span><span class="p">())</span>  <span class="c1"># {&#39;en&#39;: &#39;English&#39;, &#39;zh&#39;: &#39;中文&#39;}</span>
 </code></pre></div>
 <h2 id="file-writers">File Writers<a class="headerlink" href="#file-writers" title="Permanent link">&para;</a></h2>
-<h3 id="bufferedfilewriter">BufferedFileWriter<a class="headerlink" href="#bufferedfilewriter" title="Permanent link">&para;</a></h3>
-<p>High-performance buffered file writer for optimized concurrent download performance.</p>
-<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">littledl</span><span class="w"> </span><span class="kn">import</span> <span class="n">BufferedFileWriter</span>
+<h3 id="filewriter">FileWriter<a class="headerlink" href="#filewriter" title="Permanent link">&para;</a></h3>
+<p>Positional file writer used by chunked downloads. It writes through a single OS
+file descriptor with seek+write pairs serialized by a lock, and preallocates the
+target file so concurrent chunk writes to any offset are safe. Downloaded data
+lands in a <code>.part</code> file that is atomically renamed to the final name on success.</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">littledl.writer</span><span class="w"> </span><span class="kn">import</span> <span class="n">FileWriter</span>
 
-<span class="n">writer</span> <span class="o">=</span> <span class="n">BufferedFileWriter</span><span class="p">(</span>
+<span class="n">writer</span> <span class="o">=</span> <span class="n">FileWriter</span><span class="p">(</span>
     <span class="n">file_path</span><span class="o">=</span><span class="s2">&quot;/path/to/file.zip&quot;</span><span class="p">,</span>
-    <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;wb&quot;</span><span class="p">,</span>
-    <span class="n">buffer_size</span><span class="o">=</span><span class="mi">512</span> <span class="o">*</span> <span class="mi">1024</span><span class="p">,</span>  <span class="c1"># 512KB buffer</span>
-    <span class="n">flush_interval</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>      <span class="c1"># 500ms auto flush</span>
-    <span class="n">max_buffers</span><span class="o">=</span><span class="mi">16</span><span class="p">,</span>          <span class="c1"># Maximum concurrent buffers</span>
+    <span class="n">file_size</span><span class="o">=</span><span class="mi">1048576</span><span class="p">,</span>   <span class="c1"># preallocate (sparse) to this size</span>
+    <span class="n">resume</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>         <span class="c1"># set True to keep existing bytes when resuming</span>
 <span class="p">)</span>
 
 <span class="k">await</span> <span class="n">writer</span><span class="o">.</span><span class="n">open</span><span class="p">()</span>
 <span class="k">await</span> <span class="n">writer</span><span class="o">.</span><span class="n">write_at</span><span class="p">(</span><span class="n">offset</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="sa">b</span><span class="s2">&quot;chunk data&quot;</span><span class="p">)</span>
 <span class="k">await</span> <span class="n">writer</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
 </code></pre></div>
-<h3 id="directfilewriter">DirectFileWriter<a class="headerlink" href="#directfilewriter" title="Permanent link">&para;</a></h3>
-<p>Direct file writer (traditional implementation, kept for backward compatibility).</p>
-<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">littledl</span><span class="w"> </span><span class="kn">import</span> <span class="n">DirectFileWriter</span>
-
-<span class="n">writer</span> <span class="o">=</span> <span class="n">DirectFileWriter</span><span class="p">(</span><span class="n">file_path</span><span class="o">=</span><span class="s2">&quot;/path/to/file.zip&quot;</span><span class="p">)</span>
-<span class="k">await</span> <span class="n">writer</span><span class="o">.</span><span class="n">open</span><span class="p">()</span>
-<span class="k">await</span> <span class="n">writer</span><span class="o">.</span><span class="n">write_at</span><span class="p">(</span><span class="n">offset</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="sa">b</span><span class="s2">&quot;chunk data&quot;</span><span class="p">)</span>
-<span class="k">await</span> <span class="n">writer</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-</code></pre></div>
-<p><strong>Note</strong>: BufferedFileWriter is automatically used in chunked downloads, no manual configuration needed.</p>
+<p><strong>Note</strong>: <code>FileWriter</code> is used internally by the downloader; no manual
+configuration is needed.</p>
 
 
 
