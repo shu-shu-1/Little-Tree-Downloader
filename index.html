@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#documentation" class="md-skip">
+        <a href="#littledl-documentation" class="md-skip">
           Skip to content
         </a>
       
@@ -534,6 +534,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#why-littledl" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why littledl
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#getting-started" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -821,8 +832,24 @@
   
 
 
-<h1 id="documentation">Documentation<a class="headerlink" href="#documentation" title="Permanent link">&para;</a></h1>
-<p>Welcome to the littledl documentation.</p>
+<h1 id="littledl-documentation">littledl Documentation<a class="headerlink" href="#littledl-documentation" title="Permanent link">&para;</a></h1>
+<p>Welcome to littledl — a high-performance file download library and CLI focused on single-file and batch downloads. It supports HTTP Range based chunked downloading, resume, adaptive scheduling, and a rich callback system.</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">littledl</span><span class="w"> </span><span class="kn">import</span> <span class="n">download_file_sync</span>
+
+<span class="n">path</span> <span class="o">=</span> <span class="n">download_file_sync</span><span class="p">(</span><span class="s2">&quot;https://example.com/file.zip&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Downloaded to: </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+<h2 id="why-littledl">Why littledl<a class="headerlink" href="#why-littledl" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Fast and steady FUSION scheduling</strong>: four-phase adaptive control (probe → ramp → cruise → tail) with bandwidth-ceiling estimation and marginal-gain detection; the cruise phase locks concurrency and uses smoothed signals, so it stays smooth like IDM instead of sawtooth jitter</li>
+<li><strong>Intelligent strategy selection</strong>: automatically picks a download style (single / multi / adaptive / fusion / hybrid_turbo) from file size, server capability, and network conditions — no manual tuning</li>
+<li><strong>Multi-threaded segmented download</strong>: HTTP Range based concurrent segments that detect slow chunks and steal work in the tail phase to maximize bandwidth</li>
+<li><strong>Atomic writes, never corrupts</strong>: chunked data lands in a preallocated <code>.part</code> file with lock-serialized positional writes and is atomically renamed on success; a failed run never destroys an existing file</li>
+<li><strong>Reliable resume</strong>: restores exact chunk byte ranges (including resplit chunks) and validates ETag/Last-Modified compatibility before resuming</li>
+<li><strong>Real-time progress callbacks</strong>: a unified callback system auto-adapts to event / dict / kwargs / legacy signatures, exposing speed, ETA, and per-chunk status</li>
+<li><strong>Enterprise-grade features</strong>: authentication (Basic / Bearer / Digest / API Key / OAuth2), proxy (system / custom / SOCKS5), speed limiting, hash verification, content-aware file reuse, and multi-source failover</li>
+<li><strong>Graceful fallback</strong>: automatically falls back to single-stream mode when chunked transfer is not viable</li>
+</ul>
 <h2 id="getting-started">Getting Started<a class="headerlink" href="#getting-started" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="getting-started/">Getting Started</a> - Quick start guide</li>
@@ -839,6 +866,7 @@
 <ul>
 <li><a href="advanced/">Advanced Usage</a> - Advanced features and optimizations</li>
 <li><a href="batch-download/">Batch Download</a> - Multi-file batch download</li>
+<li><a href="cli/">CLI</a> - Command-line usage</li>
 <li><a href="api-reference/">API Reference</a> - Complete API reference</li>
 </ul>
 <h2 id="other">Other<a class="headerlink" href="#other" title="Permanent link">&para;</a></h2>

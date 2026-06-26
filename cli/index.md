@@ -14,7 +14,7 @@ Verify installation:
 
 ```
 littledl --version
-# Output: littledl 1.0.0
+# Output: littledl 1.1.0
 ```
 
 ## Basic Usage

@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#_1" class="md-skip">
+        <a href="#littledl" class="md-skip">
           跳转至
         </a>
       
@@ -534,7 +534,18 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#_2" class="md-nav__link">
+  <a href="#littledl_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        为什么选择 littledl
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         入门指南
@@ -545,7 +556,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_3" class="md-nav__link">
+  <a href="#_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         用户指南
@@ -556,7 +567,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_4" class="md-nav__link">
+  <a href="#_3" class="md-nav__link">
     <span class="md-ellipsis">
       
         高级主题
@@ -567,7 +578,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_5" class="md-nav__link">
+  <a href="#_4" class="md-nav__link">
     <span class="md-ellipsis">
       
         其他
@@ -821,27 +832,44 @@
   
 
 
-<h1 id="_1">文档<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h1>
-<p>欢迎使用 littledl 文档。</p>
-<h2 id="_2">入门指南<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
+<h1 id="littledl">littledl 文档<a class="headerlink" href="#littledl" title="Permanent link">&para;</a></h1>
+<p>欢迎使用 littledl —— 高性能文件下载库与命令行工具，专注单文件与批量下载，支持基于 HTTP Range 的分块下载、断点续传、自适应调度与丰富的回调体系。</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">littledl</span><span class="w"> </span><span class="kn">import</span> <span class="n">download_file_sync</span>
+
+<span class="n">path</span> <span class="o">=</span> <span class="n">download_file_sync</span><span class="p">(</span><span class="s2">&quot;https://example.com/file.zip&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;下载至: </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+<h2 id="littledl_1">为什么选择 littledl<a class="headerlink" href="#littledl_1" title="Permanent link">&para;</a></h2>
 <ul>
-<li><a href="getting-started/">快速入门</a> - 快速入门指南</li>
+<li><strong>又快又稳的 FUSION 调度</strong>：四阶段自适应（探测 → 爬升 → 巡航 → 收尾），带带宽天花板估算与边际收益检测；巡航期锁定并发、平滑判断，像 IDM 一样平稳，而非锯齿抖动</li>
+<li><strong>智能策略选择</strong>：根据文件大小、服务器能力与网络状况自动选择下载风格（single / multi / adaptive / fusion / hybrid_turbo），无需手动调参</li>
+<li><strong>多线程分块下载</strong>：基于 HTTP Range 的分段并发，自动识别慢块并在收尾阶段抢占，最大化带宽利用</li>
+<li><strong>原子化写入，永不损坏</strong>：分块数据写入预分配的 <code>.part</code> 文件，定位写入由锁串行化，成功后原子重命名；中途失败不会破坏已有文件</li>
+<li><strong>可靠的断点续传</strong>：精确还原分片字节区间（含重切分片），续传前校验 ETag/Last-Modified 兼容性</li>
+<li><strong>实时进度回调</strong>：统一回调系统自动适配 event / dict / kwargs / legacy 四种签名，速度、ETA、分片状态实时可查</li>
+<li><strong>企业级特性</strong>：认证（Basic / Bearer / Digest / API Key / OAuth2）、代理（系统 / 自定义 / SOCKS5）、限速、哈希校验、文件复用与多源故障切换</li>
+<li><strong>自动降级</strong>：分块传输不可行时自动回退单流模式，保证可用性</li>
+</ul>
+<h2 id="_1">入门指南<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="getting-started/">快速入门</a> - 安装与首个下载</li>
 <li><a href="getting-started/#安装">安装</a> - 安装说明</li>
 </ul>
-<h2 id="_3">用户指南<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h2>
+<h2 id="_2">用户指南<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="configuration/">配置指南</a> - 配置选项</li>
 <li><a href="authentication/">认证设置</a> - 认证设置</li>
 <li><a href="proxy/">代理配置</a> - 代理配置</li>
 <li><a href="error-handling/">错误处理</a> - 错误处理和重试</li>
 </ul>
-<h2 id="_4">高级主题<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h2>
+<h2 id="_3">高级主题<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="advanced/">高级用法</a> - 高级功能和优化</li>
 <li><a href="batch-download/">批量下载</a> - 多文件批量下载</li>
+<li><a href="cli/">命令行工具</a> - CLI 用法</li>
 <li><a href="api-reference/">API 参考</a> - 完整的 API 参考</li>
 </ul>
-<h2 id="_5">其他<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h2>
+<h2 id="_4">其他<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="../../CONTRIBUTING.zh.md">贡献指南</a> - 贡献指南</li>
 <li><a href="../../CHANGELOG.zh.md">变更日志</a> - 版本历史</li>
