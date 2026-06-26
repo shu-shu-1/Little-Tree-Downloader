@@ -7,6 +7,18 @@ littledl 的所有重要变更都会记录在此文件中。
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)，
 本项目遵循[语义化版本](https://semver.org/spec/v2.0.0.html)。
 
+## 1.1.0 - 2026-06-26
+
+### 变更
+
+- FUSION 巡航期改为 IDM 式平稳：新增带宽天花板锁定，接近上限时锁定并发数 hold 一段时间（消除"加-减-加"锯齿）；所有判断统一改用平滑速度而非瞬时速度，避免单次掉速误判
+- 智能重切改为分阶段差异化：PROBE/RAMP 阶段不重切，CRUISE 阶段只切严重慢块且冷却翻倍，TAIL 阶段保持激进抢占
+- RAMP 爬升限制单轮增幅（`fusion_ramp_max_step`），并发以平滑阶梯增长而非翻倍，减少爬升后的速度回落
+
+### 新增
+
+- 新增配置项：`fusion_ramp_max_step`、`fusion_ceiling_lock_duration`、`fusion_cruise_resplit_threshold`
+
 ## 1.0.0 - 2026-06-23
 
 ### 新增

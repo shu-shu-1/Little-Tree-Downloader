@@ -453,6 +453,8 @@ class FusionScheduler:
         # Cruise state
         self._last_adjustment_time: float = 0.0
         self._adjustment_count: int = 0
+        # 天花板锁定：接近带宽上限时锁定并发 hold 一段时间，消除天花板处的锯齿。
+        self._ceiling_lock_until: float = 0.0
 
         # Resplit state
         self._last_resplit_time: float = 0.0
@@ -618,7 +620,8 @@ class FusionScheduler:
             self._plateau_reached = True
             return
 
-        # 还有收益，继续翻倍
+        # 还有收益，继续增长（乘性），但限制单轮增幅，避免突发并发冲击
+        # 网络/服务器后造成速度回落——这是“前快后回落”抖动的主因之一。
         self._ramp_prev_speed = avg_speed
         new_target = min(
             self.config.max_chunks,
@@ -626,6 +629,8 @@ class FusionScheduler:
         )
         # 至少 +1
         new_target = max(new_target, self._target_workers + 1)
+        # 单轮新增并发不超过 fusion_ramp_max_step，把指数爬升变成更平滑的阶梯
+        new_target = min(new_target, self._target_workers + self.config.fusion_ramp_max_step)
         self._target_workers = min(new_target, self.config.max_chunks)
         self._ramp_rounds += 1
         self._phase_start_time = time.time()  # 重置计时器等下一轮
@@ -634,12 +639,13 @@ class FusionScheduler:
 
     async def _do_cruise(self, current_speed: float, bw_est: BandwidthEstimate) -> None:
         """
-        巡航期：AIMD++ 带天花板感知
+        巡航期：AIMD++ 带天花板感知 + 天花板锁定
 
-        - 持续速度增长 + 不在天花板 → +1 并发
-        - 速度下降 > congestion_drop 或错误 → *decrease_factor
-        - 在天花板附近 → 锁定当前并发
-        - 稳定性太低 → 减少并发
+        核心改进（让巡航更像 IDM 的平稳）：
+          - 所有判断统一使用平滑后的均值速度（decision_speed），不再用单次瞬时
+            速度触发增减，消除单点抖动导致的误判。
+          - 天花板锁定：接近带宽上限时锁定并发 hold 一段时长，期间只减不增，
+            消除天花板处的“加-减-加”锯齿。
         """
         now = time.time()
         cooldown = max(2.0, self.config.adaptive_interval)
@@ -649,34 +655,45 @@ class FusionScheduler:
         avg_speed = self._speed_avg.get_average()
         trend = self._speed_avg.get_trend()
 
-        # 用 P50（抗抖动）作为速度变化基线，避免单次抖动触发误判。
+        # 用 P50（抗抖动）作为速度变化基线
         p50 = self._bw.p50_speed
-        baseline = p50 if p50 > 0 else current_speed
-        speed_change = (current_speed - baseline) / max(baseline, 1.0) if baseline > 0 else 0.0
+
+        # 判断基线统一采用平滑后的均值，避免瞬时抖动触发误判
+        decision_speed = avg_speed if avg_speed > 0 else current_speed
+        baseline = p50 if p50 > 0 else decision_speed
+        speed_change = (decision_speed - baseline) / max(baseline, 1.0) if baseline > 0 else 0.0
+
+        # 天花板锁定：命中或刚减并发都刷新锁定，锁定期内不再加性增
+        near_top = self._bw.near_ceiling(decision_speed)
+        if near_top:
+            self._ceiling_lock_until = max(self._ceiling_lock_until, now + self.config.fusion_ceiling_lock_duration)
+        ceiling_locked = now < self._ceiling_lock_until
 
         changed = False
 
-        # 稳定性检查：如果速度方差太大先降
-        if len(self._speed_history) >= 5:
-            recent = self._speed_history[-5:]
+        # 稳定性检查：方差过大先降（用更长窗口，避免一次抖动即降）
+        if len(self._speed_history) >= 7:
+            recent = self._speed_history[-7:]
             mean_recent = sum(recent) / len(recent)
             if mean_recent > 0:
                 cv = (sum((s - mean_recent) ** 2 for s in recent) / len(recent)) ** 0.5 / mean_recent
                 if cv > (1 - self.config.fusion_stability_floor) and self._target_workers > self.min_workers:
-                    # 不稳定，减少并发
                     self._target_workers = max(self.min_workers, self._target_workers - 1)
+                    # 不稳定 → 刷新锁定，避免刚降下去又被趋势加回
+                    self._ceiling_lock_until = now + self.config.fusion_ceiling_lock_duration
                     changed = True
 
         if not changed:
-            # 在天花板附近 → 不动
-            if self._bw.near_ceiling(current_speed):
+            if ceiling_locked or near_top:
+                # 锁定期 / 命中天花板：保持并发，hold
                 pass
-            # 拥塞信号：要求“相对 P50 显著下降”且“趋势确认”，缺一不降（滞回，减少锯齿）。
+            # 拥塞信号：要求“平滑均值相对 P50 显著下降”且“趋势确认”，缺一不降
             elif speed_change < -self.config.fusion_congestion_drop and trend < -0.05:
                 self._target_workers = max(
                     self.min_workers,
                     int(self._target_workers * self.config.fusion_cruise_decrease_factor),
                 )
+                self._ceiling_lock_until = now + self.config.fusion_ceiling_lock_duration
                 changed = True
             # 正向趋势 + 未达天花板 → 加性增
             elif trend > 0.05 and speed_change >= 0 and self._target_workers < self.config.max_chunks:
@@ -692,12 +709,13 @@ class FusionScheduler:
         # 速度极低保护：要求“持续下滑（trend 明显为负）”才减并发，单个抖动不再误降。
         if (
             p50 > 0
-            and current_speed < p50 * 0.35
+            and decision_speed < p50 * 0.35
             and avg_speed > 0
             and trend < -0.1
             and self._target_workers > self.min_workers
         ):
             self._target_workers = max(self.min_workers, self._target_workers - 1)
+            self._ceiling_lock_until = now + self.config.fusion_ceiling_lock_duration
             changed = True
 
         if changed:
@@ -741,17 +759,36 @@ class FusionScheduler:
     # -- Slow chunks & resplit --
 
     async def _check_slow_chunks(self, bw_est: BandwidthEstimate) -> None:
-        """检测并处理慢块"""
-        threshold = self.config.resplit_threshold
+        """检测并处理慢块
+
+        分阶段差异化，让巡航期更像 IDM 的平稳：
+          - PROBE / RAMP：不做重切。这两个阶段在探测带宽/爬升并发，重切会
+            污染带宽测量并制造抖动。
+          - CRUISE：只切“严重慢块”（< 均速的 cruise_resplit_threshold），且
+            使用更长的冷却；轻微速度波动不再触发取消重切，避免巡航期的停顿。
+          - TAIL：保持激进抢占（这是提速收尾的关键）。
+        """
+        if self._phase in (FusionPhase.PROBE, FusionPhase.RAMP):
+            return
+
         if self._phase == FusionPhase.TAIL:
             threshold = self.config.fusion_tail_steal_ratio
+            min_remaining = self.config.fusion_tail_micro_split_min
+            cooldown = self.config.resplit_cooldown
+            max_resplits = 3
+        else:  # CRUISE
+            threshold = self.config.fusion_cruise_resplit_threshold
+            min_remaining = self.config.hybrid_min_remaining_bytes
+            # 巡航期双倍冷却，减少中途重切带来的停顿
+            cooldown = self.config.resplit_cooldown * 2
+            max_resplits = self.config.hybrid_max_resplit_per_chunk
 
         slow_chunks = self.chunk_manager.get_slow_chunks(threshold)
         if not slow_chunks:
             return
 
         now = time.time()
-        if now - self._last_resplit_time < self.config.resplit_cooldown:
+        if now - self._last_resplit_time < cooldown:
             return
 
         active_count = len(self.chunk_manager.active_chunks)
@@ -762,15 +799,9 @@ class FusionScheduler:
         for chunk in slow_chunks:
             if processed >= max_process:
                 break
-            min_remaining = (
-                self.config.fusion_tail_micro_split_min
-                if self._phase == FusionPhase.TAIL
-                else self.config.hybrid_min_remaining_bytes
-            )
             if chunk.remaining < min_remaining:
                 continue
             resplit_times = self._chunk_resplit_count.get(chunk.index, 0)
-            max_resplits = 3 if self._phase == FusionPhase.TAIL else self.config.hybrid_max_resplit_per_chunk
             if resplit_times >= max_resplits:
                 continue
             if chunk.can_resplit(self.config.resplit_cooldown, global_avg_speed) and await self._resplit_chunk(

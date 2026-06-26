@@ -56,6 +56,10 @@ DEFAULT_FUSION_CONGESTION_DROP = 0.15
 DEFAULT_FUSION_STABILITY_FLOOR = 0.35
 DEFAULT_FUSION_TAIL_MICRO_SPLIT_MIN = 256 * 1024
 DEFAULT_FUSION_TAIL_STEAL_RATIO = 0.50
+# 稳定性增强（让 FUSION 在巡航期更像 IDM：平稳而非锯齿）
+DEFAULT_FUSION_RAMP_MAX_STEP = 4  # 单轮爬升最多新增的并发数，防止突发冲击
+DEFAULT_FUSION_CEILING_LOCK = 8.0  # 接近带宽天花板时锁定并发的时长(秒)
+DEFAULT_FUSION_CRUISE_RESPLIT_RATIO = 0.35  # 巡航期只切严重慢块（<均速35%），轻微波动不重切
 
 
 class ProxyMode(Enum):
@@ -245,6 +249,9 @@ class DownloadConfig:
     fusion_stability_floor: float = DEFAULT_FUSION_STABILITY_FLOOR
     fusion_tail_micro_split_min: int = DEFAULT_FUSION_TAIL_MICRO_SPLIT_MIN
     fusion_tail_steal_ratio: float = DEFAULT_FUSION_TAIL_STEAL_RATIO
+    fusion_ramp_max_step: int = DEFAULT_FUSION_RAMP_MAX_STEP
+    fusion_ceiling_lock_duration: float = DEFAULT_FUSION_CEILING_LOCK
+    fusion_cruise_resplit_threshold: float = DEFAULT_FUSION_CRUISE_RESPLIT_RATIO
     enable_predictive_scheduling: bool = True
     enable_connection_health_check: bool = True
     health_check_interval: float = 10.0
@@ -312,6 +319,12 @@ class DownloadConfig:
             self.hybrid_min_remaining_bytes = DEFAULT_HYBRID_MIN_REMAINING_BYTES
         if self.hybrid_max_resplit_per_chunk < 1:
             self.hybrid_max_resplit_per_chunk = 1
+        if self.fusion_ramp_max_step < 1:
+            self.fusion_ramp_max_step = 1
+        if self.fusion_ceiling_lock_duration < 0:
+            self.fusion_ceiling_lock_duration = 0.0
+        if self.fusion_cruise_resplit_threshold <= 0 or self.fusion_cruise_resplit_threshold >= 1:
+            self.fusion_cruise_resplit_threshold = DEFAULT_FUSION_CRUISE_RESPLIT_RATIO
 
     def _ensure_proxy_initialized(self) -> None:
         if self.proxy is None:

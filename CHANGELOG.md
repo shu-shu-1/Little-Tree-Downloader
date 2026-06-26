@@ -7,6 +7,18 @@ All notable changes to littledl will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.1.0 - 2026-06-26
+
+### Changed
+
+- FUSION cruise phase is now IDM-like and steady: a bandwidth-ceiling lock holds the worker count near the ceiling (eliminating add/subtract sawtooth), and all decisions use smoothed speed instead of instantaneous samples to avoid single-dip misfires
+- Smart resplit is now phase-aware: skipped during PROBE/RAMP (no bandwidth-measurement pollution), restricted to severe stragglers during CRUISE with doubled cooldown, and remains aggressive only in TAIL
+- RAMP growth is capped per round (`fusion_ramp_max_step`) so concurrency climbs in smooth steps instead of doubling, reducing post-surge speed drop-off
+
+### Added
+
+- `fusion_ramp_max_step`, `fusion_ceiling_lock_duration`, and `fusion_cruise_resplit_threshold` configuration knobs to tune the new stability behavior
+
 ## 1.0.0 - 2026-06-23
 
 ### Added

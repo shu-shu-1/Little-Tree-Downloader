@@ -22,7 +22,7 @@ Scope intentionally excluded:
 - Project: littledl
 - Package import: littledl
 - Package location: src/littledl
-- Current version: 1.0.0
+- Current version: 1.1.0
 - Python requirement: 3.10+
 - Primary interfaces: Python library and `littledl` CLI
 - Supported platforms: Windows, macOS, Linux, FreeBSD
@@ -84,7 +84,7 @@ CLI availability check:
 littledl --version
 ```
 
-Expected version at the time of this bundle: `littledl 1.0.0`.
+Expected version at the time of this bundle: `littledl 1.1.0`.
 
 ## Quick start
 
@@ -1000,6 +1000,13 @@ Common types:
 ## Release highlights
 
 This section summarizes the capabilities of the current release.
+
+### 1.1.0
+
+- FUSION cruise phase is now IDM-like and steady: a bandwidth-ceiling lock holds the worker count near the ceiling (eliminating add/subtract sawtooth), and all decisions use smoothed speed instead of instantaneous samples to avoid single-dip misfires
+- phase-aware smart resplit: skipped during PROBE/RAMP, restricted to severe stragglers during CRUISE with doubled cooldown, aggressive only in TAIL
+- RAMP growth capped per round so concurrency climbs in smooth steps instead of doubling, reducing post-surge speed drop-off
+- new tunables: `fusion_ramp_max_step`, `fusion_ceiling_lock_duration`, `fusion_cruise_resplit_threshold`
 
 ### 1.0.0
 
